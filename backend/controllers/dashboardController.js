@@ -98,7 +98,7 @@ const getDashboardStats = async (req, res) => {
       }
     }
     const estimatedGrossProfit = Math.max(0, monthlySales - totalCogs);
-    const profitMarginPercent = monthlySales > 0 ? ((estimatedGrossProfit / monthlySales) * 100).toFixed(1) : 18.5;
+    const profitMarginPercent = monthlySales > 0 ? ((estimatedGrossProfit / monthlySales) * 100).toFixed(1) : 0;
 
     // 8. Top 5 Products by Sales
     const productSalesMap = {};

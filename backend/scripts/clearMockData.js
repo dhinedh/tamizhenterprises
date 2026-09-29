@@ -1,3 +1,5 @@
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const path = require('path');
@@ -27,8 +29,7 @@ const clearMockData = async () => {
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB successfully.');
 
-    // 1. Wipe all transactional, inventory, customer, and catalogue mock data
-    console.log('Clearing Products, Stock, Stores, Purchases, Orders, Invoices, Payments, Deliveries, Returns, Schemes, and Visits...');
+    console.log('Clearing all mock transactional, inventory, catalog, customer, and sales force data...');
     await Promise.all([
       Product.deleteMany({}),
       Stock.deleteMany({}),
@@ -41,24 +42,13 @@ const clearMockData = async () => {
       Return.deleteMany({}),
       Delivery.deleteMany({}),
       Scheme.deleteMany({}),
-      SalesmanVisit.deleteMany({})
+      SalesmanVisit.deleteMany({}),
+      Salesman.deleteMany({}),
+      Manufacturer.deleteMany({}),
+      User.deleteMany({ role: { $ne: 'Owner' } })
     ]);
 
-    // 2. Reset Manufacturer financial and inventory counters to 0
-    console.log('Resetting manufacturer counters (outstanding, purchased, paid to 0)...');
-    await Manufacturer.updateMany({}, {
-      $set: {
-        currentOutstanding: 0,
-        totalPurchased: 0,
-        totalPaid: 0,
-        productsCount: 0,
-        totalPhysicalStock: 0
-      }
-    });
-
-    // 3. Ensure Admin / Owner account is intact and clean up any mock store users
-    await User.deleteMany({ role: { $in: ['Store'] } });
-
+    // Ensure Admin / Owner account is intact
     let admin = await User.findOne({ email: 'admin@tamilenterprises.com' });
     if (!admin) {
       console.log('Creating clean Admin / Owner account...');
@@ -74,27 +64,9 @@ const clearMockData = async () => {
       console.log('Admin account preserved:', admin.email);
     }
 
-    // 4. Ensure 1 field salesman exists for field activities
-    let salesman = await Salesman.findOne();
-    if (!salesman) {
-      salesman = await Salesman.create({
-        name: 'Murugan P',
-        phone: '+91 98402 34567',
-        email: 'murugan@tamilenterprises.com',
-        assignedRoute: 'Madurai Central & Retail Beat',
-        totalOrdersCount: 0,
-        totalSalesValue: 0,
-        status: 'Active'
-      });
-    } else {
-      salesman.totalOrdersCount = 0;
-      salesman.totalSalesValue = 0;
-      await salesman.save();
-    }
-
-    console.log('=== DATA CLEAR COMPLETE ===');
-    console.log('All mock products, stock, stores, orders, invoices, and payments have been removed.');
-    console.log('Manufacturer brands and Admin login (admin@tamilenterprises.com / admin123) are ready for manual entries.');
+    console.log('=== ALL MOCK DATA REMOVED SUCCESSFULLY ===');
+    console.log('The database is completely fresh with 0 mock records.');
+    console.log('Admin login (admin@tamilenterprises.com / admin123) is preserved and ready for manual operations.');
 
     await mongoose.disconnect();
     process.exit(0);
