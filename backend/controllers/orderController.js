@@ -210,11 +210,35 @@ const approveOrder = async (req, res) => {
 // @route   PUT /api/orders/:id
 const updateOrder = async (req, res) => {
   try {
-    const order = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { status, receivedByName } = req.body;
+    const updateData = { ...req.body };
+
+    if (status === 'Delivered') {
+      updateData.deliveryDate = new Date();
+    }
+
+    const order = await Order.findByIdAndUpdate(req.params.id, updateData, { new: true })
+      .populate('storeId')
+      .populate('salesmanId')
+      .populate('items.productId');
+
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
-    res.json({ success: true, data: order });
+
+    // If marked as Delivered, also sync any associated Delivery document
+    if (status === 'Delivered') {
+      await Delivery.updateMany(
+        { orderId: order._id },
+        {
+          status: 'Delivered',
+          actualDeliveryDate: new Date(),
+          receivedByName: receivedByName || 'Store Receiving Manager'
+        }
+      );
+    }
+
+    res.json({ success: true, message: `Order status updated to ${order.status}`, data: order });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

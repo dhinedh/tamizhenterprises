@@ -49,6 +49,7 @@ const orderSchema = new mongoose.Schema({
   deliveryNotes: { type: String, default: '' },
   approvedBy: { type: String, default: '' },
   approvalDate: { type: Date },
+  deliveryDate: { type: Date },
   invoiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice', default: null },
   deliveryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Delivery', default: null }
 }, {

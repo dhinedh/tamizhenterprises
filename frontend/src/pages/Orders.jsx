@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Plus, CheckCircle2, Clock, Truck, FileText, AlertCircle, Eye, XCircle, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Plus, CheckCircle2, Clock, Truck, FileText, AlertCircle, Eye, XCircle, ArrowRight, ChevronDown } from 'lucide-react';
 import api from '../api/client';
 import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
@@ -17,6 +17,7 @@ const Orders = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [successToast, setSuccessToast] = useState('');
 
   // Stock Transfer Modal
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -180,8 +181,40 @@ const Orders = () => {
     }
   };
 
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    try {
+      const res = await api.put(`/orders/${orderId}`, { status: newStatus });
+      if (res.data.success) {
+        setSuccessToast(`Order status updated to "${newStatus}" successfully!`);
+        setTimeout(() => setSuccessToast(''), 4500);
+        fetchOrders();
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error updating order status');
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Success Notification */}
+      {successToast && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-900 text-xs shadow-md animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5 font-medium">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span>{successToast}</span>
+          </div>
+          <button
+            onClick={() => setSuccessToast('')}
+            className="text-emerald-700 hover:text-emerald-950 font-bold ml-4 text-base leading-none"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -269,7 +302,38 @@ const Orders = () => {
                         ₹ {Number(ord.grandTotal).toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <StatusBadge status={ord.status} />
+                        {isOwner ? (
+                          <div className="relative inline-block">
+                            <select
+                              value={ord.status}
+                              onChange={(e) => handleUpdateStatus(ord._id, e.target.value)}
+                              className={`px-2.5 py-1 rounded-full text-[11px] font-bold border cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 appearance-none pr-5 text-center ${
+                                ord.status === 'Delivered'
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                  : ord.status === 'Dispatched'
+                                  ? 'bg-teal-100 text-teal-800 border-teal-300'
+                                  : ord.status === 'Approved'
+                                  ? 'bg-blue-100 text-blue-800 border-blue-300'
+                                  : ord.status === 'Processing'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                  : ord.status === 'Cancelled'
+                                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                  : 'bg-slate-100 text-slate-800 border-slate-300'
+                              }`}
+                              title="Click to edit order status"
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Approved">Approved</option>
+                              <option value="Processing">Processing</option>
+                              <option value="Dispatched">Dispatched</option>
+                              <option value="Delivered">Delivered</option>
+                              <option value="Cancelled">Cancelled</option>
+                            </select>
+                            <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" />
+                          </div>
+                        ) : (
+                          <StatusBadge status={ord.status} />
+                        )}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -280,6 +344,17 @@ const Orders = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+
+                          {/* Mark as Delivered button for Dispatched or Processing orders */}
+                          {isOwner && (ord.status === 'Dispatched' || ord.status === 'Processing') && (
+                            <button
+                              onClick={() => handleUpdateStatus(ord._id, 'Delivered')}
+                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold text-[11px] flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                              title="Mark order as Delivered to retail store"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Mark Delivered
+                            </button>
+                          )}
 
                           {/* Workflow buttons for Owner */}
                           {isOwner && (ord.status === 'Pending' || ord.status === 'Approved') && (
@@ -506,8 +581,26 @@ const Orders = () => {
                 <span className="font-bold text-slate-900">{selectedOrder.storeId?.name}</span>
                 <div className="text-[10px] text-slate-500">{selectedOrder.storeId?.city} &bull; {new Date(selectedOrder.orderDate).toLocaleDateString('en-IN')}</div>
               </div>
-              <div className="text-right">
-                <StatusBadge status={selectedOrder.status} />
+              <div className="flex items-center gap-2">
+                {isOwner ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-500 font-semibold uppercase">Status:</span>
+                    <select
+                      value={selectedOrder.status}
+                      onChange={(e) => handleUpdateStatus(selectedOrder._id, e.target.value)}
+                      className="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-300 bg-white cursor-pointer focus:ring-1 focus:ring-teal-500"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Approved">Approved</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Dispatched">Dispatched</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                ) : (
+                  <StatusBadge status={selectedOrder.status} />
+                )}
               </div>
             </div>
 
@@ -535,6 +628,24 @@ const Orders = () => {
                 Grand Total: ₹ {Number(selectedOrder.grandTotal).toLocaleString('en-IN')}
               </div>
             </div>
+
+            {isOwner && (
+              <div className="pt-3 flex justify-between items-center border-t border-slate-200">
+                <span className="text-[11px] text-slate-500">
+                  {selectedOrder.status === 'Delivered'
+                    ? '✓ This order has been delivered to the retail store.'
+                    : `Current order status is ${selectedOrder.status}.`}
+                </span>
+                {selectedOrder.status !== 'Delivered' && (
+                  <button
+                    onClick={() => handleUpdateStatus(selectedOrder._id, 'Delivered')}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> Mark Order as Delivered
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </Modal>
       )}
