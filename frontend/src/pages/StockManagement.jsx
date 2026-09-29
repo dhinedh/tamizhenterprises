@@ -290,9 +290,9 @@ const StockManagement = () => {
               setIsTransferModalOpen(true);
             }}
             className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
-            title="Dispatch stock directly to retail store and generate GST invoice bill"
+            title="Dispatch stock directly to retail shop and generate GST invoice bill"
           >
-            <Truck className="w-4 h-4" /> + Transfer to Store & Bill
+            <Truck className="w-4 h-4" /> + Transfer to Shop & Bill
           </button>
           <button
             onClick={() => openInwardModal()}
@@ -349,7 +349,7 @@ const StockManagement = () => {
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          <Truck className="w-4 h-4 text-emerald-600" /> Store Transfers & Bills
+          <Truck className="w-4 h-4 text-emerald-600" /> Shop Transfers & Bills
         </button>
 
         <button
@@ -515,7 +515,7 @@ const StockManagement = () => {
               <div className="flex items-center gap-2">
                 <UserCheck className="w-5 h-5 text-amber-700" />
                 <h3 className="font-bold text-slate-900 text-sm">
-                  Field Salesperson Store Booking Requests ({salesmanRequests.length} Pending)
+                  Field Salesperson Shop Booking Requests ({salesmanRequests.length} Pending)
                 </h3>
               </div>
               <p className="text-xs text-slate-600 mt-1">
@@ -578,7 +578,7 @@ const StockManagement = () => {
                     {/* Store & Salesman details row */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-b border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 px-4 sm:px-6 text-xs">
                       <div>
-                        <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Destination Retail Store</span>
+                        <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Destination Retail Shop</span>
                         <div className="font-bold text-slate-900">{store?.name || 'Retail Client'}</div>
                         <div className="text-[11px] text-slate-600">
                           {store?.city} &bull; Owner: {store?.ownerName} ({store?.phone})
@@ -704,9 +704,9 @@ const StockManagement = () => {
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200">
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Store Stock Transfers & GST Invoices</h3>
+              <h3 className="font-bold text-slate-900 text-sm">Shop Stock Transfers & GST Invoices</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Complete audit history of stock dispatched to retail stores with generated GST Tax Invoices
+                Complete audit history of stock dispatched to retail shops with generated GST Tax Invoices
               </p>
             </div>
             <button
@@ -716,7 +716,7 @@ const StockManagement = () => {
               }}
               className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
             >
-              <Truck className="w-4 h-4" /> + New Store Stock Transfer
+              <Truck className="w-4 h-4" /> + New Shop Stock Transfer
             </button>
           </div>
 
@@ -726,7 +726,7 @@ const StockManagement = () => {
                 <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                   <tr>
                     <th className="py-3 px-3">Invoice / Challan</th>
-                    <th className="py-3 px-3">Destination Store</th>
+                    <th className="py-3 px-3">Destination Shop</th>
                     <th className="py-3 px-3">Dispatch Date</th>
                     <th className="py-3 px-3">Payment Terms</th>
                     <th className="py-3 px-3 text-right">Taxable Subtotal</th>
@@ -781,7 +781,7 @@ const StockManagement = () => {
                   ) : (
                     <tr>
                       <td colSpan="8" className="py-8 text-center text-slate-400">
-                        No store transfers recorded yet. Click "+ New Store Stock Transfer" above to initiate a dispatch.
+                        No shop transfers recorded yet. Click "+ New Shop Stock Transfer" above to initiate a dispatch.
                       </td>
                     </tr>
                   )}
@@ -983,7 +983,7 @@ const StockManagement = () => {
             >
               <option value="Physical Count Verification">Physical Count Verification</option>
               <option value="Warehouse Handling Damage">Warehouse Handling Damage</option>
-              <option value="Store Free Sample Sampling">Store Free Sample Sampling</option>
+              <option value="Shop Free Sample Sampling">Shop Free Sample Sampling</option>
               <option value="Supplier Inward Correction">Supplier Inward Correction</option>
             </select>
           </div>
@@ -995,7 +995,7 @@ const StockManagement = () => {
               value={adjustData.notes}
               onChange={(e) => setAdjustData({ ...adjustData, notes: e.target.value })}
               className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
-              placeholder="e.g. Verified by Store Manager during quarterly inventory audit"
+              placeholder="e.g. Verified by Shop Manager during quarterly inventory audit"
             />
           </div>
 

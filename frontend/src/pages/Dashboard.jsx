@@ -689,7 +689,7 @@ const Dashboard = () => {
             </div>
             <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center min-w-[120px]">
               <div className="text-2xl font-bold text-emerald-300">{kpis.activeStoresCount ?? 0}</div>
-              <div className="text-[11px] font-medium text-slate-300 mt-0.5">Retail Stores</div>
+              <div className="text-[11px] font-medium text-slate-300 mt-0.5">Retail Shops</div>
             </div>
           </div>
         </div>
@@ -714,9 +714,9 @@ const Dashboard = () => {
         />
 
         <MetricCard
-          title="Store Receivables"
+          title="Shop Receivables"
           value={`₹ ${Number(kpis.totalOutstandingReceivables || 0).toLocaleString('en-IN')}`}
-          subtitle={`Active Stores: ${kpis.activeStoresCount || 0}`}
+          subtitle={`Active Shops: ${kpis.activeStoresCount || 0}`}
           icon={Store}
           color="amber"
         />

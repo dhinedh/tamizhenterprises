@@ -206,7 +206,7 @@ const StoreTransferModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={orderId ? "Approve Salesperson Request & Dispatch Stock" : "Transfer Stock to Store & Generate GST Invoice"}
+      title={orderId ? "Approve Salesperson Request & Dispatch Stock" : "Transfer Stock to Shop & Generate GST Invoice"}
       maxWidth="max-w-3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -217,17 +217,17 @@ const StoreTransferModal = ({
           </div>
         )}
 
-        {/* Store & Salesperson Selection */}
+        {/* Shop & Salesperson Selection */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Destination Store *</label>
+            <label className="block font-semibold text-slate-700 mb-1">Destination Shop *</label>
             <select
               value={storeId}
               onChange={(e) => handleStoreChange(e.target.value)}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white font-medium"
               required
             >
-              <option value="">Select Destination Store...</option>
+              <option value="">Select Destination Shop...</option>
               {effectiveStores.map((s) => (
                 <option key={s._id} value={s._id}>
                   {s.name} ({s.city}) &bull; Due: ₹{s.outstandingBalance || 0}
@@ -269,7 +269,7 @@ const StoreTransferModal = ({
                   onChange={(e) => setPaymentType(e.target.value)}
                   className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
                 >
-                  <option value="Credit">Credit Bill (Store Ledger)</option>
+                  <option value="Credit">Credit Bill (Shop Ledger)</option>
                   <option value="Cash">Cash on Delivery (Paid)</option>
                   <option value="UPI">Instant UPI</option>
                   <option value="Cheque">Post-Dated Cheque</option>

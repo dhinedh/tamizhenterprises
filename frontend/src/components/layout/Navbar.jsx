@@ -88,7 +88,7 @@ const Navbar = ({ onOpenSidebar, hasSidebar }) => {
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Store (Retailer)
+            Shop (Retailer)
           </button>
         </div>
 

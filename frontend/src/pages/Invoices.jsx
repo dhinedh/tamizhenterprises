@@ -78,7 +78,7 @@ const Invoices = () => {
               <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                 <tr>
                   <th className="py-3 px-3">Invoice Number</th>
-                  <th className="py-3 px-3">Store Name</th>
+                  <th className="py-3 px-3">Shop Name</th>
                   <th className="py-3 px-3">Invoice Date</th>
                   <th className="py-3 px-3">Due Date</th>
                   <th className="py-3 px-3 text-right">Taxable Subtotal</th>

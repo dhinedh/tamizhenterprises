@@ -219,7 +219,7 @@ const Orders = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-            Store Orders & Fulfillment Lifecycle
+            Shop Orders & Fulfillment Lifecycle
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Order Placement &rarr; Admin Stock Reservation &rarr; Invoice Generation &rarr; Vehicle Dispatch &rarr; Delivery
@@ -234,7 +234,7 @@ const Orders = () => {
               }}
               className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
             >
-              <Truck className="w-4 h-4" /> + Transfer Stock to Store & Bill
+              <Truck className="w-4 h-4" /> + Transfer Stock to Shop & Bill
             </button>
           )}
           <button
@@ -273,7 +273,7 @@ const Orders = () => {
               <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                 <tr>
                   <th className="py-3 px-3">Order Number</th>
-                  <th className="py-3 px-3">Store Name</th>
+                  <th className="py-3 px-3">Shop Name</th>
                   <th className="py-3 px-3">Salesman</th>
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3 text-right">Grand Total</th>
@@ -418,12 +418,12 @@ const Orders = () => {
       <Modal
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
-        title="Book Wholesale Order for Store"
+        title="Book Wholesale Order for Shop"
         maxWidth="max-w-3xl"
       >
         <form onSubmit={handlePlaceOrder} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Select Customer Retail Store *</label>
+            <label className="block font-semibold text-slate-700 mb-1">Select Customer Retail Shop *</label>
             <select
               required
               disabled={isStore}

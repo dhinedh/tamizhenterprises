@@ -132,7 +132,7 @@ const Stores = () => {
       if (res.data.success) {
         setIsCreateModalOpen(false);
         resetForm();
-        setSuccessToast(`Store "${res.data.data.name}" registered successfully!`);
+        setSuccessToast(`Shop "${res.data.data.name}" registered successfully!`);
         setTimeout(() => setSuccessToast(''), 5000);
         fetchStores();
       }
@@ -258,15 +258,15 @@ const Stores = () => {
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                Store Master & Distribution Network
+                Shop Master & Distribution Network
               </span>
             </div>
             <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
               <Store className="w-6 h-6 text-teal-400" />
-              Retail Stores Directory & Complete 360° Tracking
+              Retail Shops Directory & Complete 360° Tracking
             </h1>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Manage retail stores, supermarkets & grocery accounts. Click any store to inspect complete 360° tracking, order history, GST tax invoices, payment collections, and delivery challans.
+              Manage retail shops, supermarkets & grocery accounts. Click any shop to inspect complete 360° tracking, order history, GST tax invoices, payment collections, and delivery challans.
             </p>
           </div>
 
@@ -278,7 +278,7 @@ const Stores = () => {
               }}
               className="px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
             >
-              <Plus className="w-4 h-4" /> Register New Store
+              <Plus className="w-4 h-4" /> Register New Shop
             </button>
           )}
         </div>
@@ -294,8 +294,8 @@ const Stores = () => {
             <Store className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Stores</div>
-            <div className="text-lg font-extrabold text-slate-900">{stats.totalStores} Outlets</div>
+            <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Shops</div>
+            <div className="text-lg font-extrabold text-slate-900">{stats.totalStores} Shops</div>
           </div>
         </div>
 
@@ -318,7 +318,7 @@ const Stores = () => {
           <div>
             <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Over Credit Limit</div>
             <div className={`text-lg font-extrabold ${stats.overLimitCount > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
-              {stats.overLimitCount} Stores
+              {stats.overLimitCount} Shops
             </div>
           </div>
         </div>
@@ -342,7 +342,7 @@ const Stores = () => {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search stores by shop name, code, owner, mobile, city, or GSTIN..."
+            placeholder="Search shops by name, code, owner, mobile, city, or GSTIN..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
@@ -362,16 +362,16 @@ const Stores = () => {
             ))}
           </select>
 
-          {/* Store Type Filter */}
+          {/* Shop Type Filter */}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
           >
-            <option value="All">All Store Types</option>
+            <option value="All">All Shop Types</option>
             <option value="Supermarket">Supermarket</option>
             <option value="Kirana">Kirana / Provision</option>
-            <option value="Departmental">Departmental Store</option>
+            <option value="Departmental">Departmental Shop</option>
             <option value="Wholesaler">Wholesaler</option>
           </select>
 
@@ -414,7 +414,7 @@ const Stores = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                 <tr>
-                  <th className="py-3 px-3">Store Name & Code</th>
+                  <th className="py-3 px-3">Shop Name & Code</th>
                   <th className="py-3 px-3">Type & City</th>
                   <th className="py-3 px-3">Owner & Contact</th>
                   <th className="py-3 px-3 text-right">Credit Terms</th>
@@ -521,7 +521,7 @@ const Stores = () => {
                 ) : (
                   <tr>
                     <td colSpan="6" className="py-12 text-center text-slate-400">
-                      No retail stores found matching current search & filters.
+                      No retail shops found matching current search & filters.
                     </td>
                   </tr>
                 )}
@@ -536,7 +536,7 @@ const Stores = () => {
         <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          title="Register New Retail Store / Supermarket"
+          title="Register New Retail Shop / Supermarket"
           maxWidth="max-w-2xl"
         >
           <form onSubmit={handleCreateStore} className="space-y-4 text-xs">
@@ -547,11 +547,11 @@ const Stores = () => {
               </div>
             )}
 
-            {/* Store Name & Store Type */}
+            {/* Shop Name & Shop Type */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Store / Shop Trade Name <span className="text-rose-500">*</span>
+                  Shop Trade Name <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -564,7 +564,7 @@ const Stores = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Store Type</label>
+                <label className="block font-semibold text-slate-700 mb-1">Shop Type</label>
                 <select
                   value={formData.storeType}
                   onChange={(e) => setFormData({ ...formData, storeType: e.target.value })}
@@ -572,7 +572,7 @@ const Stores = () => {
                 >
                   <option value="Supermarket">Supermarket</option>
                   <option value="Kirana">Kirana / Provision</option>
-                  <option value="Departmental">Departmental Store</option>
+                  <option value="Departmental">Departmental Shop</option>
                   <option value="Wholesaler">Semi-Wholesaler</option>
                   <option value="Pharmacy/FMCG">Pharmacy / FMCG</option>
                 </select>
@@ -714,7 +714,7 @@ const Stores = () => {
                 disabled={submitting}
                 className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-extrabold shadow-sm transition-all disabled:opacity-50"
               >
-                {submitting ? 'Registering Store...' : 'Register Store in ERP'}
+                {submitting ? 'Registering Shop...' : 'Register Shop in ERP'}
               </button>
             </div>
           </form>

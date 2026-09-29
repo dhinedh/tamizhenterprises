@@ -145,7 +145,7 @@ const Salesmen = () => {
             Sales Force & Field Operations
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Field executive tracking &bull; Monthly booking targets vs achievement &bull; Store check-in/out visit logs
+            Field executive tracking &bull; Monthly booking targets vs achievement &bull; Shop check-in/out visit logs
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ const Salesmen = () => {
               onClick={() => setIsVisitModalOpen(true)}
               className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
             >
-              <MapPin className="w-4 h-4" /> Log Store Visit
+              <MapPin className="w-4 h-4" /> Log Shop Visit
             </button>
           )}
         </div>
@@ -182,7 +182,7 @@ const Salesmen = () => {
                     <div className="text-[10px] text-teal-700 font-semibold">{sls.employeeCode} &bull; {sls.territory}</div>
                   </div>
                   <span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-bold text-xs flex items-center justify-center">
-                    {sls.assignedStoresCount || 0} Stores
+                    {sls.assignedStoresCount || 0} Shops
                   </span>
                 </div>
 
@@ -232,14 +232,14 @@ const Salesmen = () => {
       )}
 
       {/* Field Visits Log */}
-      <Card title="Recent Store Field Visits & Audits" subtitle="Real-time check-in logs from salesmen on the road">
+      <Card title="Recent Shop Field Visits & Audits" subtitle="Real-time check-in logs from salesmen on the road">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
               <tr>
                 <th className="py-3 px-3">Date & Time</th>
                 <th className="py-3 px-3">Salesman</th>
-                <th className="py-3 px-3">Store Visited</th>
+                <th className="py-3 px-3">Shop Visited</th>
                 <th className="py-3 px-3">Visit Purpose</th>
                 <th className="py-3 px-3">Notes & Outcome</th>
                 <th className="py-3 px-3 text-right">Payment Collected</th>
@@ -292,7 +292,7 @@ const Salesmen = () => {
       </Card>
 
       {/* Record Visit Modal */}
-      <Modal isOpen={isVisitModalOpen} onClose={() => setIsVisitModalOpen(false)} title="Log Store Field Visit & Check-in">
+      <Modal isOpen={isVisitModalOpen} onClose={() => setIsVisitModalOpen(false)} title="Log Shop Field Visit & Check-in">
         <form onSubmit={handleRecordVisit} className="space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -309,7 +309,7 @@ const Salesmen = () => {
               </select>
             </div>
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Retail Store Visited *</label>
+              <label className="block font-semibold text-slate-700 mb-1">Retail Shop Visited *</label>
               <select
                 required
                 value={visitData.storeId}
@@ -334,7 +334,7 @@ const Salesmen = () => {
                 <option value="Order Booking">Order Booking</option>
                 <option value="Payment Collection">Payment Collection</option>
                 <option value="Stock Audit">Stock Audit</option>
-                <option value="New Store Intro">New Store Intro</option>
+                <option value="New Shop Intro">New Shop Intro</option>
                 <option value="Relationship Meeting">Relationship Meeting</option>
               </select>
             </div>
@@ -351,14 +351,14 @@ const Salesmen = () => {
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Field Visit Remarks / Store Feedback</label>
+            <label className="block font-semibold text-slate-700 mb-1">Field Visit Remarks / Shop Feedback</label>
             <textarea
               rows="3"
               required
               value={visitData.notes}
               onChange={(e) => setVisitData({ ...visitData, notes: e.target.value })}
               className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
-              placeholder="e.g. Met owner. Checked shelf space for Good Day & Dark Fantasy. Booked fresh order for weekend delivery."
+              placeholder="e.g. Met owner. Checked shelf space for products. Booked fresh order for weekend delivery."
             />
           </div>
 

@@ -119,10 +119,10 @@ const Sidebar = ({ isOpen, onClose }) => {
       ]
     },
     {
-      group: 'Store Distribution',
+      group: 'Shop Distribution',
       items: [
         {
-          name: 'Retail Stores',
+          name: 'Retail Shops',
           path: '/stores',
           icon: Store,
           badge: 'Master'
@@ -134,7 +134,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           badge: 'Direct Bill'
         },
         {
-          name: 'Store Orders',
+          name: 'Shop Orders',
           path: '/orders',
           icon: ShoppingCart
         },
@@ -216,10 +216,10 @@ const Sidebar = ({ isOpen, onClose }) => {
       ]
     },
     {
-      group: 'Store Distribution',
+      group: 'Shop Distribution',
       items: [
         {
-          name: 'Retail Stores',
+          name: 'Retail Shops',
           path: '/stores',
           icon: Store,
           badge: 'Master'
@@ -231,7 +231,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           badge: 'Direct Bill'
         },
         {
-          name: 'Store Orders',
+          name: 'Shop Orders',
           path: '/orders',
           icon: ShoppingCart
         },

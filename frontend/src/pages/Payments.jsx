@@ -157,7 +157,7 @@ const Payments = () => {
             Financial Ledger & Payments
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Store Collections (Receivables Inflow) &bull; Manufacturer Settlements (Payables Outflow) &bull; Working Capital
+            Shop Collections (Receivables Inflow) &bull; Manufacturer Settlements (Payables Outflow) &bull; Working Capital
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -165,7 +165,7 @@ const Payments = () => {
             onClick={() => setIsCollectionModalOpen(true)}
             className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors"
           >
-            <ArrowDownLeft className="w-4 h-4" /> Collect Store Due
+            <ArrowDownLeft className="w-4 h-4" /> Collect Shop Due
           </button>
           {isOwner && (
             <button
@@ -183,13 +183,13 @@ const Payments = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-xl border border-slate-200">
             <div className="flex items-center gap-2 text-emerald-700 text-xs font-semibold uppercase">
-              <ArrowDownLeft className="w-4 h-4" /> Total Store Receivables (Due In)
+              <ArrowDownLeft className="w-4 h-4" /> Total Shop Receivables (Due In)
             </div>
             <div className="text-2xl font-bold text-slate-900 mt-2">
               ₹ {Number(outstandings.totalStoreReceivables).toLocaleString('en-IN')}
             </div>
             <div className="text-[11px] text-slate-400 mt-1">
-              Outstanding across {outstandings.storesWithOutstanding?.length || 0} stores
+              Outstanding across {outstandings.storesWithOutstanding?.length || 0} shops
             </div>
           </div>
 
@@ -235,7 +235,7 @@ const Payments = () => {
             typeFilter === 'Store_Collection' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
           }`}
         >
-          Store Collections (Inflow)
+          Shop Collections (Inflow)
         </button>
         <button
           onClick={() => setTypeFilter('Manufacturer_Payment')}
@@ -258,7 +258,7 @@ const Payments = () => {
                 <tr>
                   <th className="py-3 px-3">Receipt / Voucher #</th>
                   <th className="py-3 px-3">Transaction Type</th>
-                  <th className="py-3 px-3">Party (Store / Manufacturer)</th>
+                  <th className="py-3 px-3">Party (Shop / Manufacturer)</th>
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3">Mode & Reference</th>
                   <th className="py-3 px-3 text-right">Amount</th>
@@ -277,7 +277,7 @@ const Payments = () => {
                         <td className="py-3 px-3">
                           {isInflow ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                              <ArrowDownLeft className="w-3 h-3" /> Store Collection
+                              <ArrowDownLeft className="w-3 h-3" /> Shop Collection
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
@@ -328,11 +328,11 @@ const Payments = () => {
       <Modal
         isOpen={isCollectionModalOpen}
         onClose={() => setIsCollectionModalOpen(false)}
-        title="Record Store Payment Collection"
+        title="Record Shop Payment Collection"
       >
         <form onSubmit={handleRecordCollection} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Customer Store *</label>
+            <label className="block font-semibold text-slate-700 mb-1">Customer Shop *</label>
             <select
               required
               value={collectionData.storeId}

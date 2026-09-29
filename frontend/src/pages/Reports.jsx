@@ -58,7 +58,7 @@ const Reports = () => {
             Executive Analytics & Performance Reports
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Store velocity &bull; Fast/Slow/Dead stock classification &bull; Margin analytics &bull; Brand contribution
+            Shop velocity &bull; Fast/Slow/Dead stock classification &bull; Margin analytics &bull; Brand contribution
           </p>
         </div>
 
@@ -108,7 +108,7 @@ const Reports = () => {
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
-          Retail Store Growth & AOV
+          Retail Shop Growth & AOV
         </button>
         <button
           onClick={() => setReportType('mfg-perf')}
@@ -234,7 +234,7 @@ const Reports = () => {
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                   <tr>
-                    <th className="py-3 px-3">Retail Store Name</th>
+                    <th className="py-3 px-3">Retail Shop Name</th>
                     <th className="py-3 px-3">City</th>
                     <th className="py-3 px-3">Assigned Salesman</th>
                     <th className="py-3 px-3 text-right">Orders Count</th>

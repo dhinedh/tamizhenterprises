@@ -430,7 +430,7 @@ const StoreTransfers = () => {
 
     const summary =
       `TAMIL ENTERPRISES - INVOICE ${invNum}\n` +
-      `Store: ${store?.name || ''} (${store?.city || ''})\n` +
+      `Shop: ${store?.name || ''} (${store?.city || ''})\n` +
       `Amount: ₹ ${Number(total).toLocaleString('en-IN')}\n` +
       `Challan: ${inv.deliveryChallanNo || ''}\n` +
       `Payment UPI: tamilenterprises@hdfcbank`;
@@ -506,10 +506,10 @@ const StoreTransfers = () => {
             </div>
             <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
               <ArrowRightLeft className="w-6 h-6 text-teal-400" />
-              Stock Transfers to Stores & GST Invoicing
+              Stock Transfers to Shops & GST Invoicing
             </h1>
             <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Dispatch physical warehouse goods to retail supermarkets, grocery stores & dealer outlets. Automatically deducts inventory, records outward ledger, and generates official GST Tax Invoices to send directly to stores.
+              Dispatch physical warehouse goods to retail supermarkets, grocery shops & dealer outlets. Automatically deducts inventory, records outward ledger, and generates official GST Tax Invoices to send directly to shops.
             </p>
           </div>
 
@@ -614,7 +614,7 @@ const StoreTransfers = () => {
                     <span className="w-6 h-6 rounded-full bg-teal-100 text-teal-800 flex items-center justify-center text-xs font-bold">
                       1
                     </span>
-                    <h3 className="text-sm font-bold text-slate-900">Destination Store & Route</h3>
+                    <h3 className="text-sm font-bold text-slate-900">Destination Shop & Route</h3>
                   </div>
                   <span className="text-[11px] text-slate-400">Step 1 of 2</span>
                 </div>
@@ -622,7 +622,7 @@ const StoreTransfers = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Select Retail Store / Supermarket <span className="text-rose-500">*</span>
+                      Select Retail Shop / Supermarket <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={storeId}
@@ -630,7 +630,7 @@ const StoreTransfers = () => {
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
                       required
                     >
-                      <option value="">-- Choose Destination Store --</option>
+                      <option value="">-- Choose Destination Shop --</option>
                       {stores.map((s) => (
                         <option key={s._id} value={s._id}>
                           {s.name} ({s.code}) &bull; {s.city} {s.gstNumber ? `&bull; GST: ${s.gstNumber}` : ''}
@@ -639,11 +639,11 @@ const StoreTransfers = () => {
                     </select>
                   </div>
 
-                  {/* Store Detail Quick Preview Card */}
+                  {/* Shop Detail Quick Preview Card */}
                   {selectedStore && (
                     <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-xl grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                       <div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Store Contact</span>
+                        <span className="text-[10px] text-slate-400 uppercase font-semibold block">Shop Contact</span>
                         <div className="font-bold text-slate-800">{selectedStore.name}</div>
                         <div className="text-slate-500 text-[11px] mt-0.5 flex items-center gap-1">
                           <Phone className="w-3 h-3 text-slate-400" />
@@ -682,7 +682,7 @@ const StoreTransfers = () => {
                       onChange={(e) => setPaymentType(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     >
-                      <option value="Credit">Credit (Standard Store Account)</option>
+                      <option value="Credit">Credit (Standard Shop Account)</option>
                       <option value="Cash">Cash on Delivery (Immediate)</option>
                       <option value="UPI">UPI / Digital QR Code</option>
                       <option value="Cheque">Bank Cheque</option>
@@ -1086,13 +1086,13 @@ const StoreTransfers = () => {
                   <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                     <tr>
                       <th className="py-3 px-3">Invoice & DC Challan</th>
-                      <th className="py-3 px-3">Destination Store</th>
+                      <th className="py-3 px-3">Destination Shop</th>
                       <th className="py-3 px-3">Dispatch Date</th>
                       <th className="py-3 px-3 text-right">Qty (Units)</th>
                       <th className="py-3 px-3 text-right">Taxable Subtotal</th>
                       <th className="py-3 px-3 text-right">Grand Total</th>
                       <th className="py-3 px-3 text-center">Status</th>
-                      <th className="py-3 px-3 text-right">Send to Store / Actions</th>
+                      <th className="py-3 px-3 text-right">Send to Shop / Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1208,13 +1208,13 @@ const StoreTransfers = () => {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-emerald-950 flex items-center gap-1.5">
-                  Stock Transfer Dispatched to Store!
+                  Stock Transfer Dispatched to Shop!
                   <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-200 text-emerald-900 font-bold uppercase">
                     Billed
                   </span>
                 </h4>
                 <p className="text-emerald-800 text-xs mt-0.5 leading-relaxed">
-                  Warehouse physical stock has been deducted and outward sales ledger entry recorded. Official GST Tax Invoice is ready to be sent to the store.
+                  Warehouse physical stock has been deducted and outward sales ledger entry recorded. Official GST Tax Invoice is ready to be sent to the shop.
                 </p>
               </div>
             </div>
@@ -1244,7 +1244,7 @@ const StoreTransfers = () => {
 
               <div className="grid grid-cols-2 gap-3 text-slate-600 text-[11px]">
                 <div>
-                  <span className="text-slate-400 text-[10px] block">Customer / Destination Store:</span>
+                  <span className="text-slate-400 text-[10px] block">Customer / Destination Shop:</span>
                   <strong className="text-slate-800 text-xs">
                     {generatedInvoiceData.invoice?.storeId?.name || selectedStore?.name || 'Retail Client'}
                   </strong>
@@ -1291,7 +1291,7 @@ const StoreTransfers = () => {
             <div className="space-y-2 pt-2">
               <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                 <Share2 className="w-4 h-4 text-teal-600" />
-                <span>Send Invoice & Payment Notification to Store:</span>
+                <span>Send Invoice & Payment Notification to Shop:</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -1302,7 +1302,7 @@ const StoreTransfers = () => {
                   className="w-full py-3 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all hover:scale-[1.01]"
                 >
                   <Share2 className="w-4 h-4" />
-                  Send to Store on WhatsApp
+                  Send to Shop on WhatsApp
                 </button>
 
                 {/* 2. Download Official PDF */}

@@ -27,7 +27,7 @@ const Deliveries = () => {
 
   // Mark Delivered Modal
   const [selectedDelivery, setSelectedDelivery] = useState(null);
-  const [receivedByName, setReceivedByName] = useState('Store Receiving Manager');
+  const [receivedByName, setReceivedByName] = useState('Shop Receiving Manager');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -135,7 +135,7 @@ const Deliveries = () => {
               <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
                 <tr>
                   <th className="py-3 px-3">Delivery #</th>
-                  <th className="py-3 px-3">Destination Store</th>
+                  <th className="py-3 px-3">Destination Shop</th>
                   <th className="py-3 px-3">Vehicle Details</th>
                   <th className="py-3 px-3">Driver Contact</th>
                   <th className="py-3 px-3">Dispatch Date</th>
@@ -312,7 +312,7 @@ const Deliveries = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Received By (Store Manager Name) *</label>
+              <label className="block font-semibold text-slate-700 mb-1">Received By (Shop Manager Name) *</label>
               <input
                 type="text"
                 required

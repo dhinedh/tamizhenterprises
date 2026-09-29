@@ -138,14 +138,14 @@ const Returns = () => {
             Returns Management & Credit Notes
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Store returns intake &bull; Damaged/expired scrap quarantine &bull; GST Credit Notes generation
+            Shop returns intake &bull; Damaged/expired scrap quarantine &bull; GST Credit Notes generation
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
           className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors"
         >
-          <Plus className="w-4 h-4" /> Intake Store Return
+          <Plus className="w-4 h-4" /> Intake Shop Return
         </button>
       </div>
 
@@ -160,7 +160,7 @@ const Returns = () => {
                 <tr>
                   <th className="py-3 px-3">Return #</th>
                   <th className="py-3 px-3">Credit Note #</th>
-                  <th className="py-3 px-3">Customer Store</th>
+                  <th className="py-3 px-3">Customer Shop</th>
                   <th className="py-3 px-3">Items & Reason</th>
                   <th className="py-3 px-3 text-right">Credit Value</th>
                   <th className="py-3 px-3 text-center">Status</th>
@@ -227,10 +227,10 @@ const Returns = () => {
       </Card>
 
       {/* Intake Return Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Intake Store Product Return">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Intake Shop Product Return">
         <form onSubmit={handleSubmitReturn} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Customer Store *</label>
+            <label className="block font-semibold text-slate-700 mb-1">Customer Shop *</label>
             <select
               required
               value={formData.storeId}
