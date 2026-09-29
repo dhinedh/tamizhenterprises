@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Store = require('../models/Store');
 const Order = require('../models/Order');
 const Invoice = require('../models/Invoice');
@@ -115,14 +116,17 @@ const createStore = async (req, res) => {
       }
     }
 
+    const cleanSalesmanId = (salesmanId && mongoose.Types.ObjectId.isValid(salesmanId)) ? salesmanId : null;
+
     const store = await Store.create({
       ...req.body,
       code: finalCode,
+      salesmanId: cleanSalesmanId,
       creditLimit: creditLimit || 50000
     });
 
-    if (salesmanId) {
-      await Salesman.findByIdAndUpdate(salesmanId, { $inc: { assignedStoresCount: 1 } });
+    if (cleanSalesmanId) {
+      await Salesman.findByIdAndUpdate(cleanSalesmanId, { $inc: { assignedStoresCount: 1 } });
     }
 
     res.status(201).json({ success: true, data: store });
@@ -140,15 +144,26 @@ const updateStore = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Store not found' });
     }
 
+    const cleanSalesmanId = (req.body.salesmanId && mongoose.Types.ObjectId.isValid(req.body.salesmanId))
+      ? req.body.salesmanId
+      : (req.body.salesmanId === '' || req.body.salesmanId === null ? null : undefined);
+
     // Check if salesman assignment changed
-    if (req.body.salesmanId && req.body.salesmanId !== oldStore.salesmanId?.toString()) {
+    if (cleanSalesmanId !== undefined && String(cleanSalesmanId) !== String(oldStore.salesmanId || '')) {
       if (oldStore.salesmanId) {
         await Salesman.findByIdAndUpdate(oldStore.salesmanId, { $inc: { assignedStoresCount: -1 } });
       }
-      await Salesman.findByIdAndUpdate(req.body.salesmanId, { $inc: { assignedStoresCount: 1 } });
+      if (cleanSalesmanId) {
+        await Salesman.findByIdAndUpdate(cleanSalesmanId, { $inc: { assignedStoresCount: 1 } });
+      }
     }
 
-    const updated = await Store.findByIdAndUpdate(req.params.id, req.body, {
+    const updatePayload = { ...req.body };
+    if (cleanSalesmanId !== undefined) {
+      updatePayload.salesmanId = cleanSalesmanId;
+    }
+
+    const updated = await Store.findByIdAndUpdate(req.params.id, updatePayload, {
       new: true,
       runValidators: true
     }).populate('salesmanId');

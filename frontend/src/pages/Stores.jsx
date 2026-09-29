@@ -124,7 +124,11 @@ const Stores = () => {
     setFormError('');
     setSubmitting(true);
     try {
-      const res = await api.post('/stores', formData);
+      const payload = {
+        ...formData,
+        salesmanId: formData.salesmanId || null
+      };
+      const res = await api.post('/stores', payload);
       if (res.data.success) {
         setIsCreateModalOpen(false);
         resetForm();
@@ -655,8 +659,8 @@ const Stores = () => {
               />
             </div>
 
-            {/* Credit Standing */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* Credit Standing & Salesman */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Credit Limit (₹)</label>
                 <input
@@ -677,6 +681,22 @@ const Stores = () => {
                   onChange={(e) => setFormData({ ...formData, creditPeriodDays: Number(e.target.value) })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Assigned Salesman</label>
+                <select
+                  value={formData.salesmanId || ''}
+                  onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none font-medium"
+                >
+                  <option value="">Direct / Unassigned</option>
+                  {salesmen.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name} ({s.territory || s.city || 'Sales'})
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
