@@ -625,7 +625,7 @@ const transferStockToStore = async (req, res) => {
         status: 'Dispatched',
         items: formattedOrderItems,
         subtotal: taxableSubtotal + totalDiscount,
-        discountTotal,
+        discountTotal: totalDiscount,
         taxTotal,
         grandTotal,
         paymentType,
