@@ -90,18 +90,34 @@ const getStoreById = async (req, res) => {
 const createStore = async (req, res) => {
   try {
     const { name, code, ownerName, phone, address, city, salesmanId, creditLimit } = req.body;
-    if (!name || !code || !ownerName || !phone || !address || !city) {
-      return res.status(400).json({ success: false, message: 'Name, Code, Owner Name, Phone, Address, and City are required' });
+    if (!name || !ownerName || !phone || !address || !city) {
+      return res.status(400).json({ success: false, message: 'Store Name, Owner Name, Phone, Address, and City are required' });
     }
 
-    const existing = await Store.findOne({ code: code.toUpperCase() });
-    if (existing) {
-      return res.status(400).json({ success: false, message: 'Store code already exists' });
+    let finalCode = (code || '').trim().toUpperCase();
+    if (!finalCode) {
+      // Auto-generate clean, unique store code (e.g. STR-MDU-05)
+      const cityClean = (city || 'STR').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MDU';
+      const count = await Store.countDocuments();
+      let candidate = `STR-${cityClean}-${String(count + 1).padStart(2, '0')}`;
+      let exists = await Store.findOne({ code: candidate });
+      let counter = count + 1;
+      while (exists) {
+        counter++;
+        candidate = `STR-${cityClean}-${String(counter).padStart(2, '0')}`;
+        exists = await Store.findOne({ code: candidate });
+      }
+      finalCode = candidate;
+    } else {
+      const existing = await Store.findOne({ code: finalCode });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Store code already exists' });
+      }
     }
 
     const store = await Store.create({
       ...req.body,
-      code: code.toUpperCase(),
+      code: finalCode,
       creditLimit: creditLimit || 50000
     });
 

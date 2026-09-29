@@ -543,9 +543,9 @@ const Stores = () => {
               </div>
             )}
 
-            {/* Store Name & Code */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+            {/* Store Name & Store Type */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="sm:col-span-2">
                 <label className="block font-semibold text-slate-700 mb-1">
                   Store / Shop Trade Name <span className="text-rose-500">*</span>
                 </label>
@@ -560,22 +560,23 @@ const Stores = () => {
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Store Code <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. STR-MDU-15"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl font-mono uppercase focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
+                <label className="block font-semibold text-slate-700 mb-1">Store Type</label>
+                <select
+                  value={formData.storeType}
+                  onChange={(e) => setFormData({ ...formData, storeType: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none font-medium"
+                >
+                  <option value="Supermarket">Supermarket</option>
+                  <option value="Kirana">Kirana / Provision</option>
+                  <option value="Departmental">Departmental Store</option>
+                  <option value="Wholesaler">Semi-Wholesaler</option>
+                  <option value="Pharmacy/FMCG">Pharmacy / FMCG</option>
+                </select>
               </div>
             </div>
 
             {/* Proprietor & Contact Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Owner / Proprietor <span className="text-rose-500">*</span>
@@ -602,20 +603,6 @@ const Stores = () => {
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-xl font-mono focus:ring-1 focus:ring-teal-500 focus:outline-none"
                 />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Store Type</label>
-                <select
-                  value={formData.storeType}
-                  onChange={(e) => setFormData({ ...formData, storeType: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none font-medium"
-                >
-                  <option value="Supermarket">Supermarket</option>
-                  <option value="Kirana">Kirana / Provision</option>
-                  <option value="Departmental">Departmental Store</option>
-                  <option value="Wholesaler">Semi-Wholesaler</option>
-                </select>
               </div>
             </div>
 
