@@ -91,8 +91,8 @@ const getStoreById = async (req, res) => {
 const createStore = async (req, res) => {
   try {
     const { name, code, ownerName, phone, address, city, salesmanId, creditLimit } = req.body;
-    if (!name || !ownerName || !phone || !address || !city) {
-      return res.status(400).json({ success: false, message: 'Store Name, Owner Name, Phone, Address, and City are required' });
+    if (!name || !phone) {
+      return res.status(400).json({ success: false, message: 'Shop Name and Phone number are required' });
     }
 
     let finalCode = (code || '').trim().toUpperCase();

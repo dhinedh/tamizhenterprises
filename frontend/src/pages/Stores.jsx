@@ -583,12 +583,11 @@ const Stores = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
-                  Owner / Proprietor <span className="text-rose-500">*</span>
+                  Owner / Proprietor
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="Mr. S. Kannan"
+                  placeholder="Mr. S. Kannan (Optional)"
                   value={formData.ownerName}
                   onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
@@ -613,11 +612,10 @@ const Stores = () => {
             {/* Address, City, State, Area, Pincode */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">City <span className="text-rose-500">*</span></label>
+                <label className="block font-semibold text-slate-700 mb-1">City</label>
                 <input
                   type="text"
-                  required
-                  placeholder="Madurai"
+                  placeholder="Madurai (Default)"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
@@ -628,7 +626,7 @@ const Stores = () => {
                 <label className="block font-semibold text-slate-700 mb-1">Area / Locality</label>
                 <input
                   type="text"
-                  placeholder="Goripalayam"
+                  placeholder="Goripalayam (Optional)"
                   value={formData.area}
                   onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
@@ -648,11 +646,10 @@ const Stores = () => {
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Full Street Address <span className="text-rose-500">*</span></label>
+              <label className="block font-semibold text-slate-700 mb-1">Full Street Address</label>
               <input
                 type="text"
-                required
-                placeholder="Door No, Main Road, Landmark"
+                placeholder="Door No, Main Road, Landmark (Optional)"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"

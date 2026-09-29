@@ -863,7 +863,7 @@ const StoreDetail = () => {
                 <label className="block font-semibold text-slate-700 mb-1">Proprietor Name</label>
                 <input
                   type="text"
-                  required
+                  placeholder="Optional"
                   value={editFormData.ownerName}
                   onChange={(e) => setEditFormData({ ...editFormData, ownerName: e.target.value })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
@@ -909,7 +909,7 @@ const StoreDetail = () => {
                 <label className="block font-semibold text-slate-700 mb-1">City</label>
                 <input
                   type="text"
-                  required
+                  placeholder="Madurai"
                   value={editFormData.city}
                   onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
                   className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
