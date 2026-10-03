@@ -91,19 +91,31 @@ const getProductById = async (req, res) => {
 // @route   POST /api/products
 const createProduct = async (req, res) => {
   try {
-    const { name, brand, category, manufacturerId, sku, hsnCode, mrp, purchasePrice, dealerPrice, sellingPrice, initialStock } = req.body;
+    const { name, brand, category, manufacturerId, mrp, purchasePrice, dealerPrice, sellingPrice, initialStock } = req.body;
+    let { sku, hsnCode } = req.body;
 
-    const existingSku = await Product.findOne({ sku: sku.toUpperCase() });
-    if (existingSku) {
-      return res.status(400).json({ success: false, message: 'Product SKU already exists' });
+    if (!sku || !sku.trim()) {
+      const cleanBrand = (brand || 'PRD').replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase();
+      sku = `${cleanBrand}-${Date.now().toString().slice(-6)}`;
+    } else {
+      sku = sku.trim().toUpperCase();
+      const existingSku = await Product.findOne({ sku });
+      if (existingSku) {
+        return res.status(400).json({ success: false, message: 'Product SKU already exists' });
+      }
+    }
+
+    if (!hsnCode || !hsnCode.trim()) {
+      hsnCode = '190590';
     }
 
     const product = await Product.create({
       ...req.body,
+      sku,
+      hsnCode,
       category: (category && category.trim()) ? category.trim() : 'General',
       dealerPrice: Number(dealerPrice || mrp || purchasePrice || 0),
-      sellingPrice: Number(sellingPrice || dealerPrice || mrp || purchasePrice || 0),
-      sku: sku.toUpperCase()
+      sellingPrice: Number(sellingPrice || dealerPrice || mrp || purchasePrice || 0)
     });
 
     // Initialize stock record

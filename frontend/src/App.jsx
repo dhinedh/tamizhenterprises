@@ -6,11 +6,10 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
-import Purchases from './pages/Purchases';
-import StockManagement from './pages/StockManagement';
 import StoreTransfers from './pages/StoreTransfers';
 import Stores from './pages/Stores';
 import StoreDetail from './pages/StoreDetail';
+import Customers from './pages/Customers';
 import Orders from './pages/Orders';
 import Invoices from './pages/Invoices';
 import Salesmen from './pages/Salesmen';
@@ -19,6 +18,7 @@ import Deliveries from './pages/Deliveries';
 import Returns from './pages/Returns';
 import Schemes from './pages/Schemes';
 import Reports from './pages/Reports';
+import StockManagement from './pages/StockManagement';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -66,13 +66,14 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="manufacturers" element={<Navigate to="/" replace />} />
               <Route path="products" element={<Products />} />
-              <Route path="purchases" element={<Purchases />} />
+              <Route path="purchases" element={<Navigate to="/products" replace />} />
               <Route path="stock" element={<StockManagement />} />
+              <Route path="stock-transfers" element={<StoreTransfers />} />
               <Route path="store-transfers" element={<StoreTransfers />} />
-              <Route path="stock-transfers" element={<Navigate to="/store-transfers" replace />} />
-              <Route path="transfers" element={<Navigate to="/store-transfers" replace />} />
+              <Route path="transfers" element={<Navigate to="/stock-transfers" replace />} />
               <Route path="stores" element={<Stores />} />
               <Route path="stores/:id" element={<StoreDetail />} />
+              <Route path="customers" element={<Customers />} />
               <Route path="orders" element={<Orders />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="salesmen" element={<Salesmen />} />

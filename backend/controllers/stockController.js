@@ -4,6 +4,7 @@ const Product = require('../models/Product');
 const Store = require('../models/Store');
 const Order = require('../models/Order');
 const Invoice = require('../models/Invoice');
+const Manufacturer = require('../models/Manufacturer');
 
 // @desc    Get all stock levels
 // @route   GET /api/stock
@@ -107,8 +108,8 @@ const getStockValuation = async (req, res) => {
 // @route   POST /api/stock/adjust
 const adjustStock = async (req, res) => {
   try {
-    const { productId, adjustmentQty, type, reason, notes, warehouseLocation } = req.body;
-    // type: 'ADDITION' or 'REDUCTION' or 'DAMAGE_TRANSFER'
+    const { productId, adjustmentQty, type = 'SET', reason, notes, warehouseLocation } = req.body;
+    // type: 'SET' or 'ADDITION' or 'REDUCTION' or 'DAMAGE_TRANSFER'
 
     let stock = await Stock.findOne({ productId });
     if (!stock) {
@@ -116,9 +117,15 @@ const adjustStock = async (req, res) => {
     }
 
     const qty = Number(adjustmentQty);
+    if (isNaN(qty)) {
+      return res.status(400).json({ success: false, message: 'Valid stock quantity is required' });
+    }
+
     const balanceBefore = stock.currentStock;
 
-    if (type === 'ADDITION') {
+    if (type === 'SET' || type === 'SET_STOCK' || type === 'OVERWRITE') {
+      stock.currentStock = Math.max(0, qty);
+    } else if (type === 'ADDITION') {
       stock.currentStock += qty;
     } else if (type === 'REDUCTION') {
       if (stock.currentStock < qty) {
@@ -140,21 +147,46 @@ const adjustStock = async (req, res) => {
 
     await stock.save();
 
-    // Log in Stock Ledger
-    await StockLedger.create({
-      productId,
-      transactionType: 'STOCK_ADJUSTMENT',
-      referenceType: 'Manual_Adjustment',
-      referenceId: `ADJ-${Date.now().toString().slice(-6)}`,
-      quantity: type === 'ADDITION' ? qty : -qty,
-      balanceBefore,
-      balanceAfter: stock.currentStock,
-      notes: `${reason || 'Manual Adjustment'}: ${notes || ''}`,
-      performedBy: req.user ? req.user.name : 'Warehouse Admin'
-    });
+    const changeQty = (type === 'SET' || type === 'SET_STOCK' || type === 'OVERWRITE')
+      ? (stock.currentStock - balanceBefore)
+      : (type === 'ADDITION' ? qty : -qty);
+
+    // Log in Stock Ledger if there was any change
+    if (changeQty !== 0 || balanceBefore === 0) {
+      await StockLedger.create({
+        productId,
+        transactionType: 'STOCK_ADJUSTMENT',
+        referenceType: 'Manual_Adjustment',
+        referenceId: `ADJ-${Date.now().toString().slice(-6)}`,
+        quantity: changeQty,
+        balanceBefore,
+        balanceAfter: stock.currentStock,
+        notes: `${reason || (type === 'SET' ? 'Stock count update' : 'Manual Adjustment')}: ${notes || ''}`,
+        performedBy: req.user ? req.user.name : 'Warehouse Admin'
+      });
+    }
+
+    // Update parent Manufacturer's total stock and valuation
+    const prod = await Product.findById(productId);
+    if (prod && prod.manufacturerId) {
+      const allMfgProducts = await Product.find({ manufacturerId: prod.manufacturerId }).select('_id purchasePrice');
+      const allStocks = await Stock.find({ productId: { $in: allMfgProducts.map(p => p._id) } });
+      const priceMap = {};
+      allMfgProducts.forEach(p => { priceMap[p._id.toString()] = p.purchasePrice || 0; });
+      let totalStock = 0;
+      let val = 0;
+      allStocks.forEach(s => {
+        totalStock += s.currentStock;
+        val += s.currentStock * (priceMap[s.productId.toString()] || 0);
+      });
+      await Manufacturer.findByIdAndUpdate(prod.manufacturerId, {
+        totalPhysicalStock: totalStock,
+        stockValuation: val
+      });
+    }
 
     const updated = await Stock.findById(stock._id).populate('productId');
-    res.json({ success: true, message: 'Stock updated and logged to ledger', data: updated });
+    res.json({ success: true, message: 'Stock updated successfully', data: updated });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

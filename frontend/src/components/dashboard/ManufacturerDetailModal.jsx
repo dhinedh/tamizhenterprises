@@ -18,7 +18,8 @@ import {
   FileText,
   Calendar,
   Layers,
-  Sparkles
+  Sparkles,
+  Globe
 } from 'lucide-react';
 import { StatusBadge } from '../common/Badge';
 
@@ -73,18 +74,28 @@ const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-400/20 text-teal-300 border border-teal-400/30 tracking-wider">
                       {manufacturer.code}
                     </span>
-                    {manufacturer.code === 'FEMI9' && (
+                    {(manufacturer.code === 'FEMI9' || manufacturer.name?.toLowerCase().includes('femi9') || manufacturer.website?.toLowerCase().includes('femi9')) && (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-500/20 text-pink-300 border border-pink-400/30 flex items-center gap-1">
                         <Sparkles className="w-3 h-3" /> Featured Healthcare Partner
                       </span>
                     )}
-                    {manufacturer.code === 'MANSARA' && (
+                    {(manufacturer.code === 'MANSARA' || manufacturer.name?.toLowerCase().includes('mansara') || manufacturer.website?.toLowerCase().includes('mansara')) && (
                       <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-400/30 flex items-center gap-1">
                         <Sparkles className="w-3 h-3" /> Traditional Agro & Foods
                       </span>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300 mt-1.5">
+                    {manufacturer.website && (
+                      <a
+                        href={manufacturer.website.startsWith('http') ? manufacturer.website : `https://${manufacturer.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-teal-300 hover:text-white underline underline-offset-2"
+                      >
+                        <Globe className="w-3.5 h-3.5 text-teal-400" /> {manufacturer.website.replace(/^https?:\/\//, '')}
+                      </a>
+                    )}
                     {manufacturer.city && (
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5 text-teal-400" /> {manufacturer.city}, {manufacturer.state || 'Tamil Nadu'}
@@ -105,18 +116,21 @@ const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
               </div>
 
               {/* Action */}
-              <div className="flex items-center gap-2 self-start md:self-auto">
-                <Link
-                  to={`/purchases?manufacturerId=${manufacturer._id}`}
-                  onClick={onClose}
-                  className="px-3.5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md"
-                >
-                  <Boxes className="w-4 h-4" /> Issue New PO
-                </Link>
+              <div className="flex items-center gap-2 self-start md:self-auto flex-wrap">
+                {manufacturer.website && (
+                  <a
+                    href={manufacturer.website.startsWith('http') ? manufacturer.website : `https://${manufacturer.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-xl text-xs flex items-center gap-1.5 transition-all border border-white/20"
+                  >
+                    <Globe className="w-3.5 h-3.5 text-teal-300" /> Visit Website
+                  </a>
+                )}
                 <Link
                   to={`/products?manufacturer=${manufacturer.code}`}
                   onClick={onClose}
-                  className="px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors border border-white/10"
+                  className="px-3.5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> Full Catalog
                 </Link>
@@ -301,14 +315,7 @@ const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
                   <div className="text-center py-10 bg-slate-50 rounded-xl border border-slate-200">
                     <Package className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                     <p className="text-sm font-medium text-slate-700">No Purchase Orders Recorded Yet</p>
-                    <p className="text-xs text-slate-500 mt-1">Issue a purchase order to stock up on this manufacturer's goods.</p>
-                    <Link
-                      to={`/purchases?manufacturerId=${manufacturer._id}`}
-                      onClick={onClose}
-                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white rounded-lg text-xs font-semibold"
-                    >
-                      <Boxes className="w-3.5 h-3.5" /> + Create Purchase Order
-                    </Link>
+                    <p className="text-xs text-slate-500 mt-1">No recorded purchase orders for this manufacturer.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto border border-slate-200 rounded-xl">
@@ -377,6 +384,20 @@ const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
                       <span className="text-slate-500">Email:</span>
                       <span className="font-semibold text-slate-800">{manufacturer.email || '-'}</span>
                     </div>
+                    {manufacturer.website && (
+                      <div className="pt-2 flex justify-between items-center">
+                        <span className="text-slate-500">Website:</span>
+                        <a
+                          href={manufacturer.website.startsWith('http') ? manufacturer.website : `https://${manufacturer.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-teal-600 hover:text-teal-800 hover:underline inline-flex items-center gap-1"
+                        >
+                          <Globe className="w-3.5 h-3.5" />
+                          {manufacturer.website}
+                        </a>
+                      </div>
+                    )}
                     <div className="pt-2 flex justify-between">
                       <span className="text-slate-500">GST Registration:</span>
                       <span className="font-mono font-semibold text-slate-900">{manufacturer.gstNumber || '-'}</span>

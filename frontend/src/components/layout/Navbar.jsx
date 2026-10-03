@@ -27,16 +27,8 @@ const Navbar = ({ onOpenSidebar, hasSidebar }) => {
         )}
 
         {activeManufacturer ? (
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleSwitchBrand}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-800 text-xs font-semibold flex items-center gap-1 transition-colors border border-slate-200 hover:border-teal-300"
-              title="Return to Main Dashboard with all manufacturers"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" /> All Brands
-            </button>
-            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
                 <Building2 className="w-4 h-4 text-teal-600" />
                 {activeManufacturer.name}
@@ -45,6 +37,26 @@ const Navbar = ({ onOpenSidebar, hasSidebar }) => {
                 {activeManufacturer.code}
               </span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => clearActiveManufacturer()}
+              className="px-2 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 text-[11px] font-semibold flex items-center gap-1 transition-colors border border-teal-200 cursor-pointer"
+              title="Switch brand selection on this page"
+            >
+              <ArrowRightLeft className="w-3 h-3" /> Change Brand
+            </button>
+
+            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+            <button
+              type="button"
+              onClick={handleSwitchBrand}
+              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1 transition-colors border border-slate-200 cursor-pointer"
+              title="Return to Main Dashboard with all manufacturers"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> All Brands Hub
+            </button>
           </div>
         ) : (
           <div>

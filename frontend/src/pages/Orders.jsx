@@ -463,11 +463,24 @@ const Orders = () => {
                       className="w-full px-2 py-1.5 border border-slate-200 rounded bg-white"
                     >
                       <option value="">Select Product</option>
-                      {products.map((p) => (
-                        <option key={p._id} value={p._id}>
-                          {p.name} (Avail: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice}
-                        </option>
-                      ))}
+                      <optgroup label="femi9.in (Hygiene & Care)">
+                        {products
+                          .filter(p => p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI'))
+                          .map((p) => (
+                            <option key={p._id} value={p._id}>
+                              {p.name} (Stock: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice}
+                            </option>
+                          ))}
+                      </optgroup>
+                      <optgroup label="mansarafoods.com (Spices & Foods)">
+                        {products
+                          .filter(p => !(p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI')))
+                          .map((p) => (
+                            <option key={p._id} value={p._id}>
+                              {p.name} (Stock: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice}
+                            </option>
+                          ))}
+                      </optgroup>
                     </select>
                   </div>
 

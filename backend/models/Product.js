@@ -9,9 +9,9 @@ const productSchema = new mongoose.Schema({
     ref: 'Manufacturer', 
     required: true 
   },
-  sku: { type: String, required: true, unique: true, uppercase: true, trim: true },
+  sku: { type: String, sparse: true, uppercase: true, trim: true },
   barcode: { type: String, trim: true },
-  hsnCode: { type: String, required: true, trim: true },
+  hsnCode: { type: String, default: '190590', trim: true },
   unit: { 
     type: String, 
     enum: ['Box', 'Pcs', 'Carton', 'Pack', 'Kg', 'Litre', 'Dozen', 'Bottle', 'Pouch', 'Jar'], 

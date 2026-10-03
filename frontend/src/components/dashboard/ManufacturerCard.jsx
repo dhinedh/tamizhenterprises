@@ -9,12 +9,14 @@ import {
   MapPin,
   Sparkles,
   Layers,
-  ChevronRight
+  ChevronRight,
+  Trash2,
+  Globe
 } from 'lucide-react';
 
-const ManufacturerCard = ({ manufacturer, onClick }) => {
-  const isFemi9 = manufacturer.code === 'FEMI9';
-  const isMansara = manufacturer.code === 'MANSARA';
+const ManufacturerCard = ({ manufacturer, onClick, onDelete }) => {
+  const isFemi9 = manufacturer.code === 'FEMI9' || manufacturer.name?.toLowerCase().includes('femi9') || manufacturer.website?.toLowerCase().includes('femi9');
+  const isMansara = manufacturer.code === 'MANSARA' || manufacturer.name?.toLowerCase().includes('mansara') || manufacturer.website?.toLowerCase().includes('mansara');
 
   const hasLowStock = (manufacturer.lowStockCount || 0) > 0;
 
@@ -63,7 +65,7 @@ const ManufacturerCard = ({ manufacturer, onClick }) => {
                     {manufacturer.name}
                   </h3>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-0.5">
                   <span className="font-mono text-[11px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
                     {manufacturer.code}
                   </span>
@@ -72,12 +74,37 @@ const ManufacturerCard = ({ manufacturer, onClick }) => {
                       <MapPin className="w-3 h-3 text-slate-400" /> {manufacturer.city}
                     </span>
                   )}
+                  {manufacturer.website && (
+                    <a
+                      href={manufacturer.website.startsWith('http') ? manufacturer.website : `https://${manufacturer.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 text-[11px] text-teal-600 hover:text-teal-800 hover:underline"
+                    >
+                      <Globe className="w-3 h-3 text-teal-500" />
+                      {manufacturer.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Badges */}
-            <div className="flex flex-col items-end gap-1">
+            {/* Badges & Actions */}
+            <div className="flex flex-col items-end gap-1.5">
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(manufacturer);
+                  }}
+                  title={`Delete ${manufacturer.name}`}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer opacity-80 group-hover:opacity-100"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
               {isFemi9 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 shadow-2xs">
                   <Sparkles className="w-2.5 h-2.5" /> Femi9 Brand

@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import { useManufacturer } from '../../context/ManufacturerContext';
+import ManufacturerSelectionView from '../common/ManufacturerSelectionView';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { activeManufacturer } = useManufacturer();
+  const location = useLocation();
+
+  // If not on the main dashboard ('/') and no manufacturer is active, show the Manufacturer Selection cards
+  const requiresManufacturerSelection = !activeManufacturer && location.pathname !== '/';
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -15,7 +22,11 @@ const Layout = () => {
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300 lg:pl-72 pl-0">
         <Navbar onOpenSidebar={() => setSidebarOpen(true)} hasSidebar={true} />
         <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
-          <Outlet />
+          {requiresManufacturerSelection ? (
+            <ManufacturerSelectionView />
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

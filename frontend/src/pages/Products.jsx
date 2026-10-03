@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Package, Plus, Search, Filter, AlertCircle, Edit, Trash2, Tag, Check, IndianRupee, PackagePlus, RefreshCw, CheckCircle2 } from 'lucide-react';
 import api from '../api/client';
 import Card from '../components/common/Card';
@@ -10,6 +11,8 @@ import { useManufacturer } from '../context/ManufacturerContext';
 import QuickStockInwardModal from '../components/stock/QuickStockInwardModal';
 
 const Products = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { isOwner } = useAuth();
   const { activeManufacturer } = useManufacturer();
   const [products, setProducts] = useState([]);
@@ -86,6 +89,23 @@ const Products = () => {
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('action') === 'new') {
+      setEditingProduct(null);
+      resetForm();
+      setIsModalOpen(true);
+    }
+  }, [location.search, activeManufacturer]);
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingProduct(null);
+    if (location.search.includes('action=new')) {
+      navigate('/products', { replace: true });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -93,8 +113,14 @@ const Products = () => {
     try {
       const pPrice = Number(formData.purchasePrice || 0);
       const mPrice = Number(formData.mrp || 0);
+      const autoSku = (formData.sku && formData.sku.trim())
+        ? formData.sku.trim().toUpperCase()
+        : `${(formData.brand || 'PRD').replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase()}-${Date.now().toString().slice(-6)}`;
+
       const payload = {
         ...formData,
+        sku: autoSku,
+        hsnCode: formData.hsnCode?.trim() || '190590',
         category: 'General',
         dealerPrice: Number(formData.dealerPrice || pPrice || mPrice || 0),
         sellingPrice: Number(formData.sellingPrice || formData.dealerPrice || mPrice || pPrice || 0)
@@ -104,8 +130,7 @@ const Products = () => {
       } else {
         await api.post('/products', payload);
       }
-      setIsModalOpen(false);
-      setEditingProduct(null);
+      handleCloseModal();
       resetForm();
       fetchProducts();
     } catch (err) {
@@ -188,21 +213,58 @@ const Products = () => {
         )}
       </div>
 
-      {activeManufacturer && (
-        <div className="bg-teal-50 border border-teal-200 rounded-xl p-3.5 flex items-center justify-between shadow-2xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-teal-950">
-              Showing Products for {activeManufacturer.name}
-            </span>
-            <span className="text-xs text-teal-800">
-              &bull; {products.length} SKUs in this brand's catalogue
-            </span>
-          </div>
-          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-teal-100 text-teal-900 border border-teal-300">
-            {activeManufacturer.code}
+      {/* Manufacturer Brand Tabs for Both Manufacturers */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          type="button"
+          onClick={() => clearActiveManufacturer()}
+          className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+            !activeManufacturer
+              ? 'bg-teal-600 text-white shadow-xs'
+              : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+          }`}
+        >
+          <span>All Products (Both Brands)</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${!activeManufacturer ? 'bg-teal-700 text-teal-100' : 'bg-slate-100 text-slate-600'}`}>
+            {manufacturers.reduce((acc, m) => acc + (m.productsCount || 0), 0) || products.length} SKUs
           </span>
-        </div>
-      )}
+        </button>
+
+        {manufacturers.map((mfg) => {
+          const isSelected = activeManufacturer?._id === mfg._id || activeManufacturer?.code === mfg.code;
+          const isFemi9 = mfg.code === 'FEMI9' || mfg.name?.toLowerCase().includes('femi9');
+          const isMansara = mfg.code === 'MANSARA' || mfg.name?.toLowerCase().includes('mansara');
+          const stockQty = mfg.totalPhysicalStock ?? mfg.totalAvailableStock ?? 0;
+
+          return (
+            <button
+              key={mfg._id}
+              type="button"
+              onClick={() => setActiveManufacturer(mfg)}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
+                isSelected
+                  ? isFemi9
+                    ? 'bg-pink-600 text-white shadow-xs'
+                    : isMansara
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'bg-teal-600 text-white shadow-xs'
+                  : isFemi9
+                  ? 'bg-pink-50/70 text-pink-900 border border-pink-200 hover:bg-pink-100/60'
+                  : isMansara
+                  ? 'bg-amber-50/70 text-amber-900 border border-amber-200 hover:bg-amber-100/60'
+                  : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              <span>{mfg.name}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                isSelected ? 'bg-black/20 text-white' : 'bg-white/80 text-slate-800 border border-slate-200/60'
+              }`}>
+                {Number(stockQty).toLocaleString('en-IN')} units ({mfg.productsCount || 0} SKUs)
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Filters Bar */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
@@ -344,7 +406,7 @@ const Products = () => {
       {/* Add / Edit Product Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         title={editingProduct ? `Edit Product: ${editingProduct.name}` : 'Create New Product Master'}
         maxWidth="max-w-2xl"
       >
@@ -407,41 +469,6 @@ const Products = () => {
                 <option value="Bottle">Bottle</option>
                 <option value="Pouch">Pouch</option>
               </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">SKU Code *</label>
-              <input
-                type="text"
-                required
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg uppercase"
-                placeholder="e.g. SKU-001"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Barcode (EAN-13)</label>
-              <input
-                type="text"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
-                placeholder="e.g. 8901234567890 (Optional)"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">HSN Code *</label>
-              <input
-                type="text"
-                required
-                value={formData.hsnCode}
-                onChange={(e) => setFormData({ ...formData, hsnCode: e.target.value })}
-                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
-                placeholder="e.g. 190590"
-              />
             </div>
           </div>
 
@@ -518,17 +545,17 @@ const Products = () => {
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-600 hover:bg-slate-50"
+              onClick={handleCloseModal}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-600 hover:bg-slate-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold disabled:opacity-50"
+              className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold disabled:opacity-50 cursor-pointer transition-colors"
             >
-              {submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product SKU'}
+              {submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Create Product'}
             </button>
           </div>
         </form>

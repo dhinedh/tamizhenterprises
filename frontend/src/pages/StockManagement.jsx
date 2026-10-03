@@ -1,1234 +1,816 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Boxes,
-  Search,
-  AlertTriangle,
-  ArrowUpDown,
-  History,
-  ShieldAlert,
-  CheckCircle2,
-  SlidersHorizontal,
-  Plus,
-  PackagePlus,
-  ArrowDownToLine,
-  Calendar,
-  IndianRupee,
-  Truck,
-  UserCheck,
-  Eye,
-  Download,
-  Share2,
-  Printer,
-  FileText,
-  Clock,
-  Sparkles
-} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Search, RefreshCw, Package, Factory, Boxes, Sparkles, PackagePlus, Plus, ArrowDown, Check, CheckCircle2, Layers } from 'lucide-react';
 import api from '../api/client';
-import Card from '../components/common/Card';
-import Modal from '../components/common/Modal';
-import { TableSkeleton } from '../components/common/Skeleton';
-import { StatusBadge } from '../components/common/Badge';
 import { useManufacturer } from '../context/ManufacturerContext';
-import StoreTransferModal from '../components/stock/StoreTransferModal';
-import InvoiceSuccessModal from '../components/stock/InvoiceSuccessModal';
+import Modal from '../components/common/Modal';
+
+const DEFAULT_STOCKS = [
+  // femi9.in Products
+  { _id: '1', name: '180mm (30 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '2', name: 'Combo pack - Femi9 Sanitary Napkins', closingQty: 0, brand: 'femi9.in' },
+  { _id: '3', name: '330mm XL (SW-9 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '4', name: '290mm L (SW-9 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '5', name: '330mm XL (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '6', name: '330mm XL (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '7', name: '290mm L (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '8', name: '290mm L (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
+  { _id: '9', name: 'Femi9 Natural Intimate Foam Hygiene Wash (100ml)', closingQty: 0, brand: 'femi9.in' },
+  // mansarafoods.com Products
+  { _id: '10', name: 'Mansara Instant Chettinad Kulambu Masala Paste (200g)', closingQty: 0, brand: 'mansarafoods.com' },
+  { _id: '11', name: 'Mansara Traditional Gunpowder / Idli Podi (250g)', closingQty: 0, brand: 'mansarafoods.com' },
+  { _id: '12', name: 'Mansara Pure Wood Pressed Sesame Oil / Gingelly Oil (500ml)', closingQty: 0, brand: 'mansarafoods.com' },
+  { _id: '13', name: 'Mansara Traditional Kaikara Ragi Murukku (200g)', closingQty: 0, brand: 'mansarafoods.com' }
+];
 
 const StockManagement = () => {
   const { activeManufacturer } = useManufacturer();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [stocks, setStocks] = useState([]);
-  const [valuation, setValuation] = useState(null);
-  const [ledger, setLedger] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('inventory'); // 'inventory', 'salesman-requests', 'store-transfer', 'ledger', 'valuation'
   const [search, setSearch] = useState('');
-  const [lowStockFilter, setLowStockFilter] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState('ALL');
 
-  // Store Stock Transfer & Salesman Requests
-  const [stores, setStores] = useState([]);
-  const [salesmen, setSalesmen] = useState([]);
-  const [allProducts, setAllProducts] = useState([]);
-  const [salesmanRequests, setSalesmanRequests] = useState([]);
-  const [recentTransfers, setRecentTransfers] = useState([]);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [transferInitialData, setTransferInitialData] = useState(null);
-  const [isInvoiceSuccessOpen, setIsInvoiceSuccessOpen] = useState(false);
-  const [generatedInvoiceData, setGeneratedInvoiceData] = useState(null);
-  const [successToast, setSuccessToast] = useState('');
-  
-  const transferProductsList = useMemo(() => {
-    return stocks.map(s => ({
-      ...s.productId,
-      stock: s
-    }));
-  }, [stocks]);
-
-  // Direct Stock Inward Modal (Price, Date, Quantity)
-  const [isInwardModalOpen, setIsInwardModalOpen] = useState(false);
-  const [inwardData, setInwardData] = useState({
-    productId: '',
-    quantity: 50,
-    unitPrice: 0,
-    date: new Date().toISOString().split('T')[0],
-    billNumber: '',
-    batchNumber: '',
-    updateProductPrice: true,
-    warehouseLocation: 'Main Warehouse - Bay 1',
-    notes: ''
-  });
-  const [inwardProductInfo, setInwardProductInfo] = useState(null);
-
-  // Manual Adjustment Modal
-  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
-  const [adjustData, setAdjustData] = useState({
-    productId: '',
-    type: 'ADDITION', // 'ADDITION', 'REDUCTION', 'DAMAGE_TRANSFER'
-    adjustmentQty: 10,
-    reason: 'Physical Count Verification',
-    notes: ''
-  });
-  const [submitting, setSubmitting] = useState(false);
+  // Update Stock Dialog State
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [modalProducts, setModalProducts] = useState([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [stockInput, setStockInput] = useState('');
+  const [updateMode, setUpdateMode] = useState('SET'); // 'SET' or 'ADDITION'
+  const [modalSearch, setModalSearch] = useState('');
+  const [modalBrandFilter, setModalBrandFilter] = useState('ALL');
+  const [savingStock, setSavingStock] = useState(false);
+  const [lastMovedProduct, setLastMovedProduct] = useState(null);
 
   useEffect(() => {
     fetchStockData();
-    fetchValuation();
-    fetchMetadata();
-    fetchSalesmanRequests();
-  }, [search, lowStockFilter, activeManufacturer]);
+  }, [activeManufacturer]);
 
   useEffect(() => {
-    if (activeTab === 'ledger') {
-      fetchLedger();
+    if (location.search.includes('action=update')) {
+      handleOpenModal();
     }
-    if (activeTab === 'salesman-requests') {
-      fetchSalesmanRequests();
-    }
-    if (activeTab === 'store-transfer') {
-      fetchRecentTransfers();
-    }
-  }, [activeTab]);
+  }, [location.search, stocks]);
 
-  const fetchMetadata = async () => {
-    try {
-      const [storesRes, salesmenRes, prodRes] = await Promise.all([
-        api.get('/stores'),
-        api.get('/salesmen'),
-        api.get('/products')
-      ]);
-      if (storesRes.data.success) setStores(storesRes.data.data);
-      if (salesmenRes.data.success) setSalesmen(salesmenRes.data.data);
-      if (prodRes.data.success) setAllProducts(prodRes.data.data);
-    } catch (e) {
-      console.error('Error fetching metadata:', e);
+  const handleOpenModal = () => {
+    const list = stocks.length > 0 ? stocks : DEFAULT_STOCKS;
+    setModalProducts(list.map(s => ({ ...s, isUpdated: false })));
+    if (list.length > 0) {
+      setSelectedProductId(list[0]._id);
+      setStockInput(list[0].closingQty !== undefined ? String(list[0].closingQty) : '');
     }
+    setIsUpdateModalOpen(true);
   };
 
-  const fetchSalesmanRequests = async () => {
-    try {
-      const res = await api.get('/stock/salesman-requests');
-      if (res.data.success) {
-        setSalesmanRequests(res.data.data);
-      }
-    } catch (e) {
-      console.error('Error fetching salesman requests:', e);
+  const handleCloseModal = () => {
+    setIsUpdateModalOpen(false);
+    if (location.search.includes('action=update')) {
+      navigate('/stock', { replace: true });
     }
-  };
-
-  const fetchRecentTransfers = async () => {
-    try {
-      const res = await api.get('/invoices');
-      if (res.data.success) {
-        setRecentTransfers(res.data.data);
-      }
-    } catch (e) {
-      console.error('Error fetching invoices:', e);
-    }
+    fetchStockData();
   };
 
   const fetchStockData = async () => {
     try {
       setLoading(true);
-      let query = `?search=${search}`;
-      if (lowStockFilter) query += `&lowStock=true`;
-      if (activeManufacturer?._id) query += `&manufacturerId=${activeManufacturer._id}`;
-      const res = await api.get(`/stock${query}`);
-      if (res.data.success) {
-        setStocks(res.data.data);
+      const params = {};
+      if (activeManufacturer?._id) {
+        params.manufacturerId = activeManufacturer._id;
+      }
+
+      const [prodRes, stockRes] = await Promise.allSettled([
+        api.get('/products', { params }),
+        api.get('/stock', { params })
+      ]);
+
+      let items = [];
+
+      if (prodRes.status === 'fulfilled' && prodRes.value.data?.success && prodRes.value.data?.data?.length > 0) {
+        const products = prodRes.value.data.data;
+        const stockMap = {};
+
+        if (stockRes.status === 'fulfilled' && stockRes.value.data?.success) {
+          (stockRes.value.data.data || []).forEach(s => {
+            const pid = s.productId?._id || s.productId;
+            if (pid) stockMap[pid.toString()] = s.currentStock ?? s.availableStock ?? 0;
+          });
+        }
+
+        items = products.map(p => {
+          const brandName = p.brand || p.manufacturerId?.name || (p.sku?.startsWith('MANS') ? 'mansarafoods.com' : 'femi9.in');
+          const isFemi9 = brandName.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI');
+          return {
+            _id: p._id,
+            name: p.name,
+            sku: p.sku,
+            brand: isFemi9 ? 'femi9.in' : 'mansarafoods.com',
+            mrp: p.mrp || 0,
+            purchasePrice: p.purchasePrice || 0,
+            unit: p.unit || 'Pcs',
+            category: p.category || 'General',
+            closingQty: stockMap[p._id.toString()] ?? p.stock?.currentStock ?? p.currentStock ?? 0
+          };
+        });
+      } else if (stockRes.status === 'fulfilled' && stockRes.value.data?.success && stockRes.value.data?.data?.length > 0) {
+        items = stockRes.value.data.data.map(s => {
+          const name = s.productId?.name || s.productName || 'Product';
+          const isMansara = (s.productId?.brand && s.productId.brand.toLowerCase().includes('mansara')) || (s.productId?.sku && s.productId.sku.startsWith('MANS'));
+          return {
+            _id: s._id,
+            name: name,
+            sku: s.productId?.sku,
+            brand: isMansara ? 'mansarafoods.com' : 'femi9.in',
+            mrp: s.productId?.mrp || 0,
+            purchasePrice: s.productId?.purchasePrice || 0,
+            unit: s.productId?.unit || 'Pcs',
+            category: s.productId?.category || 'General',
+            closingQty: s.currentStock ?? s.availableStock ?? 0
+          };
+        });
+      }
+
+      if (items.length > 0) {
+        setStocks(items);
+      } else {
+        setStocks(DEFAULT_STOCKS);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch stock data:', err);
+      setStocks(DEFAULT_STOCKS);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchValuation = async () => {
-    try {
-      const res = await api.get('/stock/valuation');
-      if (res.data.success) {
-        setValuation(res.data.data);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // Quantities for each manufacturer
+  const femi9Total = useMemo(() => {
+    return stocks
+      .filter(s => s.brand === 'femi9.in')
+      .reduce((sum, item) => sum + (Number(item.closingQty) || 0), 0);
+  }, [stocks]);
 
-  const fetchLedger = async () => {
-    try {
-      const res = await api.get('/stock/ledger');
-      if (res.data.success) {
-        setLedger(res.data.data);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const mansaraTotal = useMemo(() => {
+    return stocks
+      .filter(s => s.brand === 'mansarafoods.com')
+      .reduce((sum, item) => sum + (Number(item.closingQty) || 0), 0);
+  }, [stocks]);
 
-  const handleAdjustSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
+  const combinedTotal = useMemo(() => {
+    return stocks.reduce((sum, item) => sum + (Number(item.closingQty) || 0), 0);
+  }, [stocks]);
+
+  const filteredStocks = useMemo(() => {
+    let list = stocks;
+    if (selectedBrand !== 'ALL') {
+      list = list.filter(s => s.brand === selectedBrand);
+    }
+    if (!search.trim()) return list;
+    const q = search.toLowerCase();
+    return list.filter(s => s.name.toLowerCase().includes(q) || (s.sku && s.sku.toLowerCase().includes(q)));
+  }, [stocks, search, selectedBrand]);
+
+  const totalFilteredQty = useMemo(() => {
+    return filteredStocks.reduce((sum, item) => sum + (Number(item.closingQty) || 0), 0);
+  }, [filteredStocks]);
+
+  // Modal active product
+  const activeModalProduct = useMemo(() => {
+    return modalProducts.find(p => p._id === selectedProductId) || modalProducts[0] || null;
+  }, [modalProducts, selectedProductId]);
+
+  // Filtered list inside the modal's left column
+  const filteredModalList = useMemo(() => {
+    let list = modalProducts;
+    if (modalBrandFilter !== 'ALL') {
+      list = list.filter(p => p.brand === modalBrandFilter);
+    }
+    if (modalSearch.trim()) {
+      const q = modalSearch.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)));
+    }
+    return list;
+  }, [modalProducts, modalBrandFilter, modalSearch]);
+
+  // Update stock for the active product and MOVE IT DOWN to the bottom
+  const handleUpdateCurrentStock = async (e) => {
+    if (e) e.preventDefault();
+    if (!activeModalProduct) return;
+
+    const qty = Number(stockInput);
+    if (isNaN(qty) || qty < 0) {
+      alert('Please enter a valid non-negative number for stock quantity.');
+      return;
+    }
+
     try {
-      const res = await api.post('/stock/adjust', adjustData);
-      if (res.data.success) {
-        setIsAdjustModalOpen(false);
-        setAdjustData({
-          productId: '',
-          type: 'ADDITION',
-          adjustmentQty: 10,
-          reason: 'Physical Count Verification',
-          notes: ''
+      setSavingStock(true);
+      const res = await api.post('/stock/adjust', {
+        productId: activeModalProduct._id,
+        adjustmentQty: qty,
+        type: updateMode
+      });
+
+      if (res.data?.success) {
+        const newQty = updateMode === 'SET' ? qty : ((activeModalProduct.closingQty || 0) + qty);
+
+        const updatedItem = {
+          ...activeModalProduct,
+          closingQty: newQty,
+          isUpdated: true
+        };
+
+        // REQUIREMENT: If 1 product in the top if i update stock that should go down!
+        // Remove from current position and append to the bottom of the queue
+        const remaining = modalProducts.filter(p => p._id !== activeModalProduct._id);
+        const reordered = [...remaining, updatedItem];
+        setModalProducts(reordered);
+
+        setLastMovedProduct({
+          name: activeModalProduct.name,
+          qty: newQty
         });
-        fetchStockData();
-        fetchValuation();
-        if (activeTab === 'ledger') fetchLedger();
+        setTimeout(() => setLastMovedProduct(null), 4000);
+
+        // Next product at the top is automatically selected
+        const nextProduct = remaining[0] || updatedItem;
+        setSelectedProductId(nextProduct._id);
+        setStockInput(nextProduct.closingQty !== undefined ? String(nextProduct.closingQty) : '');
+
+        // Update overall stocks list in background
+        setStocks(prev => prev.map(s => s._id === activeModalProduct._id ? { ...s, closingQty: newQty } : s));
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Error adjusting stock');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openInwardModal = (stockItem = null) => {
-    if (stockItem && stockItem.productId) {
-      const prod = stockItem.productId;
-      setInwardProductInfo(prod);
-      setInwardData({
-        productId: prod._id,
-        quantity: 50,
-        unitPrice: prod.purchasePrice || 0,
-        date: new Date().toISOString().split('T')[0],
-        billNumber: '',
-        batchNumber: stockItem.batchNumber || '',
-        updateProductPrice: true,
-        warehouseLocation: stockItem.warehouseLocation || 'Main Warehouse - Bay 1',
-        notes: ''
-      });
-    } else {
-      const first = stocks[0]?.productId;
-      setInwardProductInfo(first || null);
-      setInwardData({
-        productId: first?._id || '',
-        quantity: 50,
-        unitPrice: first?.purchasePrice || 0,
-        date: new Date().toISOString().split('T')[0],
-        billNumber: '',
-        batchNumber: '',
-        updateProductPrice: true,
-        warehouseLocation: 'Main Warehouse - Bay 1',
-        notes: ''
-      });
-    }
-    setIsInwardModalOpen(true);
-  };
-
-  const handleInwardSubmit = async (e) => {
-    e.preventDefault();
-    if (!inwardData.productId) {
-      alert('Please select a product');
-      return;
-    }
-    if (Number(inwardData.quantity) <= 0) {
-      alert('Please enter a valid quantity');
-      return;
-    }
-    if (Number(inwardData.unitPrice) < 0) {
-      alert('Please enter a valid purchase price');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await api.post('/stock/inward', inwardData);
-      if (res.data.success) {
-        setIsInwardModalOpen(false);
-        fetchStockData();
-        fetchValuation();
-        if (activeTab === 'ledger') fetchLedger();
-      }
-    } catch (err) {
+      console.error('Failed to update stock:', err);
       alert(err.response?.data?.message || 'Error updating stock');
     } finally {
-      setSubmitting(false);
+      setSavingStock(false);
     }
+  };
+
+  // Skip current product and push it down to bottom
+  const handleSkipCurrent = () => {
+    if (!activeModalProduct) return;
+    const remaining = modalProducts.filter(p => p._id !== activeModalProduct._id);
+    const reordered = [...remaining, activeModalProduct];
+    setModalProducts(reordered);
+    const nextProduct = remaining[0] || activeModalProduct;
+    setSelectedProductId(nextProduct._id);
+    setStockInput(nextProduct.closingQty !== undefined ? String(nextProduct.closingQty) : '');
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      {/* Top Header with Search, Update Stock, and Refresh */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-            Warehouse & Inventory Control
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+            Overall Stock
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Physical current stock &bull; Reserved for dispatch &bull; Quarantine damaged goods &bull; Complete audit ledger
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Central Warehouse • Physical Closing Product Quantity for Both Manufacturers
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => {
-              setTransferInitialData(null);
-              setIsTransferModalOpen(true);
-            }}
-            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
-            title="Dispatch stock directly to retail shop and generate GST invoice bill"
-          >
-            <Truck className="w-4 h-4" /> + Transfer to Shop & Bill
-          </button>
-          <button
-            onClick={() => openInwardModal()}
-            className="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors"
-          >
-            <PackagePlus className="w-4 h-4" /> + Direct Inward
-          </button>
-          <button
-            onClick={() => {
-              if (stocks.length > 0) setAdjustData(prev => ({ ...prev, productId: stocks[0].productId?._id }));
-              setIsAdjustModalOpen(true);
-            }}
-            className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors"
-          >
-            <SlidersHorizontal className="w-4 h-4" /> Audit / Adjust
-          </button>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('inventory')}
-          className={`py-2 px-4 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'inventory'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Boxes className="w-4 h-4" /> Live Warehouse Stock
-        </button>
-
-        <button
-          onClick={() => setActiveTab('salesman-requests')}
-          className={`py-2 px-4 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'salesman-requests'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <UserCheck className="w-4 h-4 text-amber-600" /> Salesperson Field Requests
-          {salesmanRequests.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
-              {salesmanRequests.length}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveTab('store-transfer')}
-          className={`py-2 px-4 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'store-transfer'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Truck className="w-4 h-4 text-emerald-600" /> Shop Transfers & Bills
-        </button>
-
-        <button
-          onClick={() => setActiveTab('ledger')}
-          className={`py-2 px-4 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'ledger'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <History className="w-4 h-4" /> Stock Movement Ledger
-        </button>
-
-        <button
-          onClick={() => setActiveTab('valuation')}
-          className={`py-2 px-4 text-xs font-semibold border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
-            activeTab === 'valuation'
-              ? 'border-teal-600 text-teal-700 bg-teal-50/50'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <ArrowUpDown className="w-4 h-4" /> Valuation & Margin Analysis
-        </button>
-      </div>
-
-      {/* TAB 1: LIVE INVENTORY */}
-      {activeTab === 'inventory' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-              <input
-                type="text"
-                placeholder="Search inventory by product, SKU, brand..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-xs"
-              />
-            </div>
-            <button
-              onClick={() => setLowStockFilter(!lowStockFilter)}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold border flex items-center gap-1.5 whitespace-nowrap transition-colors ${
-                lowStockFilter
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              Show Low Stock Only
-            </button>
-          </div>
-
-          <Card>
-            {loading ? (
-              <TableSkeleton rows={6} cols={6} />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
-                    <tr>
-                      <th className="py-3 px-3">Product Description</th>
-                      <th className="py-3 px-3">Location / Bay</th>
-                      <th className="py-3 px-3 text-right">Physical On-Hand</th>
-                      <th className="py-3 px-3 text-right">Reserved (Pending)</th>
-                      <th className="py-3 px-3 text-right">Damaged (Quarantine)</th>
-                      <th className="py-3 px-3 text-right">Net Available to Sell</th>
-                      <th className="py-3 px-3 text-center">Health Status</th>
-                      <th className="py-3 px-3 text-right">Quick Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-700">
-                    {stocks.length > 0 ? (
-                      stocks.map((stock) => {
-                        const prod = stock.productId;
-                        if (!prod) return null;
-                        const available = Math.max(0, stock.currentStock - stock.reservedStock);
-                        const isLow = available <= stock.minStockAlert && available > 0;
-                        const isOut = available === 0;
-
-                        return (
-                          <tr key={stock._id} className="hover:bg-slate-50/70 transition-colors">
-                            <td className="py-3 px-3">
-                              <div className="font-semibold text-slate-900">{prod.name}</div>
-                              <div className="text-[10px] text-slate-400 font-mono">
-                                SKU: {prod.sku} &bull; Batch: {stock.batchNumber}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <span className="font-medium text-slate-700">{stock.warehouseLocation}</span>
-                            </td>
-                            <td className="py-3 px-3 text-right font-bold text-slate-900">
-                              {stock.currentStock} {prod.unit}
-                            </td>
-                            <td className="py-3 px-3 text-right text-slate-500 font-medium">
-                              {stock.reservedStock > 0 ? (
-                                <span className="text-amber-700 font-bold">{stock.reservedStock} {prod.unit}</span>
-                              ) : (
-                                '0'
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-right">
-                              {stock.damagedStock > 0 ? (
-                                <span className="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">
-                                  {stock.damagedStock} {prod.unit}
-                                </span>
-                              ) : (
-                                <span className="text-slate-400">0</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-right">
-                              <span className={`text-sm font-extrabold ${isOut ? 'text-rose-600' : isLow ? 'text-amber-600' : 'text-teal-700'}`}>
-                                {available} {prod.unit}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              {isOut ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-                                  Out of Stock
-                                </span>
-                              ) : isLow ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                                  Low Stock (Min: {stock.minStockAlert})
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                  Healthy
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-right">
-                              <button
-                                onClick={() => openInwardModal(stock)}
-                                className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
-                                title="Directly update stock with price, date, and quantity"
-                              >
-                                <ArrowDownToLine className="w-3 h-3 text-teal-600" /> + Inward
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan="7" className="py-8 text-center text-slate-400">
-                          No stock inventory found.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* TAB: SALESPERSON FIELD REQUESTS & MANUAL TRANSFER */}
-      {activeTab === 'salesman-requests' && (
-        <div className="space-y-4">
-          {/* Subheader & Stats */}
-          <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-amber-700" />
-                <h3 className="font-bold text-slate-900 text-sm">
-                  Field Salesperson Shop Booking Requests ({salesmanRequests.length} Pending)
-                </h3>
-              </div>
-              <p className="text-xs text-slate-600 mt-1">
-                Check requested quantities against live warehouse stock availability. Verify physical inventory and execute manual stock transfer with automated GST invoice generation.
-              </p>
-            </div>
-
-            <button
-              onClick={fetchSalesmanRequests}
-              className="px-3 py-1.5 bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 font-semibold text-xs rounded-lg flex items-center gap-1.5 self-start sm:self-auto transition-colors"
-            >
-              Check Fresh Requests
-            </button>
-          </div>
-
-          {/* Requests Cards List */}
-          {salesmanRequests.length > 0 ? (
-            <div className="space-y-4">
-              {salesmanRequests.map((request) => {
-                const store = request.storeId;
-                const salesman = request.salesmanId;
-                const allInStock = request.allItemsInStock;
-
-                return (
-                  <Card key={request._id} className="overflow-hidden">
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-teal-50 border border-teal-200 flex items-center justify-center font-mono font-bold text-teal-800 text-xs">
-                          ORD
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 text-sm font-mono">{request.orderNumber}</span>
-                            <StatusBadge status={request.status} />
-                            {allInStock ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                <CheckCircle2 className="w-3 h-3" /> 100% Stock In Warehouse
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                                <AlertTriangle className="w-3 h-3" /> Stock Shortage On Items
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-500 mt-0.5">
-                            Booked on: {new Date(request.orderDate || request.createdAt).toLocaleString('en-IN')}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-[11px] text-slate-400">Total Booking Value</div>
-                        <div className="text-base font-extrabold text-teal-800 font-mono">
-                          ₹ {Number(request.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Store & Salesman details row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-b border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 px-4 sm:px-6 text-xs">
-                      <div>
-                        <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Destination Retail Shop</span>
-                        <div className="font-bold text-slate-900">{store?.name || 'Retail Client'}</div>
-                        <div className="text-[11px] text-slate-600">
-                          {store?.city} &bull; Owner: {store?.ownerName} ({store?.phone})
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
-                          Outstanding Due: <strong className="text-amber-700">₹{store?.outstandingBalance?.toLocaleString('en-IN') || 0}</strong> &bull; Credit Limit: ₹{store?.creditLimit?.toLocaleString('en-IN')}
-                        </div>
-                      </div>
-
-                      <div>
-                        <span className="text-[10px] uppercase font-semibold text-slate-400 block mb-0.5">Booked by Field Sales Executive</span>
-                        <div className="font-bold text-slate-900">{salesman?.name || 'Field Officer'}</div>
-                        <div className="text-[11px] text-slate-600">
-                          Code: {salesman?.employeeCode} &bull; Territory: {salesman?.territory || 'Tamil Nadu'}
-                        </div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">
-                          Phone: {salesman?.phone}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Items table with Live Stock Comparison */}
-                    <div className="pt-3">
-                      <div className="text-xs font-bold text-slate-800 mb-2">
-                        Requested Items & Live Warehouse Availability:
-                      </div>
-
-                      <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-slate-100 text-slate-600 font-semibold text-[10px] uppercase">
-                            <tr>
-                              <th className="py-2 px-3">Product Name & SKU</th>
-                              <th className="py-2 px-3 text-right">Requested Qty</th>
-                              <th className="py-2 px-3 text-right">Physical Warehouse Stock</th>
-                              <th className="py-2 px-3 text-center">Stock Check</th>
-                              <th className="py-2 px-3 text-right">Unit Rate (₹)</th>
-                              <th className="py-2 px-3 text-right">Total (₹)</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 text-slate-700 bg-white">
-                            {request.items?.map((item, iIdx) => {
-                              const hasEnough = item.hasEnoughStock;
-                              const stockQty = item.currentStock;
-
-                              return (
-                                <tr key={iIdx} className={!hasEnough ? 'bg-rose-50/40' : ''}>
-                                  <td className="py-2 px-3">
-                                    <span className="font-semibold text-slate-900">{item.productName}</span>
-                                    <div className="text-[10px] text-slate-400 font-mono">SKU: {item.sku}</div>
-                                  </td>
-                                  <td className="py-2 px-3 text-right font-bold text-slate-900">
-                                    {item.quantity} {item.freeQuantity ? `(+${item.freeQuantity} free)` : ''}
-                                  </td>
-                                  <td className="py-2 px-3 text-right font-mono font-medium">
-                                    {stockQty} units
-                                  </td>
-                                  <td className="py-2 px-3 text-center">
-                                    {hasEnough ? (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                        Stock OK ({stockQty} in bay)
-                                      </span>
-                                    ) : (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-                                        Shortage: Need {item.quantity} (Have {stockQty})
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="py-2 px-3 text-right font-mono">
-                                    ₹ {Number(item.unitPrice).toFixed(2)}
-                                  </td>
-                                  <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                                    ₹ {Number(item.total).toFixed(2)}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Bottom Action Footer */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 mt-3 border-t border-slate-100">
-                      <div className="text-xs text-slate-500">
-                        {request.deliveryNotes && (
-                          <span>Notes: <em>"{request.deliveryNotes}"</em></span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            setTransferInitialData(request);
-                            setIsTransferModalOpen(true);
-                          }}
-                          className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
-                        >
-                          <Truck className="w-4 h-4" />
-                          Check & Transfer Stock (Generate Bill)
-                        </button>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card>
-              <div className="py-12 text-center text-slate-400 space-y-2">
-                <CheckCircle2 className="w-8 h-8 mx-auto text-emerald-500" />
-                <div className="font-semibold text-slate-700 text-sm">No Pending Salesperson Requests</div>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  All requests booked by field sales executives have been reviewed and transferred to stores. New requests will appear here automatically when booked by field staff.
-                </p>
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* TAB: STORE TRANSFERS & DISPATCHES (INVOICES) */}
-      {activeTab === 'store-transfer' && (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">Shop Stock Transfers & GST Invoices</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Complete audit history of stock dispatched to retail shops with generated GST Tax Invoices
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setTransferInitialData(null);
-                setIsTransferModalOpen(true);
-              }}
-              className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
-            >
-              <Truck className="w-4 h-4" /> + New Shop Stock Transfer
-            </button>
-          </div>
-
-          <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
-                  <tr>
-                    <th className="py-3 px-3">Invoice / Challan</th>
-                    <th className="py-3 px-3">Destination Shop</th>
-                    <th className="py-3 px-3">Dispatch Date</th>
-                    <th className="py-3 px-3">Payment Terms</th>
-                    <th className="py-3 px-3 text-right">Taxable Subtotal</th>
-                    <th className="py-3 px-3 text-right">Total Bill (₹)</th>
-                    <th className="py-3 px-3 text-center">Status</th>
-                    <th className="py-3 px-3 text-right">Invoice Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {recentTransfers.length > 0 ? (
-                    recentTransfers.map((inv) => (
-                      <tr key={inv._id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-3 font-mono">
-                          <span className="font-bold text-slate-900">{inv.invoiceNumber}</span>
-                          <div className="text-[10px] text-slate-400">{inv.deliveryChallanNo || 'Challan Created'}</div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-semibold text-slate-800">{inv.storeId?.name}</div>
-                          <div className="text-[10px] text-slate-400">{inv.storeId?.city}</div>
-                        </td>
-                        <td className="py-3 px-3 text-slate-600">
-                          {new Date(inv.invoiceDate).toLocaleDateString('en-IN')}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded bg-slate-100 font-medium text-[10px] text-slate-700">
-                            {inv.saleType || 'Credit'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right font-medium text-slate-600 font-mono">
-                          ₹ {Number(inv.taxableSubtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-3 text-right font-bold text-teal-800 font-mono text-sm">
-                          ₹ {Number(inv.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <StatusBadge status={inv.status} />
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => window.open(`/api/invoices/${inv._id}/pdf`, '_blank')}
-                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 rounded font-semibold text-[11px] inline-flex items-center gap-1 transition-colors"
-                              title="Download / Print PDF Tax Invoice Bill"
-                            >
-                              <Download className="w-3.5 h-3.5 text-teal-600" />
-                              PDF Bill
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="py-8 text-center text-slate-400">
-                        No shop transfers recorded yet. Click "+ New Shop Stock Transfer" above to initiate a dispatch.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* TAB 4: STOCK LEDGER AUDIT TRAIL */}
-      {activeTab === 'ledger' && (
-        <Card title="Stock Ledger Audit History" subtitle="Immutable movement logs for inward, sales outward, returns and damage">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-semibold uppercase">
-                <tr>
-                  <th className="py-3 px-3">Date & Time</th>
-                  <th className="py-3 px-3">Product SKU</th>
-                  <th className="py-3 px-3">Type</th>
-                  <th className="py-3 px-3">Reference</th>
-                  <th className="py-3 px-3 text-right">Quantity</th>
-                  <th className="py-3 px-3 text-right">Balance (Before &rarr; After)</th>
-                  <th className="py-3 px-3">Notes / Operator</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {ledger.length > 0 ? (
-                  ledger.map((entry) => {
-                    const isPositive = entry.quantity > 0;
-                    return (
-                      <tr key={entry._id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="py-3 px-3 font-mono text-[11px] text-slate-500">
-                          {new Date(entry.date).toLocaleString('en-IN')}
-                        </td>
-                        <td className="py-3 px-3 font-semibold text-slate-800">
-                          {entry.productId?.name || 'Item'}
-                          <div className="text-[10px] text-slate-400 font-mono">{entry.productId?.sku}</div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <span className="inline-block px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100 text-slate-800">
-                            {entry.transactionType}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 font-mono font-bold text-teal-800">
-                          {entry.referenceId || '-'}
-                        </td>
-                        <td className={`py-3 px-3 text-right font-extrabold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {isPositive ? `+${entry.quantity}` : entry.quantity}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-medium text-slate-600">
-                          {entry.balanceBefore} &rarr; <span className="font-bold text-slate-900">{entry.balanceAfter}</span>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="text-[11px] text-slate-700">{entry.notes}</div>
-                          <div className="text-[10px] text-slate-400">By: {entry.performedBy}</div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="py-8 text-center text-slate-400">
-                      No stock movement ledger records found yet.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {/* TAB 3: INVENTORY VALUATION & MARGIN ANALYSIS */}
-      {activeTab === 'valuation' && valuation && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-500 uppercase">Purchase Cost Valuation</span>
-              <div className="text-2xl font-bold text-slate-900 mt-2">
-                ₹ {Number(valuation.totalPurchaseValuation).toLocaleString('en-IN')}
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Capital currently invested in physical stock</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-500 uppercase">Wholesale Selling Valuation</span>
-              <div className="text-2xl font-bold text-teal-800 mt-2">
-                ₹ {Number(valuation.totalSellingValuation).toLocaleString('en-IN')}
-              </div>
-              <p className="text-xs text-slate-400 mt-1">Expected revenue upon complete distribution</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200">
-              <span className="text-xs font-semibold text-slate-500 uppercase">Potential Gross Profit</span>
-              <div className="text-2xl font-bold text-emerald-600 mt-2">
-                ₹ {Number(valuation.potentialGrossProfit).toLocaleString('en-IN')}
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                Estimated inventory profit margin (~{((valuation.potentialGrossProfit / valuation.totalSellingValuation) * 100).toFixed(1)}%)
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card title="Damaged & Quarantine Exposure" subtitle="Products reported broken or unsellable">
-              <div className="flex items-center justify-between p-4 bg-rose-50 rounded-xl border border-rose-100">
-                <div>
-                  <div className="text-rose-900 font-bold text-sm">Damaged Stock Units: {valuation.totalDamagedUnits} units</div>
-                  <div className="text-rose-700 text-xs mt-0.5">Eligible for supplier replacement or debit credit note</div>
-                </div>
-                <div className="text-lg font-bold text-rose-800">
-                  ₹ {Number(valuation.damagedValuation).toLocaleString('en-IN')}
-                </div>
-              </div>
-            </Card>
-
-            <Card title="Stock Health Metrics" subtitle="Active SKU availability summary">
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600">Total Unique SKUs Tracked:</span>
-                  <span className="font-bold text-slate-900">{valuation.totalSkus} SKUs</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-slate-600">Total Physical Units in Warehouse:</span>
-                  <span className="font-bold text-slate-900">{valuation.totalPhysicalQuantity} Units</span>
-                </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-100">
-                  <span className="text-amber-700 font-semibold">SKUs Below Minimum Alert:</span>
-                  <span className="font-bold text-amber-700">{valuation.lowStockCount} Products</span>
-                </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-rose-700 font-semibold">Completely Out-of-Stock SKUs:</span>
-                  <span className="font-bold text-rose-700">{valuation.outOfStockCount} Products</span>
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Stock Adjustment Modal */}
-      <Modal
-        isOpen={isAdjustModalOpen}
-        onClose={() => setIsAdjustModalOpen(false)}
-        title="Warehouse Stock Audit / Manual Adjustment"
-      >
-        <form onSubmit={handleAdjustSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Select Product *</label>
-            <select
-              required
-              value={adjustData.productId}
-              onChange={(e) => setAdjustData({ ...adjustData, productId: e.target.value })}
-              className="w-full px-3 py-1.5 border border-slate-200 rounded-lg bg-white"
-            >
-              <option value="">Select Product SKU</option>
-              {stocks.map((s) => (
-                <option key={s.productId?._id} value={s.productId?._id}>
-                  {s.productId?.name} ({s.productId?.sku}) - Current: {s.currentStock}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Adjustment Action *</label>
-              <select
-                value={adjustData.type}
-                onChange={(e) => setAdjustData({ ...adjustData, type: e.target.value })}
-                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg bg-white font-medium"
-              >
-                <option value="ADDITION">+ Stock Addition (Found / Surplus)</option>
-                <option value="REDUCTION">- Stock Reduction (Damaged / Missing / Promo)</option>
-                <option value="DAMAGE_TRANSFER">&rarr; Transfer to Damaged Quarantine</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Quantity *</label>
-              <input
-                type="number"
-                min="1"
-                required
-                value={adjustData.adjustmentQty}
-                onChange={(e) => setAdjustData({ ...adjustData, adjustmentQty: Number(e.target.value) })}
-                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Audit Reason</label>
-            <select
-              value={adjustData.reason}
-              onChange={(e) => setAdjustData({ ...adjustData, reason: e.target.value })}
-              className="w-full px-3 py-1.5 border border-slate-200 rounded-lg bg-white"
-            >
-              <option value="Physical Count Verification">Physical Count Verification</option>
-              <option value="Warehouse Handling Damage">Warehouse Handling Damage</option>
-              <option value="Shop Free Sample Sampling">Shop Free Sample Sampling</option>
-              <option value="Supplier Inward Correction">Supplier Inward Correction</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Notes & Approver Remarks</label>
-            <textarea
-              rows="2"
-              value={adjustData.notes}
-              onChange={(e) => setAdjustData({ ...adjustData, notes: e.target.value })}
-              className="w-full px-3 py-1.5 border border-slate-200 rounded-lg"
-              placeholder="e.g. Verified by Shop Manager during quarterly inventory audit"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsAdjustModalOpen(false)}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold disabled:opacity-50"
-            >
-              {submitting ? 'Applying Adjustment...' : 'Confirm Stock Adjustment'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Direct Stock Inward Modal (Price, Date, Quantity) */}
-      <Modal
-        isOpen={isInwardModalOpen}
-        onClose={() => setIsInwardModalOpen(false)}
-        title="Direct Stock Inward Entry (No PO Required)"
-      >
-        <form onSubmit={handleInwardSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Select Product SKU *</label>
-            <select
-              required
-              value={inwardData.productId}
-              onChange={(e) => {
-                const prodId = e.target.value;
-                const found = stocks.find(s => s.productId?._id === prodId)?.productId;
-                setInwardProductInfo(found || null);
-                setInwardData(prev => ({
-                  ...prev,
-                  productId: prodId,
-                  unitPrice: found?.purchasePrice || prev.unitPrice || 0
-                }));
-              }}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white font-medium"
-            >
-              <option value="">Select Product SKU...</option>
-              {stocks.map((s) => (
-                <option key={s.productId?._id} value={s.productId?._id}>
-                  {s.productId?.name} ({s.productId?.sku}) &bull; Current Stock: {s.currentStock}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {inwardProductInfo && (
-            <div className="p-2.5 bg-teal-50 border border-teal-200 rounded-lg flex items-center justify-between text-[11px] text-teal-800">
-              <span>Brand: <strong>{inwardProductInfo.brand || inwardProductInfo.manufacturerId?.name || 'Tamil Ent'}</strong></span>
-              <span>MRP: <strong>₹{inwardProductInfo.mrp}</strong> &bull; Selling: <strong>₹{inwardProductInfo.sellingPrice}</strong></span>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Date */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Inward Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={inwardData.date}
-                onChange={(e) => setInwardData({ ...inwardData, date: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white"
-              />
-            </div>
-
-            {/* Quantity */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Received Qty *
-              </label>
-              <input
-                type="number"
-                min="1"
-                required
-                value={inwardData.quantity}
-                onChange={(e) => setInwardData({ ...inwardData, quantity: Math.max(1, parseInt(e.target.value) || 0) })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg font-bold text-slate-900"
-              />
-              <div className="flex gap-1 mt-1">
-                {[10, 50, 100].map(add => (
-                  <button
-                    type="button"
-                    key={add}
-                    onClick={() => setInwardData(prev => ({ ...prev, quantity: (Number(prev.quantity) || 0) + add }))}
-                    className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-semibold"
-                  >
-                    +{add}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Price */}
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">
-                Purchase Rate / Unit (₹) *
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-slate-400 font-semibold">₹</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  required
-                  value={inwardData.unitPrice}
-                  onChange={(e) => setInwardData({ ...inwardData, unitPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-lg font-bold text-slate-900"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Valuation preview */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-            <span className="text-slate-600 font-medium">Total Cost: ({inwardData.quantity} units &times; ₹{inwardData.unitPrice})</span>
-            <span className="text-base font-bold text-teal-700">
-              ₹ {(Math.round((Number(inwardData.quantity) || 0) * (Number(inwardData.unitPrice) || 0) * 100) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Bill / Invoice No.</label>
-              <input
-                type="text"
-                placeholder="e.g. INV-2026-99"
-                value={inwardData.billNumber}
-                onChange={(e) => setInwardData({ ...inwardData, billNumber: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Batch Number</label>
-              <input
-                type="text"
-                placeholder="e.g. B-2026"
-                value={inwardData.batchNumber}
-                onChange={(e) => setInwardData({ ...inwardData, batchNumber: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="updateMasterPrice"
-              checked={inwardData.updateProductPrice}
-              onChange={(e) => setInwardData({ ...inwardData, updateProductPrice: e.target.checked })}
-              className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 w-4 h-4 cursor-pointer"
-            />
-            <label htmlFor="updateMasterPrice" className="text-slate-700 font-medium cursor-pointer">
-              Update master product purchase price to ₹{inwardData.unitPrice}
-            </label>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 mb-1">Notes</label>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-60">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="e.g. Direct inward from distributor truck"
-              value={inwardData.notes}
-              onChange={(e) => setInwardData({ ...inwardData, notes: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+              placeholder="Search product..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          {/* Add New Product Button */}
+          <button
+            onClick={() => navigate('/products?action=new')}
+            className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer whitespace-nowrap"
+            title="Create New Product Master"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Product</span>
+          </button>
+
+          {/* Update Stock Action Button */}
+          <button
+            onClick={handleOpenModal}
+            className="px-3.5 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer whitespace-nowrap"
+            title="Open Stock Update Dialog"
+          >
+            <PackagePlus className="w-4 h-4" />
+            <span>Update Stock</span>
+          </button>
+
+          <button
+            onClick={fetchStockData}
+            title="Refresh Stock Data"
+            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-teal-600' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Manufacturer Quantity Summary Cards for Both Manufacturers */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Femi9 Card */}
+        <button
+          type="button"
+          onClick={() => setSelectedBrand(selectedBrand === 'femi9.in' ? 'ALL' : 'femi9.in')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedBrand === 'femi9.in'
+              ? 'bg-pink-50 border-pink-400 ring-2 ring-pink-200 shadow-xs'
+              : 'bg-white hover:bg-pink-50/40 border-pink-200 shadow-2xs'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-pink-900 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-pink-600" />
+              femi9.in
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-pink-100 text-pink-800 font-semibold">
+              FEMI9
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-xl font-black text-slate-900">
+              {Number(femi9Total).toLocaleString('en-IN')} <span className="text-xs font-semibold text-slate-500">units</span>
+            </span>
+            <span className="text-[11px] text-pink-700 font-medium">
+              {stocks.filter(s => s.brand === 'femi9.in').length} SKUs
+            </span>
+          </div>
+        </button>
+
+        {/* Mansara Foods Card */}
+        <button
+          type="button"
+          onClick={() => setSelectedBrand(selectedBrand === 'mansarafoods.com' ? 'ALL' : 'mansarafoods.com')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedBrand === 'mansarafoods.com'
+              ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-200 shadow-xs'
+              : 'bg-white hover:bg-amber-50/40 border-amber-200 shadow-2xs'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-amber-900 flex items-center gap-1.5">
+              <Factory className="w-3.5 h-3.5 text-amber-600" />
+              mansarafoods.com
+            </span>
+            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-semibold">
+              MANSARA
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-xl font-black text-slate-900">
+              {Number(mansaraTotal).toLocaleString('en-IN')} <span className="text-xs font-semibold text-slate-500">units</span>
+            </span>
+            <span className="text-[11px] text-amber-800 font-medium">
+              {stocks.filter(s => s.brand === 'mansarafoods.com').length} SKUs
+            </span>
+          </div>
+        </button>
+
+        {/* Combined Inventory Card */}
+        <button
+          type="button"
+          onClick={() => setSelectedBrand('ALL')}
+          className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+            selectedBrand === 'ALL'
+              ? 'bg-teal-50 border-teal-500 ring-2 ring-teal-200 shadow-xs'
+              : 'bg-white hover:bg-slate-50 border-slate-200 shadow-2xs'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-800 flex items-center gap-1.5">
+              <Boxes className="w-3.5 h-3.5 text-teal-600" />
+              Both Manufacturers
+            </span>
+            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-700">
+              Combined Total
+            </span>
+          </div>
+          <div className="mt-2 flex items-baseline justify-between">
+            <span className="text-xl font-black text-slate-900">
+              {Number(combinedTotal).toLocaleString('en-IN')} <span className="text-xs font-semibold text-slate-500">units</span>
+            </span>
+            <span className="text-[11px] text-teal-700 font-medium">
+              {stocks.length} SKUs Total
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* Main Overall Stock Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="py-3.5 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Product SKU & Name
+                </th>
+                <th className="py-3.5 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">
+                  Manufacturer / Brand
+                </th>
+                <th className="py-3.5 px-6 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">
+                  Closing Qty
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading && stocks.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-xs font-medium">Loading Overall Stock...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredStocks.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-12 text-center text-slate-400">
+                    <Package className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                    <p className="text-sm font-medium text-slate-600">No products found</p>
+                    {search && <p className="text-xs text-slate-400 mt-0.5">Try adjusting your search query</p>}
+                  </td>
+                </tr>
+              ) : (
+                filteredStocks.map((item) => {
+                  const isFemi9 = item.brand === 'femi9.in';
+                  return (
+                    <tr
+                      key={item._id || item.name}
+                      className="hover:bg-slate-50/50 transition-colors"
+                    >
+                      <td className="py-3.5 px-6 text-sm font-bold text-slate-900 leading-snug">
+                        <div>{item.name}</div>
+                        {item.sku && (
+                          <div className="text-[11px] font-mono font-normal text-slate-400 mt-0.5">
+                            SKU: {item.sku}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-6 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                            isFemi9
+                              ? 'bg-pink-50 text-pink-700 border border-pink-200'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {isFemi9 ? 'femi9.in' : 'mansarafoods.com'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-6 text-sm font-bold text-slate-900 text-right font-mono">
+                        {Number(item.closingQty).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-slate-200 bg-slate-50/60">
+                <td colSpan={2} className="py-4 px-6 text-sm font-bold text-slate-900">
+                  Total Closing Stock Quantity {selectedBrand !== 'ALL' ? `(${selectedBrand})` : '(Both Manufacturers)'}
+                </td>
+                <td className="py-4 px-6 text-base font-black text-slate-900 text-right font-mono">
+                  {Number(totalFilteredQty).toLocaleString('en-IN')}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      {/* 2-Column Update Stock Dialog Box */}
+      <Modal
+        isOpen={isUpdateModalOpen}
+        onClose={handleCloseModal}
+        title="Update Product Stock"
+        maxWidth="max-w-4xl"
+      >
+        <div className="space-y-4 text-xs">
+          {/* Top Brand Filter Tabs & Counter */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+              <span className="text-[11px] font-semibold text-slate-500 mr-1">Brand Filter:</span>
+              <button
+                type="button"
+                onClick={() => setModalBrandFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  modalBrandFilter === 'ALL'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                All ({modalProducts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalBrandFilter('femi9.in')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  modalBrandFilter === 'femi9.in'
+                    ? 'bg-pink-600 text-white'
+                    : 'bg-pink-50 text-pink-700 hover:bg-pink-100 border border-pink-200'
+                }`}
+              >
+                femi9.in ({modalProducts.filter(p => p.brand === 'femi9.in').length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalBrandFilter('mansarafoods.com')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  modalBrandFilter === 'mansarafoods.com'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                }`}
+              >
+                mansarafoods.com ({modalProducts.filter(p => p.brand === 'mansarafoods.com').length})
+              </button>
+            </div>
+
+            <div className="text-[11px] text-slate-500 font-medium">
+              Updated in queue: <span className="font-bold text-teal-700">{modalProducts.filter(p => p.isUpdated).length}</span> / {modalProducts.length} SKUs
+            </div>
+          </div>
+
+          {/* Feedback banner when product was updated and moved down */}
+          {lastMovedProduct && (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 flex items-center justify-between text-xs animate-in fade-in duration-300">
+              <span className="flex items-center gap-1.5 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  <strong>{lastMovedProduct.name}</strong> updated to <strong>{lastMovedProduct.qty} units</strong> and moved down to the bottom of the list.
+                </span>
+              </span>
+              <span className="text-[11px] font-mono text-emerald-700 flex items-center gap-0.5 font-bold">
+                <ArrowDown className="w-3.5 h-3.5" /> Moved Down
+              </span>
+            </div>
+          )}
+
+          {/* Two-Column Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+            {/* LEFT COLUMN: List all products one by one */}
+            <div className="md:col-span-5 flex flex-col border border-slate-200 rounded-xl bg-slate-50/50 overflow-hidden">
+              <div className="p-2.5 bg-white border-b border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="font-bold text-xs flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-teal-600" />
+                    Product Queue ({filteredModalList.length})
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Top item is active
+                  </span>
+                </div>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search in queue..."
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    className="w-full pl-8 pr-2.5 py-1 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+
+              {/* Scrollable list of products one by one */}
+              <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 p-1.5 space-y-1">
+                {filteredModalList.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 text-xs">
+                    No products matching search
+                  </div>
+                ) : (
+                  filteredModalList.map((item, idx) => {
+                    const isSelected = item._id === selectedProductId;
+                    const isTop = idx === 0;
+                    const isFemi9 = item.brand === 'femi9.in';
+
+                    return (
+                      <div
+                        key={item._id}
+                        onClick={() => {
+                          setSelectedProductId(item._id);
+                          setStockInput(item.closingQty !== undefined ? String(item.closingQty) : '');
+                        }}
+                        className={`p-2.5 rounded-lg transition-all cursor-pointer text-left relative ${
+                          isSelected
+                            ? 'bg-teal-50/80 border-2 border-teal-500 shadow-xs'
+                            : 'bg-white hover:bg-slate-100/70 border border-slate-200/60'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-1.5">
+                          <div className="flex items-start gap-1.5">
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                              isTop && !item.isUpdated
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : item.isUpdated
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {isTop && !item.isUpdated ? 'TOP #1' : `#${idx + 1}`}
+                            </span>
+                            <div className="font-semibold text-slate-900 line-clamp-2 leading-tight">
+                              {item.name}
+                            </div>
+                          </div>
+                          
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                            item.isUpdated
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : item.closingQty > 0
+                              ? 'bg-slate-100 text-slate-800'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {item.isUpdated ? `✓ ${item.closingQty}` : `${item.closingQty} qty`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 pl-6">
+                          <span>{item.sku || 'SKU'}</span>
+                          <span className={isFemi9 ? 'text-pink-600 font-semibold' : 'text-amber-700 font-semibold'}>
+                            {item.brand}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN: Allow to enter the stock for the product */}
+            <div className="md:col-span-7 flex flex-col justify-between border border-slate-200 rounded-xl bg-white p-4 shadow-2xs">
+              {activeModalProduct ? (
+                <form onSubmit={handleUpdateCurrentStock} className="space-y-4">
+                  {/* Selected Product Card */}
+                  <div className={`p-3.5 rounded-xl border ${
+                    activeModalProduct.brand === 'femi9.in'
+                      ? 'bg-gradient-to-br from-pink-50/60 to-rose-50/30 border-pink-200'
+                      : 'bg-gradient-to-br from-amber-50/60 to-orange-50/30 border-amber-200'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                        activeModalProduct.brand === 'femi9.in' ? 'bg-pink-100 text-pink-800' : 'bg-amber-100 text-amber-800'
+                      }`}>
+                        {activeModalProduct.brand}
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-500 font-bold">
+                        {activeModalProduct.sku}
+                      </span>
+                    </div>
+
+                    <h4 className="font-bold text-sm text-slate-900 mt-1 leading-snug">
+                      {activeModalProduct.name}
+                    </h4>
+
+                    <div className="grid grid-cols-3 gap-2 mt-3 pt-2.5 border-t border-slate-200/60 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">Current Stock</span>
+                        <span className="font-black text-slate-800 text-xs">
+                          {activeModalProduct.closingQty || 0} {activeModalProduct.unit || 'units'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">MRP Rate</span>
+                        <span className="font-bold text-slate-700 text-xs">
+                          ₹ {activeModalProduct.mrp || 0}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 text-[10px] block">Queue Status</span>
+                        <span className="font-semibold text-teal-700 text-xs flex items-center gap-1">
+                          {activeModalProduct.isUpdated ? '✓ Updated' : 'Pending Entry'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stock Entry Section */}
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-800">
+                        Enter Stock Quantity *
+                      </label>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <label className="flex items-center gap-1 text-slate-600 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="updateMode"
+                            checked={updateMode === 'SET'}
+                            onChange={() => setUpdateMode('SET')}
+                            className="text-teal-600 focus:ring-teal-500"
+                          />
+                          <span>Set Absolute</span>
+                        </label>
+                        <label className="flex items-center gap-1 text-slate-600 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="updateMode"
+                            checked={updateMode === 'ADDITION'}
+                            onChange={() => setUpdateMode('ADDITION')}
+                            className="text-teal-600 focus:ring-teal-500"
+                          />
+                          <span>Add (+)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        autoFocus
+                        value={stockInput}
+                        onChange={(e) => setStockInput(e.target.value)}
+                        placeholder="e.g. 150"
+                        className="w-full px-4 py-2.5 text-lg font-black text-slate-900 border-2 border-slate-200 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 font-mono tracking-tight"
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                        Units
+                      </span>
+                    </div>
+
+                    {/* Quick quantity shortcuts */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] text-slate-400 font-semibold mr-1">Quick:</span>
+                      {[0, 10, 25, 50, 100, 200, 500].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => setStockInput(String(num))}
+                          className="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-[11px] font-semibold transition-colors cursor-pointer"
+                        >
+                          {num === 0 ? '0' : `+${num}`}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Flow Action Buttons */}
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSkipCurrent}
+                      className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Skip this product and move it to the bottom"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Skip to Next</span>
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={savingStock}
+                      className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      {savingStock ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Update Stock & Move Down &rarr;</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="py-16 text-center text-slate-400 space-y-2">
+                  <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-500" />
+                  <p className="font-bold text-slate-700 text-sm">All products have been updated!</p>
+                  <p className="text-xs text-slate-400">You can close this dialog or select any product on the left to re-edit.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer with Close Button */}
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <span className="text-slate-400 text-[11px]">
+              Updating stock here immediately reflects in Central Warehouse & Principal Supplier records.
+            </span>
             <button
               type="button"
-              onClick={() => setIsInwardModalOpen(false)}
-              className="px-3.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"
+              onClick={handleCloseModal}
+              className="px-4 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-colors cursor-pointer"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold shadow-xs transition-colors disabled:opacity-50"
-            >
-              {submitting ? 'Updating Stock...' : 'Confirm Direct Inward'}
+              Done & Close
             </button>
           </div>
-        </form>
-      </Modal>
-
-      {/* Store Stock Transfer Modal */}
-      <StoreTransferModal
-        isOpen={isTransferModalOpen}
-        onClose={() => {
-          setIsTransferModalOpen(false);
-          setTransferInitialData(null);
-        }}
-        initialData={transferInitialData}
-        storesList={stores}
-        salesmenList={salesmen}
-        productsList={transferProductsList}
-        onSuccess={(result) => {
-          fetchStockData();
-          fetchValuation();
-          fetchSalesmanRequests();
-          fetchRecentTransfers();
-          setGeneratedInvoiceData(result);
-          setIsInvoiceSuccessOpen(true);
-        }}
-      />
-
-      {/* Invoice Success & Bill Download/Print Modal */}
-      <InvoiceSuccessModal
-        isOpen={isInvoiceSuccessOpen}
-        onClose={() => setIsInvoiceSuccessOpen(false)}
-        invoiceData={generatedInvoiceData}
-      />
-
-      {/* Toast Alert */}
-      {successToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-emerald-900 text-white px-4 py-3 rounded-xl shadow-xl border border-emerald-500 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-          <div className="text-xs font-semibold">{successToast}</div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

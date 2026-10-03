@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Factory, Plus, Search, Phone, Mail, MapPin, Eye, IndianRupee, PackagePlus, Boxes, ArrowRight, CheckCircle2, Package } from 'lucide-react';
+import { Factory, Plus, Search, Phone, Mail, MapPin, Eye, IndianRupee, PackagePlus, Boxes, ArrowRight, CheckCircle2, Package, Globe } from 'lucide-react';
 import api from '../api/client';
 import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
@@ -31,6 +31,7 @@ const Manufacturers = () => {
     contactPerson: '',
     phone: '',
     email: '',
+    website: '',
     address: '',
     city: 'Chennai',
     state: 'Tamil Nadu',
@@ -86,6 +87,7 @@ const Manufacturers = () => {
           contactPerson: '',
           phone: '',
           email: '',
+          website: '',
           address: '',
           city: 'Chennai',
           state: 'Tamil Nadu',
@@ -152,10 +154,103 @@ const Manufacturers = () => {
         </div>
       </div>
 
+      {/* Product Quantity & Stock Overview for Both Manufacturers */}
+      {manufacturers.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {manufacturers.map((mfg) => {
+            const isFemi9 = mfg.code === 'FEMI9' || mfg.name?.toLowerCase().includes('femi9');
+            const isMansara = mfg.code === 'MANSARA' || mfg.name?.toLowerCase().includes('mansara');
+            const stockQty = mfg.totalPhysicalStock ?? mfg.totalAvailableStock ?? 0;
+
+            return (
+              <div
+                key={mfg._id}
+                onClick={() => {
+                  setActiveManufacturer(mfg);
+                  openDetails(mfg._id);
+                }}
+                className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                  isFemi9
+                    ? 'bg-gradient-to-br from-pink-50/70 to-rose-50/30 border-pink-200 hover:border-pink-300'
+                    : isMansara
+                    ? 'bg-gradient-to-br from-amber-50/70 to-orange-50/30 border-amber-200 hover:border-amber-300'
+                    : 'bg-gradient-to-br from-teal-50/70 to-emerald-50/30 border-teal-200 hover:border-teal-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                    <Factory className="w-3.5 h-3.5 text-teal-600" />
+                    {mfg.name}
+                  </span>
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/90 border border-slate-200 text-slate-700">
+                    {mfg.code}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between mt-2">
+                  <div>
+                    <div className="text-[10px] uppercase font-semibold text-slate-500">Warehouse Stock Qty</div>
+                    <div className="text-xl font-black text-slate-900 flex items-baseline gap-1 mt-0.5">
+                      {Number(stockQty).toLocaleString('en-IN')}
+                      <span className="text-xs font-semibold text-slate-500">units</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase font-semibold text-slate-500">Active SKUs</div>
+                    <div className="text-sm font-bold text-teal-800 mt-0.5">
+                      {mfg.productsCount || 0} Products
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-2.5 border-t border-slate-200/60 flex items-center justify-between text-[11px] text-slate-600">
+                  <span>Stock Value: <strong className="text-emerald-700 font-semibold">₹ {Number(mfg.stockValuation || 0).toLocaleString('en-IN')}</strong></span>
+                  <span className="text-teal-700 hover:underline flex items-center gap-0.5 font-medium">
+                    Catalogue &rarr;
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Combined Inventory Total */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                <Boxes className="w-3.5 h-3.5 text-slate-600" />
+                Combined Inventory Total
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                {manufacturers.length} Principal Brands
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-2">
+              <div>
+                <div className="text-[10px] uppercase font-semibold text-slate-500">Total Quantity (All Brands)</div>
+                <div className="text-xl font-black text-slate-900 flex items-baseline gap-1 mt-0.5">
+                  {Number(manufacturers.reduce((acc, m) => acc + (m.totalPhysicalStock ?? m.totalAvailableStock ?? 0), 0)).toLocaleString('en-IN')}
+                  <span className="text-xs font-semibold text-slate-500">units</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] uppercase font-semibold text-slate-500">Total SKUs</div>
+                <div className="text-sm font-bold text-slate-900 mt-0.5">
+                  {manufacturers.reduce((acc, m) => acc + (m.productsCount || 0), 0)} SKUs
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600">
+              <span>Total Valuation: <strong className="text-emerald-700 font-semibold">₹ {Number(manufacturers.reduce((acc, m) => acc + (m.stockValuation || 0), 0)).toLocaleString('en-IN')}</strong></span>
+              <Link to="/stock-management" className="text-teal-700 hover:underline flex items-center gap-0.5 font-medium">
+                Overall Stock &rarr;
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table Card */}
       <Card>
         {loading ? (
-          <TableSkeleton rows={5} cols={6} />
+          <TableSkeleton rows={5} cols={7} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -163,6 +258,7 @@ const Manufacturers = () => {
                 <tr>
                   <th className="py-3 px-3">Manufacturer</th>
                   <th className="py-3 px-3">Code / GSTIN</th>
+                  <th className="py-3 px-3">Products & Stock Qty</th>
                   <th className="py-3 px-3">Contact Person</th>
                   <th className="py-3 px-3">Credit Terms</th>
                   <th className="py-3 px-3 text-right">Payable Outstanding</th>
@@ -190,11 +286,44 @@ const Manufacturers = () => {
                             + Stock
                           </span>
                         </div>
-                        <div className="text-[10px] text-slate-400 font-normal">{mfg.city}, {mfg.state}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400 font-normal">
+                          <span>{mfg.city}, {mfg.state}</span>
+                          {mfg.website && (
+                            <>
+                              <span>&bull;</span>
+                              <a
+                                href={mfg.website.startsWith('http') ? mfg.website : `https://${mfg.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-teal-600 hover:text-teal-800 hover:underline inline-flex items-center gap-0.5"
+                              >
+                                <Globe className="w-2.5 h-2.5" />
+                                {mfg.website.replace(/^https?:\/\//, '')}
+                              </a>
+                            </>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3 font-mono">
                         <span className="font-bold text-slate-800">{mfg.code}</span>
                         <div className="text-[10px] text-slate-500">{mfg.gstNumber || 'No GST recorded'}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <Boxes className="w-3.5 h-3.5 text-teal-600" />
+                          <span>{Number(mfg.totalPhysicalStock ?? mfg.totalAvailableStock ?? 0).toLocaleString('en-IN')} units</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                          <span className="font-medium text-teal-700 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200">
+                            {mfg.productsCount || 0} SKUs
+                          </span>
+                          {mfg.stockValuation > 0 && (
+                            <span className="text-slate-500">
+                              Val: ₹ {Number(mfg.stockValuation).toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3">
                         <div className="font-medium text-slate-800">{mfg.contactPerson || 'Office Sales'}</div>
@@ -254,7 +383,7 @@ const Manufacturers = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="py-8 text-center text-slate-400">
+                    <td colSpan="8" className="py-8 text-center text-slate-400">
                       No manufacturers found matching your search.
                     </td>
                   </tr>
@@ -320,6 +449,29 @@ const Manufacturers = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
+                placeholder="orders@company.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Website URL</label>
+              <input
+                type="text"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs"
+                placeholder="e.g. mansarafoods.com"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">GSTIN Number</label>
               <input
                 type="text"
@@ -379,7 +531,7 @@ const Manufacturers = () => {
           maxWidth="max-w-2xl"
         >
           <div className="space-y-5 text-xs">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Code</span>
                 <span className="font-bold text-slate-800 text-sm">{selectedMfg.code}</span>
@@ -389,14 +541,34 @@ const Manufacturers = () => {
                 <span className="font-bold text-slate-800 text-sm">{selectedMfg.creditPeriodDays} Days</span>
               </div>
               <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Catalogue SKUs</span>
+                <span className="font-bold text-teal-700 text-sm">{selectedMfg.productsCount || 0} SKUs</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Total Stock Qty</span>
+                <span className="font-bold text-teal-800 text-sm">{Number(selectedMfg.totalPhysicalStock ?? selectedMfg.totalAvailableStock ?? 0).toLocaleString('en-IN')} Units</span>
+              </div>
+              <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-bold">Current Payable</span>
                 <span className="font-bold text-amber-700 text-sm">₹ {Number(selectedMfg.currentOutstanding || 0).toLocaleString('en-IN')}</span>
               </div>
-              <div>
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Catalogue Items</span>
-                <span className="font-bold text-teal-700 text-sm">{selectedMfg.productsCount || 0} SKUs</span>
-              </div>
             </div>
+
+            {selectedMfg.website && (
+              <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <span className="text-slate-600 font-medium flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-teal-600" /> Official Website:
+                </span>
+                <a
+                  href={selectedMfg.website.startsWith('http') ? selectedMfg.website : `https://${selectedMfg.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-teal-600 hover:text-teal-800 hover:underline flex items-center gap-1"
+                >
+                  {selectedMfg.website} &rarr;
+                </a>
+              </div>
+            )}
 
             {/* Quick Actions Header in Modal */}
             <div className="flex items-center justify-between gap-2 p-3 bg-teal-50 border border-teal-200 rounded-xl">

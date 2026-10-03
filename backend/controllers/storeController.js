@@ -87,8 +87,97 @@ const getStoreById = async (req, res) => {
 };
 
 // @desc    Create new store
+// @desc    Create bulk stores in batch
+// @route   POST /api/stores/bulk
+const createBulkStores = async (req, res) => {
+  try {
+    const rawStores = req.body.stores || (Array.isArray(req.body) ? req.body : [req.body]);
+    if (!Array.isArray(rawStores) || rawStores.length === 0) {
+      return res.status(400).json({ success: false, message: 'An array of stores is required' });
+    }
+
+    const createdStores = [];
+    const errors = [];
+    let count = await Store.countDocuments();
+
+    for (let i = 0; i < rawStores.length; i++) {
+      const s = rawStores[i];
+      if (!s.name || !s.name.trim()) {
+        errors.push(`Row #${i + 1}: Shop Name is required`);
+        continue;
+      }
+      if (!s.phone || !s.phone.trim()) {
+        errors.push(`Row #${i + 1} (${s.name}): Mobile phone number is required`);
+        continue;
+      }
+
+      // Generate clean unique store code
+      const cityClean = (s.city || 'MDU').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MDU';
+      count++;
+      let candidate = `STR-${cityClean}-${String(count).padStart(2, '0')}`;
+      let exists = await Store.findOne({ code: candidate });
+      while (exists) {
+        count++;
+        candidate = `STR-${cityClean}-${String(count).padStart(2, '0')}`;
+        exists = await Store.findOne({ code: candidate });
+      }
+
+      const cleanSalesmanId = (s.salesmanId && mongoose.Types.ObjectId.isValid(s.salesmanId)) ? s.salesmanId : null;
+
+      try {
+        const newStore = await Store.create({
+          name: s.name.trim(),
+          code: s.code ? s.code.trim().toUpperCase() : candidate,
+          storeType: s.storeType || 'Supermarket',
+          ownerName: s.ownerName ? s.ownerName.trim() : '',
+          phone: s.phone.trim(),
+          email: s.email ? s.email.trim() : '',
+          address: s.address ? s.address.trim() : '',
+          area: s.area ? s.area.trim() : '',
+          city: s.city ? s.city.trim() : 'Madurai',
+          state: s.state ? s.state.trim() : 'Tamil Nadu',
+          pincode: s.pincode ? s.pincode.trim() : '',
+          gstNumber: s.gstNumber ? s.gstNumber.trim().toUpperCase() : '',
+          salesmanId: cleanSalesmanId,
+          creditLimit: Number(s.creditLimit) || 50000,
+          creditPeriodDays: Number(s.creditPeriodDays) || 21,
+          status: s.status || 'Active'
+        });
+
+        if (cleanSalesmanId) {
+          await Salesman.findByIdAndUpdate(cleanSalesmanId, { $inc: { assignedStoresCount: 1 } });
+        }
+
+        createdStores.push(newStore);
+      } catch (err) {
+        errors.push(`Row #${i + 1} (${s.name}): ${err.message}`);
+      }
+    }
+
+    if (createdStores.length === 0 && errors.length > 0) {
+      return res.status(400).json({ success: false, message: errors.join(', '), errors });
+    }
+
+    res.status(201).json({
+      success: true,
+      count: createdStores.length,
+      data: createdStores,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Successfully registered ${createdStores.length} shop(s)`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Create new store
 // @route   POST /api/stores
 const createStore = async (req, res) => {
+  // If array or bulk payload is passed, forward to createBulkStores
+  if (Array.isArray(req.body) || req.body.stores) {
+    return createBulkStores(req, res);
+  }
+
   try {
     const { name, code, ownerName, phone, address, city, salesmanId, creditLimit } = req.body;
     if (!name || !phone) {
@@ -196,6 +285,7 @@ module.exports = {
   getStores,
   getStoreById,
   createStore,
+  createBulkStores,
   updateStore,
   deleteStore
 };

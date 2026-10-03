@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowRightLeft,
   Truck,
@@ -37,6 +38,7 @@ import { TableSkeleton } from '../components/common/Skeleton';
 import { useManufacturer } from '../context/ManufacturerContext';
 
 const StoreTransfers = () => {
+  const navigate = useNavigate();
   const { activeManufacturer } = useManufacturer();
 
   // Tab State: 'transfer' (New Transfer & Direct Billing) | 'history' (Transfers History & Generated Invoices)
@@ -621,9 +623,18 @@ const StoreTransfers = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Select Retail Shop / Supermarket <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Select Retail Shop / Supermarket <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => navigate('/stores?action=new')}
+                        className="text-[11px] font-bold text-teal-600 hover:text-teal-700 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3 h-3" /> Add New Shop
+                      </button>
+                    </div>
                     <select
                       value={storeId}
                       onChange={(e) => handleStoreChange(e.target.value)}
@@ -637,6 +648,18 @@ const StoreTransfers = () => {
                         </option>
                       ))}
                     </select>
+                    {stores.length === 0 && !loading && (
+                      <div className="mt-2.5 text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-xl flex items-center justify-between">
+                        <span>No retail shops found. Please register a shop first.</span>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/stores?action=new')}
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs cursor-pointer"
+                        >
+                          + Add Shop
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Shop Detail Quick Preview Card */}

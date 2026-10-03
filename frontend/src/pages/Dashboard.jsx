@@ -26,7 +26,8 @@ import {
   Filter,
   PackagePlus,
   Plus,
-  Trash2
+  Trash2,
+  Globe
 } from 'lucide-react';
 import {
   BarChart,
@@ -74,6 +75,7 @@ const Dashboard = () => {
     contactPerson: '',
     phone: '',
     email: '',
+    website: '',
     city: 'Madurai',
     state: 'Tamil Nadu',
     pincode: '',
@@ -126,10 +128,11 @@ const Dashboard = () => {
     setMfgProducts(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
-      if (field === 'name' && mfgFormData.code && !updated[index].sku) {
+      if (field === 'name' && !updated[index].sku) {
         const cleanName = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase();
         if (cleanName) {
-          updated[index].sku = `${mfgFormData.code.toUpperCase()}-${cleanName}`;
+          const brandPrefix = (mfgFormData.code || mfgFormData.name || 'PRD').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase();
+          updated[index].sku = `${brandPrefix}-${cleanName}`;
         }
       }
       return updated;
@@ -140,8 +143,10 @@ const Dashboard = () => {
     e.preventDefault();
     try {
       setSubmittingMfg(true);
+      const autoCode = mfgFormData.code || mfgFormData.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase() || 'MFR';
       const payload = {
         ...mfgFormData,
+        code: autoCode,
         categories: mfgFormData.categories
           ? (typeof mfgFormData.categories === 'string'
               ? mfgFormData.categories.split(',').map(c => c.trim()).filter(Boolean)
@@ -161,6 +166,7 @@ const Dashboard = () => {
           contactPerson: '',
           phone: '',
           email: '',
+          website: '',
           city: 'Madurai',
           state: 'Tamil Nadu',
           pincode: '',
@@ -176,6 +182,25 @@ const Dashboard = () => {
       alert(err.response?.data?.message || 'Failed to create manufacturer');
     } finally {
       setSubmittingMfg(false);
+    }
+  };
+
+  const handleDeleteManufacturer = async (mfg) => {
+    if (!window.confirm(`Are you sure you want to permanently remove "${mfg.name}" and its associated catalog?`)) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/manufacturers/${mfg._id}`);
+      if (res.data.success) {
+        setSuccessToast(`Manufacturer "${mfg.name}" removed successfully.`);
+        setTimeout(() => setSuccessToast(''), 4000);
+        if (activeManufacturer?._id === mfg._id || activeManufacturer?.code === mfg.code) {
+          clearActiveManufacturer();
+        }
+        await fetchStats();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove manufacturer');
     }
   };
 
@@ -262,8 +287,8 @@ const Dashboard = () => {
   if (activeManufacturer) {
     // Current fresh active manufacturer data
     const mfg = manufacturerCards.find(m => m.code === activeManufacturer.code) || activeManufacturer;
-    const isFemi9 = mfg.code === 'FEMI9';
-    const isMansara = mfg.code === 'MANSARA';
+    const isFemi9 = mfg.code === 'FEMI9' || mfg.name?.toLowerCase().includes('femi9') || mfg.website?.toLowerCase().includes('femi9');
+    const isMansara = mfg.code === 'MANSARA' || mfg.name?.toLowerCase().includes('mansara') || mfg.website?.toLowerCase().includes('mansara');
 
     const products = mfg.products || [];
     const filteredProducts = products.filter(p =>
@@ -320,6 +345,16 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300 mt-1.5">
+                  {mfg.website && (
+                    <a
+                      href={mfg.website.startsWith('http') ? mfg.website : `https://${mfg.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-teal-300 hover:text-white underline underline-offset-2"
+                    >
+                      <Globe className="w-3.5 h-3.5 text-teal-400" /> {mfg.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  )}
                   {mfg.city && (
                     <span className="flex items-center gap-1">
                       <MapPin className="w-3.5 h-3.5 text-teal-400" /> {mfg.city}, {mfg.state || 'Tamil Nadu'}
@@ -342,7 +377,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Switch Brand & Quick PO */}
+            {/* Switch Brand */}
             <div className="flex items-center gap-2 self-start md:self-auto">
               <button
                 onClick={clearActiveManufacturer}
@@ -351,12 +386,6 @@ const Dashboard = () => {
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> Switch Manufacturer
               </button>
-              <Link
-                to={`/purchases?manufacturerId=${mfg._id}`}
-                className="px-3.5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md"
-              >
-                <Boxes className="w-4 h-4" /> Issue New PO
-              </Link>
             </div>
           </div>
 
@@ -408,7 +437,7 @@ const Dashboard = () => {
           </Link>
 
           <Link
-            to="/stock"
+            to="/products"
             className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-teal-400 hover:shadow-xs transition-all flex items-center justify-between"
           >
             <div>
@@ -561,14 +590,6 @@ const Dashboard = () => {
         <Card
           title={`Procurement PO History (${mfg.code})`}
           subtitle="Recent purchase orders placed with this manufacturer and goods receipt status."
-          action={
-            <Link
-              to={`/purchases?manufacturerId=${mfg._id}`}
-              className="text-xs font-semibold text-teal-700 hover:text-teal-900"
-            >
-              View All POs &rarr;
-            </Link>
-          }
         >
           {purchases.length === 0 ? (
             <div className="text-center py-8 text-slate-500 text-xs">
@@ -801,6 +822,7 @@ const Dashboard = () => {
                 setActiveManufacturer(mfg);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
+              onDelete={handleDeleteManufacturer}
             />
           ))}
         </div>
@@ -895,32 +917,19 @@ const Dashboard = () => {
         maxWidth="max-w-3xl"
       >
         <form onSubmit={handleCreateManufacturer} className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Company / Manufacturer Name *</label>
-              <input
-                type="text"
-                required
-                value={mfgFormData.name}
-                onChange={(e) => setMfgFormData({ ...mfgFormData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
-                placeholder="e.g. Acme Enterprises Pvt Ltd"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Brand Code (Short, Unique) *</label>
-              <input
-                type="text"
-                required
-                value={mfgFormData.code}
-                onChange={(e) => setMfgFormData({ ...mfgFormData, code: e.target.value.toUpperCase() })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500 uppercase font-mono font-bold"
-                placeholder="e.g. ACME"
-              />
-            </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Company / Manufacturer Name *</label>
+            <input
+              type="text"
+              required
+              value={mfgFormData.name}
+              onChange={(e) => setMfgFormData({ ...mfgFormData, name: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+              placeholder="e.g. Acme Enterprises Pvt Ltd"
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
               <input
@@ -950,6 +959,16 @@ const Dashboard = () => {
                 onChange={(e) => setMfgFormData({ ...mfgFormData, email: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
                 placeholder="sales@manufacturer.com"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Website URL</label>
+              <input
+                type="text"
+                value={mfgFormData.website}
+                onChange={(e) => setMfgFormData({ ...mfgFormData, website: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-teal-500"
+                placeholder="e.g. mansarafoods.com"
               />
             </div>
           </div>

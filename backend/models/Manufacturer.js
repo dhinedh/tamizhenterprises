@@ -6,6 +6,7 @@ const manufacturerSchema = new mongoose.Schema({
   contactPerson: { type: String, trim: true },
   phone: { type: String, required: true, trim: true },
   email: { type: String, trim: true, lowercase: true },
+  website: { type: String, trim: true, default: '' },
   address: { type: String, trim: true },
   city: { type: String, trim: true },
   state: { type: String, default: 'Tamil Nadu', trim: true },

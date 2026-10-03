@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Store,
   Plus,
@@ -39,6 +39,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Stores = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isOwner, isSalesman } = useAuth();
 
   // Master Data
@@ -56,6 +57,13 @@ const Stores = () => {
   // Modals State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState('');
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    if (location.search.includes('action=new') || location.search.includes('create=true')) {
+      navigate('/stores', { replace: true });
+    }
+  };
 
   // Create Store Form State
   const [formData, setFormData] = useState({
@@ -81,6 +89,12 @@ const Stores = () => {
   useEffect(() => {
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    if (location.search.includes('action=new') || location.search.includes('create=true')) {
+      setIsCreateModalOpen(true);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     fetchStores();
@@ -135,6 +149,9 @@ const Stores = () => {
         setSuccessToast(`Shop "${res.data.data.name}" registered successfully!`);
         setTimeout(() => setSuccessToast(''), 5000);
         fetchStores();
+        if (location.search.includes('action=new') || location.search.includes('create=true')) {
+          navigate('/stores', { replace: true });
+        }
       }
     } catch (err) {
       setFormError(err.response?.data?.message || 'Error creating store');
@@ -535,7 +552,7 @@ const Stores = () => {
       {isCreateModalOpen && (
         <Modal
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={handleCloseCreateModal}
           title="Register New Retail Shop / Supermarket"
           maxWidth="max-w-2xl"
         >
@@ -701,7 +718,7 @@ const Stores = () => {
             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
               <button
                 type="button"
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={handleCloseCreateModal}
                 className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"
               >
                 Cancel

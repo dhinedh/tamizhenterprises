@@ -17,12 +17,50 @@ const getManufacturers = async (req, res) => {
         { name: { $regex: search, $options: 'i' } },
         { code: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
-        { gstNumber: { $regex: search, $options: 'i' } }
+        { gstNumber: { $regex: search, $options: 'i' } },
+        { website: { $regex: search, $options: 'i' } }
       ];
     }
 
-    const manufacturers = await Manufacturer.find(filter).sort({ name: 1 });
-    res.json({ success: true, count: manufacturers.length, data: manufacturers });
+    const manufacturers = await Manufacturer.find(filter).sort({ name: 1 }).lean();
+
+    const enriched = await Promise.all(
+      manufacturers.map(async (mfg) => {
+        const products = await Product.find({ manufacturerId: mfg._id }).select('purchasePrice mrp').lean();
+        const productIds = products.map(p => p._id);
+        const stocks = await Stock.find({ productId: { $in: productIds } }).lean();
+
+        const priceMap = {};
+        products.forEach(p => {
+          priceMap[p._id.toString()] = p.purchasePrice || p.mrp || 0;
+        });
+
+        let totalPhysicalStock = 0;
+        let totalAvailableStock = 0;
+        let stockValuation = 0;
+
+        stocks.forEach(s => {
+          const buyPrice = priceMap[s.productId.toString()] || 0;
+          const curr = Number(s.currentStock || 0);
+          const resv = Number(s.reservedStock || 0);
+          const avail = Math.max(0, curr - resv);
+
+          totalPhysicalStock += curr;
+          totalAvailableStock += avail;
+          stockValuation += curr * buyPrice;
+        });
+
+        return {
+          ...mfg,
+          productsCount: products.length,
+          totalPhysicalStock,
+          totalAvailableStock,
+          stockValuation
+        };
+      })
+    );
+
+    res.json({ success: true, count: enriched.length, data: enriched });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -48,6 +86,10 @@ const getManufacturerById = async (req, res) => {
       stockMap[s.productId.toString()] = s;
     });
 
+    let totalPhysicalStock = 0;
+    let totalAvailableStock = 0;
+    let stockValuation = 0;
+
     const productsWithStock = products.map(p => {
       const s = stockMap[p._id.toString()] || {
         currentStock: 0,
@@ -57,6 +99,10 @@ const getManufacturerById = async (req, res) => {
         warehouseLocation: 'Warehouse Main - Bay A'
       };
       const availableStock = Math.max(0, s.currentStock - (s.reservedStock || 0));
+      totalPhysicalStock += (s.currentStock || 0);
+      totalAvailableStock += availableStock;
+      stockValuation += (s.currentStock || 0) * (p.purchasePrice || 0);
+
       return {
         ...p,
         stock: {
@@ -74,6 +120,9 @@ const getManufacturerById = async (req, res) => {
         purchases,
         payments,
         productsCount: products.length,
+        totalPhysicalStock,
+        totalAvailableStock,
+        stockValuation,
         products: productsWithStock
       }
     });
@@ -86,12 +135,25 @@ const getManufacturerById = async (req, res) => {
 // @route   POST /api/manufacturers
 const createManufacturer = async (req, res) => {
   try {
-    const { name, code, phone, products } = req.body;
-    if (!name || !code || !phone) {
-      return res.status(400).json({ success: false, message: 'Name, Code, and Phone are required' });
+    const { name, phone, products } = req.body;
+    let { code } = req.body;
+    if (!name || !phone) {
+      return res.status(400).json({ success: false, message: 'Company Name and Phone are required' });
     }
 
-    const upperCode = code.toUpperCase().trim();
+    let upperCode = code ? code.toUpperCase().trim() : '';
+    if (!upperCode && name) {
+      upperCode = name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase();
+      if (!upperCode) upperCode = 'MFR';
+      let candidate = upperCode;
+      let counter = 1;
+      while (await Manufacturer.findOne({ code: candidate })) {
+        candidate = `${upperCode}${counter}`;
+        counter++;
+      }
+      upperCode = candidate;
+    }
+
     const existingCode = await Manufacturer.findOne({ code: upperCode });
     if (existingCode) {
       return res.status(400).json({ success: false, message: `Manufacturer code "${upperCode}" already exists` });
@@ -209,8 +271,12 @@ const deleteManufacturer = async (req, res) => {
     if (!manufacturer) {
       return res.status(404).json({ success: false, message: 'Manufacturer not found' });
     }
+    const products = await Product.find({ manufacturerId: manufacturer._id });
+    const productIds = products.map(p => p._id);
+    await Stock.deleteMany({ productId: { $in: productIds } });
+    await Product.deleteMany({ manufacturerId: manufacturer._id });
     await manufacturer.deleteOne();
-    res.json({ success: true, message: 'Manufacturer removed' });
+    res.json({ success: true, message: 'Manufacturer and associated catalog removed' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
