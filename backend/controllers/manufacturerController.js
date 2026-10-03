@@ -22,25 +22,45 @@ const getManufacturers = async (req, res) => {
       ];
     }
 
-    const manufacturers = await Manufacturer.find(filter).sort({ name: 1 }).lean();
+    // Single parallel batch with .lean()
+    const [manufacturers, products, stocks] = await Promise.all([
+      Manufacturer.find(filter).sort({ name: 1 }).lean(),
+      Product.find().select('manufacturerId purchasePrice mrp').lean(),
+      Stock.find().select('productId currentStock reservedStock').lean()
+    ]);
 
-    const enriched = await Promise.all(
-      manufacturers.map(async (mfg) => {
-        const products = await Product.find({ manufacturerId: mfg._id }).select('purchasePrice mrp').lean();
-        const productIds = products.map(p => p._id);
-        const stocks = await Stock.find({ productId: { $in: productIds } }).lean();
+    // Build fast lookup maps in memory
+    const priceMap = {};
+    const mfgProductsMap = {};
+    products.forEach(p => {
+      const pid = p._id.toString();
+      priceMap[pid] = p.purchasePrice || p.mrp || 0;
+      if (p.manufacturerId) {
+        const mid = p.manufacturerId.toString();
+        if (!mfgProductsMap[mid]) mfgProductsMap[mid] = [];
+        mfgProductsMap[mid].push(pid);
+      }
+    });
 
-        const priceMap = {};
-        products.forEach(p => {
-          priceMap[p._id.toString()] = p.purchasePrice || p.mrp || 0;
-        });
+    const stockMap = {};
+    stocks.forEach(s => {
+      if (s.productId) {
+        stockMap[s.productId.toString()] = s;
+      }
+    });
 
-        let totalPhysicalStock = 0;
-        let totalAvailableStock = 0;
-        let stockValuation = 0;
+    const enriched = manufacturers.map(mfg => {
+      const mid = mfg._id.toString();
+      const productIds = mfgProductsMap[mid] || [];
 
-        stocks.forEach(s => {
-          const buyPrice = priceMap[s.productId.toString()] || 0;
+      let totalPhysicalStock = 0;
+      let totalAvailableStock = 0;
+      let stockValuation = 0;
+
+      productIds.forEach(pid => {
+        const s = stockMap[pid];
+        if (s) {
+          const buyPrice = priceMap[pid] || 0;
           const curr = Number(s.currentStock || 0);
           const resv = Number(s.reservedStock || 0);
           const avail = Math.max(0, curr - resv);
@@ -48,17 +68,17 @@ const getManufacturers = async (req, res) => {
           totalPhysicalStock += curr;
           totalAvailableStock += avail;
           stockValuation += curr * buyPrice;
-        });
+        }
+      });
 
-        return {
-          ...mfg,
-          productsCount: products.length,
-          totalPhysicalStock,
-          totalAvailableStock,
-          stockValuation
-        };
-      })
-    );
+      return {
+        ...mfg,
+        productsCount: productIds.length,
+        totalPhysicalStock,
+        totalAvailableStock,
+        stockValuation
+      };
+    });
 
     res.json({ success: true, count: enriched.length, data: enriched });
   } catch (error) {

@@ -4,9 +4,21 @@ import api from '../api/client';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('tamil_erp_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState(localStorage.getItem('tamil_erp_token'));
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    const storedToken = localStorage.getItem('tamil_erp_token');
+    const storedUser = localStorage.getItem('tamil_erp_user');
+    // Only block if token exists but user isn't cached yet
+    return !!(storedToken && !storedUser);
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -16,12 +28,15 @@ export const AuthProvider = ({ children }) => {
           const res = await api.get('/auth/me');
           if (res.data.success) {
             setUser(res.data.data);
+            localStorage.setItem('tamil_erp_user', JSON.stringify(res.data.data));
           } else {
             logout();
           }
         } catch (err) {
           console.error('Failed to load user', err);
-          logout();
+          if (err.response?.status === 401) {
+            logout();
+          }
         }
       }
       setLoading(false);

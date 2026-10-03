@@ -11,12 +11,20 @@ const Return = require('../models/Return');
 // @route   GET /api/stores
 const getStores = async (req, res) => {
   try {
-    const { search, city, salesmanId, status, overdueOnly } = req.query;
+    const { search, city, district, salesmanId, status, manufacturerId, overdueOnly } = req.query;
     const filter = {};
 
     if (city) filter.city = city;
+    if (district) filter.district = district;
     if (salesmanId) filter.salesmanId = salesmanId;
     if (status) filter.status = status;
+    if (manufacturerId) {
+      if (mongoose.Types.ObjectId.isValid(manufacturerId)) {
+        filter.manufacturerId = manufacturerId;
+      } else {
+        filter.manufacturerCode = manufacturerId.toUpperCase();
+      }
+    }
 
     // If salesman role is logged in, restrict to assigned stores
     if (req.user && req.user.role === 'Salesman' && req.user.salesmanId) {
@@ -35,13 +43,18 @@ const getStores = async (req, res) => {
         { ownerName: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } },
         { city: { $regex: search, $options: 'i' } },
+        { area: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { pincode: { $regex: search, $options: 'i' } },
         { gstNumber: { $regex: search, $options: 'i' } }
       ];
     }
 
     let stores = await Store.find(filter)
       .populate('salesmanId', 'name employeeCode phone territory')
-      .sort({ outstandingBalance: -1, name: 1 });
+      .populate('manufacturerId', 'name code')
+      .sort({ outstandingBalance: -1, name: 1 })
+      .lean();
 
     if (overdueOnly === 'true') {
       stores = stores.filter(s => s.outstandingBalance > 0);
@@ -129,12 +142,18 @@ const createBulkStores = async (req, res) => {
           name: s.name.trim(),
           code: s.code ? s.code.trim().toUpperCase() : candidate,
           storeType: s.storeType || 'Supermarket',
+          category: s.category ? s.category.trim() : '',
+          manufacturerId: s.manufacturerId || null,
+          manufacturerCode: s.manufacturerCode ? s.manufacturerCode.trim().toUpperCase() : '',
+          femi9RetailerId: s.femi9RetailerId ? s.femi9RetailerId.trim().toUpperCase() : '',
           ownerName: s.ownerName ? s.ownerName.trim() : '',
           phone: s.phone.trim(),
+          landline: s.landline ? s.landline.trim() : '',
           email: s.email ? s.email.trim() : '',
           address: s.address ? s.address.trim() : '',
           area: s.area ? s.area.trim() : '',
-          city: s.city ? s.city.trim() : 'Madurai',
+          city: s.city ? s.city.trim() : 'Chennai',
+          district: s.district ? s.district.trim() : 'Chennai',
           state: s.state ? s.state.trim() : 'Tamil Nadu',
           pincode: s.pincode ? s.pincode.trim() : '',
           gstNumber: s.gstNumber ? s.gstNumber.trim().toUpperCase() : '',

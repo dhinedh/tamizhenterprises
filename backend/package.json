@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "seed": "node scripts/seed.js",
+    "import:femi9-shops": "node scripts/import-femi9-shops.js",
     "dev": "node --watch server.js"
   },
   "keywords": [],

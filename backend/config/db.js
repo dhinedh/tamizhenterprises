@@ -10,7 +10,12 @@ const connectDB = async () => {
       // Fallback if environment restricts custom DNS
     }
 
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/tamil_enterprises_erp');
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/tamil_enterprises_erp', {
+      maxPoolSize: 20,
+      minPoolSize: 5,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000
+    });
     console.log(`MongoDB Connected: ${conn.connection.host} / ${conn.connection.name}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);

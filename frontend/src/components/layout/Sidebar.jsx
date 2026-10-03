@@ -28,12 +28,14 @@ import { useManufacturer } from '../../context/ManufacturerContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const { activeManufacturer, setActiveManufacturer, clearActiveManufacturer } = useManufacturer();
+  const {
+    activeManufacturer,
+    setActiveManufacturer,
+    clearActiveManufacturer,
+    manufacturers
+  } = useManufacturer();
   const location = useLocation();
   const navigate = useNavigate();
-
-  const [manufacturers, setManufacturers] = useState([]);
-  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
 
   // Accordion state for expandable sections - default 'stock', 'customer', and 'invoice' to open
   const [expandedGroups, setExpandedGroups] = useState({
@@ -42,10 +44,6 @@ const Sidebar = ({ isOpen, onClose }) => {
     invoice: true,
     shop: false
   });
-
-  useEffect(() => {
-    fetchManufacturers();
-  }, []);
 
   // Keep accordion open if on any related page
   useEffect(() => {
@@ -67,17 +65,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       setExpandedGroups((prev) => ({ ...prev, shop: true }));
     }
   }, [location.pathname, location.search]);
-
-  const fetchManufacturers = async () => {
-    try {
-      const res = await api.get('/manufacturers');
-      if (res.data.success) {
-        setManufacturers(res.data.data);
-      }
-    } catch (err) {
-      console.error('Failed to load manufacturers in sidebar:', err);
-    }
-  };
 
   const handleBackToAllBrands = () => {
     clearActiveManufacturer();

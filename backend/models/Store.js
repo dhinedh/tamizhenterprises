@@ -5,18 +5,27 @@ const storeSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true, uppercase: true, trim: true },
   storeType: { 
     type: String, 
-    enum: ['Supermarket', 'Kirana', 'Departmental', 'Wholesaler', 'Pharmacy/FMCG'], 
     default: 'Supermarket' 
   },
+  category: { type: String, trim: true, default: '' }, // e.g. MEDICALS, SUPER MARKETS, etc.
+  manufacturerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Manufacturer',
+    default: null
+  },
+  manufacturerCode: { type: String, uppercase: true, trim: true, default: '' },
+  femi9RetailerId: { type: String, uppercase: true, trim: true, default: '' },
   ownerName: { type: String, default: '', trim: true },
   phone: { type: String, required: true, trim: true },
-  email: { type: String, trim: true, lowercase: true },
+  landline: { type: String, trim: true, default: '' },
+  email: { type: String, trim: true, lowercase: true, default: '' },
   address: { type: String, default: '', trim: true },
-  area: { type: String, trim: true },
-  city: { type: String, default: 'Madurai', trim: true },
+  area: { type: String, trim: true, default: '' },
+  city: { type: String, default: 'Chennai', trim: true },
+  district: { type: String, default: 'Chennai', trim: true },
   state: { type: String, default: 'Tamil Nadu', trim: true },
-  pincode: { type: String, trim: true },
-  gstNumber: { type: String, uppercase: true, trim: true },
+  pincode: { type: String, trim: true, default: '' },
+  gstNumber: { type: String, uppercase: true, trim: true, default: '' },
   salesmanId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Salesman', 
@@ -34,6 +43,7 @@ const storeSchema = new mongoose.Schema({
   timestamps: true
 });
 
-storeSchema.index({ code: 1, name: 1, city: 1, salesmanId: 1 });
+storeSchema.index({ code: 1, name: 1, city: 1, salesmanId: 1, manufacturerId: 1, manufacturerCode: 1 });
 
 module.exports = mongoose.model('Store', storeSchema);
+

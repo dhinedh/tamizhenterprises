@@ -36,11 +36,13 @@ import Modal from '../components/common/Modal';
 import { StatusBadge } from '../components/common/Badge';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
+import { useManufacturer } from '../context/ManufacturerContext';
 
 const Stores = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isOwner, isSalesman } = useAuth();
+  const { activeManufacturer } = useManufacturer();
 
   // Master Data
   const [stores, setStores] = useState([]);
@@ -50,6 +52,7 @@ const Stores = () => {
   // Search & Filter State
   const [search, setSearch] = useState('');
   const [cityFilter, setCityFilter] = useState('All');
+  const [areaFilter, setAreaFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [overLimitOnly, setOverLimitOnly] = useState(false);
@@ -228,20 +231,31 @@ const Stores = () => {
   // Filtered Stores
   const filteredStores = useMemo(() => {
     return stores.filter((s) => {
-      const matchCity = cityFilter === 'All' || s.city?.toLowerCase() === cityFilter.toLowerCase();
-      const matchType = typeFilter === 'All' || s.storeType?.toLowerCase() === typeFilter.toLowerCase();
+      const matchBrand = !activeManufacturer || s.manufacturerCode === activeManufacturer.code || s.manufacturerId?._id === activeManufacturer._id || s.manufacturerId === activeManufacturer._id;
+      const matchCity = cityFilter === 'All' || s.city?.toLowerCase() === cityFilter.toLowerCase() || s.district?.toLowerCase() === cityFilter.toLowerCase();
+      const matchArea = areaFilter === 'All' || s.area?.toLowerCase() === areaFilter.toLowerCase();
+      const matchType = typeFilter === 'All' || s.storeType?.toLowerCase() === typeFilter.toLowerCase() || s.category?.toLowerCase() === typeFilter.toLowerCase();
       const matchOverLimit = !overLimitOnly || (s.outstandingBalance || 0) > (s.creditLimit || 50000);
-      return matchCity && matchType && matchOverLimit;
+      return matchBrand && matchCity && matchArea && matchType && matchOverLimit;
     });
-  }, [stores, cityFilter, typeFilter, overLimitOnly]);
+  }, [stores, activeManufacturer, cityFilter, areaFilter, typeFilter, overLimitOnly]);
 
-  // Unique Cities & Types for Filter Dropdowns
+  // Unique Cities & Areas for Filter Dropdowns
   const availableCities = useMemo(() => {
     const set = new Set();
     stores.forEach((s) => {
       if (s.city) set.add(s.city);
+      if (s.district) set.add(s.district);
     });
     return Array.from(set);
+  }, [stores]);
+
+  const availableAreas = useMemo(() => {
+    const set = new Set();
+    stores.forEach((s) => {
+      if (s.area) set.add(s.area);
+    });
+    return Array.from(set).sort();
   }, [stores]);
 
   // Overall Statistics
@@ -367,17 +381,31 @@ const Stores = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto flex-wrap justify-end">
-          {/* City Filter */}
+          {/* City / District Filter */}
           <select
             value={cityFilter}
             onChange={(e) => setCityFilter(e.target.value)}
             className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
           >
-            <option value="All">All Cities</option>
+            <option value="All">All Cities / Districts</option>
             {availableCities.map((city) => (
               <option key={city} value={city}>{city}</option>
             ))}
           </select>
+
+          {/* Area / Locality Filter */}
+          {availableAreas.length > 0 && (
+            <select
+              value={areaFilter}
+              onChange={(e) => setAreaFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 max-w-[150px] truncate"
+            >
+              <option value="All">All Areas ({availableAreas.length})</option>
+              {availableAreas.map((area) => (
+                <option key={area} value={area}>{area}</option>
+              ))}
+            </select>
+          )}
 
           {/* Shop Type Filter */}
           <select
@@ -386,9 +414,10 @@ const Stores = () => {
             className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700"
           >
             <option value="All">All Shop Types</option>
+            <option value="Pharmacy/FMCG">Pharmacy / Medicals</option>
             <option value="Supermarket">Supermarket</option>
             <option value="Kirana">Kirana / Provision</option>
-            <option value="Departmental">Departmental Shop</option>
+            <option value="Departmental">Departmental / Specialty</option>
             <option value="Wholesaler">Wholesaler</option>
           </select>
 
@@ -455,11 +484,16 @@ const Stores = () => {
                       >
                         {/* Name & Code */}
                         <td className="py-3 px-3">
-                          <div className="font-bold text-slate-900 group-hover:text-teal-700 transition-colors flex items-center gap-1.5">
+                          <div className="font-bold text-slate-900 group-hover:text-teal-700 transition-colors flex items-center gap-1.5 flex-wrap">
                             {store.name}
                             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                               {store.code}
                             </span>
+                            {store.manufacturerCode === 'FEMI9' && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 border border-teal-200">
+                                FEMI9
+                              </span>
+                            )}
                           </div>
                           <div className="text-[10px] text-slate-400 mt-0.5">
                             {store.gstNumber ? `GST: ${store.gstNumber}` : 'URP (Unregistered)'}
@@ -470,10 +504,16 @@ const Stores = () => {
                         <td className="py-3 px-3">
                           <div className="font-semibold text-slate-800 flex items-center gap-1">
                             <MapPin className="w-3 h-3 text-slate-400" />
-                            {store.city}
+                            {store.city} {store.pincode ? `(${store.pincode})` : ''}
                           </div>
-                          <div className="text-[10px] text-slate-500">
-                            {store.storeType || 'Retailer'} {store.area ? `&bull; ${store.area}` : ''}
+                          <div className="text-[10px] text-slate-500 flex items-center gap-1 flex-wrap mt-0.5">
+                            <span className="font-medium text-slate-700">{store.storeType || 'Retailer'}</span>
+                            {store.category && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 font-mono">
+                                {store.category}
+                              </span>
+                            )}
+                            {store.area ? <span>&bull; {store.area}</span> : ''}
                           </div>
                         </td>
 

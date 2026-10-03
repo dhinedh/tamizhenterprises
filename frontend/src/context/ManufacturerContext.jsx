@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../api/client';
 
 const ManufacturerContext = createContext(null);
 
@@ -11,6 +12,38 @@ export const ManufacturerProvider = ({ children }) => {
       return null;
     }
   });
+
+  const [manufacturers, setManufacturers] = useState(() => {
+    try {
+      const cached = localStorage.getItem('tamil_erp_manufacturers');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loadingManufacturers, setLoadingManufacturers] = useState(false);
+
+  const fetchManufacturers = useCallback(async () => {
+    try {
+      setLoadingManufacturers(true);
+      const res = await api.get('/manufacturers');
+      if (res.data?.success) {
+        setManufacturers(res.data.data);
+        localStorage.setItem('tamil_erp_manufacturers', JSON.stringify(res.data.data));
+      }
+    } catch (err) {
+      console.error('Error fetching manufacturers in ManufacturerContext:', err);
+    } finally {
+      setLoadingManufacturers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('tamil_erp_token');
+    if (token) {
+      fetchManufacturers();
+    }
+  }, [fetchManufacturers]);
 
   const setActiveManufacturer = (mfg) => {
     setActiveManufacturerState(mfg);
@@ -35,7 +68,10 @@ export const ManufacturerProvider = ({ children }) => {
         activeManufacturer,
         setActiveManufacturer,
         clearActiveManufacturer,
-        hasActiveManufacturer: !!activeManufacturer
+        hasActiveManufacturer: !!activeManufacturer,
+        manufacturers,
+        fetchManufacturers,
+        loadingManufacturers
       }}
     >
       {children}
