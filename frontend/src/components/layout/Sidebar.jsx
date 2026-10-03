@@ -37,6 +37,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+
   // Accordion state for expandable sections - default 'stock', 'customer', and 'invoice' to open
   const [expandedGroups, setExpandedGroups] = useState({
     stock: true,
@@ -389,7 +391,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <div className="px-2.5 py-1 text-[10px] font-bold uppercase text-slate-400 tracking-wider">
                       Switch Active Brand
                     </div>
-                    {manufacturers.map((m) => (
+                    {(manufacturers || []).map((m) => (
                       <button
                         key={m._id}
                         onClick={() => handleSelectBrand(m)}
