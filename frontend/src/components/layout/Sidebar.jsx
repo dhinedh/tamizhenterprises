@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -22,7 +22,6 @@ import {
   Check,
   Star
 } from 'lucide-react';
-import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useManufacturer } from '../../context/ManufacturerContext';
 
@@ -38,6 +37,17 @@ const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
 
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const brandDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (brandDropdownRef.current && !brandDropdownRef.current.contains(event.target)) {
+        setShowBrandDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Accordion state for expandable sections - default 'stock', 'customer', and 'invoice' to open
   const [expandedGroups, setExpandedGroups] = useState({
@@ -354,7 +364,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               </div>
 
               {/* Active Brand Card with Quick Switch Dropdown */}
-              <div className="relative">
+              <div className="relative" ref={brandDropdownRef}>
                 <button
                   onClick={() => setShowBrandDropdown(!showBrandDropdown)}
                   className="w-full text-left p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 hover:border-blue-300 transition-all shadow-2xs"
