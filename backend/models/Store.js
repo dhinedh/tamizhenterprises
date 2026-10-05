@@ -16,14 +16,18 @@ const storeSchema = new mongoose.Schema({
   manufacturerCode: { type: String, uppercase: true, trim: true, default: '' },
   femi9RetailerId: { type: String, uppercase: true, trim: true, default: '' },
   ownerName: { type: String, default: '', trim: true },
+  countryCode: { type: String, default: '+91', trim: true },
   phone: { type: String, required: true, trim: true },
   landline: { type: String, trim: true, default: '' },
   email: { type: String, trim: true, lowercase: true, default: '' },
   address: { type: String, default: '', trim: true },
   area: { type: String, trim: true, default: '' },
+  firka: { type: String, trim: true, default: '' },
+  division: { type: String, trim: true, default: 'CHENNAI CENTRAL B' },
+  taluk: { type: String, trim: true, default: '' },
   city: { type: String, default: 'Chennai', trim: true },
-  district: { type: String, default: 'Chennai', trim: true },
-  state: { type: String, default: 'Tamil Nadu', trim: true },
+  district: { type: String, default: 'CHENNAI', trim: true },
+  state: { type: String, default: 'Tamilnadu', trim: true },
   pincode: { type: String, trim: true, default: '' },
   gstNumber: { type: String, uppercase: true, trim: true, default: '' },
   salesmanId: { 
@@ -44,6 +48,9 @@ const storeSchema = new mongoose.Schema({
 });
 
 storeSchema.index({ code: 1, name: 1, city: 1, salesmanId: 1, manufacturerId: 1, manufacturerCode: 1 });
+storeSchema.index({ outstandingBalance: -1, name: 1 });
+storeSchema.index({ salesmanId: 1 });
+storeSchema.index({ manufacturerId: 1 });
 
 module.exports = mongoose.model('Store', storeSchema);
 

@@ -57,8 +57,15 @@ const COLORS = ['#0f766e', '#0284c7', '#f59e0b', '#8b5cf6', '#ec4899', '#10b981'
 const Dashboard = () => {
   const { user, isOwner, isSalesman, isStore } = useAuth();
   const { activeManufacturer, setActiveManufacturer, clearActiveManufacturer } = useManufacturer();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('tamil_erp_dashboard_stats');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(!data);
   const [mfgFilter, setMfgFilter] = useState('ALL');
   const [mfgSearch, setMfgSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
@@ -205,15 +212,20 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchStats();
+    fetchStats(!!data);
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground && !data) {
+        setLoading(true);
+      }
       const res = await api.get('/dashboard/stats');
       if (res.data.success) {
         setData(res.data.data);
+        try {
+          sessionStorage.setItem('tamil_erp_dashboard_stats', JSON.stringify(res.data.data));
+        } catch (e) {}
 
         // Keep activeManufacturer synced with fresh stats data
         if (activeManufacturer) {

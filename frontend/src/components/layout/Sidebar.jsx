@@ -20,13 +20,20 @@ import {
   Sparkles,
   MapPin,
   Check,
-  Star
+  Star,
+  User,
+  KeyRound,
+  LogOut,
+  Lock,
+  ClipboardCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useManufacturer } from '../../context/ManufacturerContext';
+import Modal from '../common/Modal';
+import api from '../../api/client';
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const {
     activeManufacturer,
     setActiveManufacturer,
@@ -54,8 +61,87 @@ const Sidebar = ({ isOpen, onClose }) => {
     stock: true,
     customer: true,
     invoice: true,
-    shop: false
+    shop: false,
+    demoDamage: false,
+    profile: false,
+    userCard: false
   });
+
+  // Profile & Password Modals State
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [profileName, setProfileName] = useState(user?.name || '');
+  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState('');
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.name || '');
+      setProfilePhone(user.phone || '');
+    }
+  }, [user]);
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    try {
+      setProfileSaving(true);
+      setProfileSuccess('');
+      const res = await api.put('/auth/profile', {
+        name: profileName,
+        phone: profilePhone
+      });
+      if (res.data.success) {
+        setProfileSuccess('Profile updated successfully!');
+        setTimeout(() => setShowProfileModal(false), 1500);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters long');
+      return;
+    }
+    try {
+      setPasswordSaving(true);
+      setPasswordError('');
+      setPasswordSuccess('');
+      const res = await api.put('/auth/change-password', {
+        currentPassword,
+        newPassword
+      });
+      if (res.data.success) {
+        setPasswordSuccess('Password changed successfully!');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setShowPasswordModal(false), 1500);
+      }
+    } catch (err) {
+      console.error(err);
+      setPasswordError(err.response?.data?.message || 'Failed to change password');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
 
   // Keep accordion open if on any related page
   useEffect(() => {
@@ -67,14 +153,30 @@ const Sidebar = ({ isOpen, onClose }) => {
     ) {
       setExpandedGroups((prev) => ({ ...prev, stock: true }));
     }
-    if (location.pathname.startsWith('/customers')) {
+    if (
+      location.pathname.startsWith('/customers') ||
+      location.pathname.startsWith('/invoices')
+    ) {
       setExpandedGroups((prev) => ({ ...prev, customer: true }));
     }
-    if (location.pathname.startsWith('/invoices')) {
-      setExpandedGroups((prev) => ({ ...prev, invoice: true }));
-    }
-    if (location.pathname.startsWith('/stores') || location.pathname.startsWith('/reports')) {
+    if (
+      location.pathname.startsWith('/stores') ||
+      location.pathname.startsWith('/invoices') ||
+      location.pathname.startsWith('/reports')
+    ) {
       setExpandedGroups((prev) => ({ ...prev, shop: true }));
+    }
+    if (location.pathname.startsWith('/demo-damage')) {
+      setExpandedGroups((prev) => ({ ...prev, demoDamage: true }));
+    }
+    if (location.pathname.startsWith('/profile')) {
+      setExpandedGroups((prev) => ({ ...prev, profile: true }));
+    }
+    if (
+      location.pathname.startsWith('/field-orders') ||
+      location.pathname.startsWith('/orders')
+    ) {
+      setExpandedGroups((prev) => ({ ...prev, fieldOrder: true }));
     }
   }, [location.pathname, location.search]);
 
@@ -134,16 +236,34 @@ const Sidebar = ({ isOpen, onClose }) => {
     if (path === '/stock-transfers' || path === '/store-transfers') {
       return location.pathname.startsWith('/stock-transfers') || location.pathname.startsWith('/store-transfers');
     }
+    if (path === '/invoices?action=new') {
+      return location.pathname === '/invoices' && location.search.includes('action=new');
+    }
     if (path === '/invoices') {
-      return location.pathname.startsWith('/invoices');
+      return location.pathname === '/invoices' && !location.search.includes('action=new');
+    }
+    if (path === '/demo-damage?action=new') {
+      return location.pathname === '/demo-damage' && location.search.includes('action=new');
+    }
+    if (path === '/demo-damage') {
+      return location.pathname === '/demo-damage' && !location.search.includes('action=new');
     }
     if (path === '/reports') {
       return location.pathname.startsWith('/reports');
     }
+    if (path === '/profile') {
+      return location.pathname === '/profile';
+    }
+    if (path === '/field-orders?action=new') {
+      return location.pathname === '/field-orders' && location.search.includes('action=new');
+    }
+    if (path === '/field-orders') {
+      return (location.pathname === '/field-orders' || location.pathname === '/orders') && !location.search.includes('action=new');
+    }
     return location.pathname === path;
   };
 
-  // Stock accordion menu item with Stock Transfer to shops
+  // Stock accordion menu item
   const stockAccordion = {
     id: 'stock',
     name: 'Stock',
@@ -154,8 +274,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     children: [
       { name: 'Overall Stock', path: '/stock' },
       { name: 'Update Stock', path: '/stock?action=update' },
-      { name: 'Add New Product', path: '/products?action=new' },
-      { name: 'Stock Transfer', path: '/stock-transfers' }
+      { name: 'Add New Product', path: '/products?action=new' }
     ]
   };
 
@@ -169,20 +288,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     isAccordion: true,
     children: [
       { name: 'Add New Customer', path: '/customers?action=new' },
-      { name: 'Manage Customer', path: '/customers' }
-    ]
-  };
-
-  // Invoice accordion menu item: DEDICATED SEPARATE MODULE for Billing & Invoices
-  const invoiceAccordion = {
-    id: 'invoice',
-    name: 'Invoice',
-    icon: FileText,
-    iconColor: 'text-blue-600',
-    iconStrokeWidth: 2,
-    isAccordion: true,
-    children: [
-      { name: 'Add Invoice', path: '/stock-transfers' },
+      { name: 'Manage Customer', path: '/customers' },
+      { name: 'Add Invoice', path: '/invoices?action=new' },
       { name: 'Manage Invoice', path: '/invoices' }
     ]
   };
@@ -198,7 +305,53 @@ const Sidebar = ({ isOpen, onClose }) => {
     children: [
       { name: 'Add Shop', path: '/stores?action=new' },
       { name: 'Manage Shop', path: '/stores' },
+      { name: 'Add Invoice', path: '/invoices?action=new' },
+      { name: 'Manage Invoice', path: '/invoices' },
       { name: 'Shop Report', path: '/reports' }
+    ]
+  };
+
+  // Field Order accordion menu item (matching Screenshot 1)
+  const fieldOrderAccordion = {
+    id: 'fieldOrder',
+    name: 'Field Order',
+    icon: ClipboardCheck,
+    iconColor: 'text-blue-600',
+    iconStrokeWidth: 2,
+    isAccordion: true,
+    children: [
+      { name: 'Add Order', path: '/field-orders?action=new' },
+      { name: 'Manage Orders', path: '/field-orders' }
+    ]
+  };
+
+  // Demo/Free/Damage accordion menu item matching user's design
+  const demoFreeDamageAccordion = {
+    id: 'demoDamage',
+    name: 'Demo/Free/Damage',
+    icon: Check,
+    iconColor: 'text-orange-500',
+    iconStrokeWidth: 3,
+    titleColor: 'text-blue-600 font-medium',
+    isAccordion: true,
+    children: [
+      { name: 'Add Demo/Free/Damage', path: '/demo-damage?action=new' },
+      { name: 'Manage Demo/Free/Damage', path: '/demo-damage' }
+    ]
+  };
+
+  // Profile accordion menu item
+  const profileAccordion = {
+    id: 'profile',
+    name: 'Profile',
+    icon: User,
+    iconColor: 'text-blue-600',
+    iconStrokeWidth: 2,
+    isAccordion: true,
+    children: [
+      { name: 'My Profile', path: '/profile' },
+      { name: 'Change Password', action: 'password' },
+      { name: 'Logout', action: 'logout' }
     ]
   };
 
@@ -215,18 +368,10 @@ const Sidebar = ({ isOpen, onClose }) => {
         },
         stockAccordion,
         customerAccordion,
-        invoiceAccordion,
         shopRetailersAccordion,
-        {
-          name: 'Shop Orders',
-          path: '/orders',
-          icon: ShoppingCart
-        },
-        {
-          name: 'Dispatch & Deliveries',
-          path: '/deliveries',
-          icon: Truck
-        }
+        fieldOrderAccordion,
+        demoFreeDamageAccordion,
+        profileAccordion
       ]
     },
     {
@@ -274,18 +419,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         },
         stockAccordion,
         customerAccordion,
-        invoiceAccordion,
         shopRetailersAccordion,
-        {
-          name: 'Shop Orders',
-          path: '/orders',
-          icon: ShoppingCart
-        },
-        {
-          name: 'Dispatch & Deliveries',
-          path: '/deliveries',
-          icon: Truck
-        }
+        demoFreeDamageAccordion,
+        profileAccordion
       ]
     },
     {
@@ -477,6 +613,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-colors cursor-pointer ${
                             isAnyChildActive || isExpanded
                               ? 'text-blue-600 font-medium'
+                              : item.titleColor
+                              ? item.titleColor
                               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                           }`}
                         >
@@ -505,6 +643,28 @@ const Sidebar = ({ isOpen, onClose }) => {
                           <div className="bg-slate-50/90 rounded-2xl p-4 ml-1 mr-1 border border-slate-100 shadow-2xs">
                             <div className="space-y-3">
                               {item.children.map((subItem) => {
+                                if (subItem.action) {
+                                  return (
+                                    <button
+                                      key={subItem.name}
+                                      type="button"
+                                      onClick={() => {
+                                        if (subItem.action === 'profile') setShowProfileModal(true);
+                                        if (subItem.action === 'password') setShowPasswordModal(true);
+                                        if (subItem.action === 'logout') logout();
+                                        if (window.innerWidth < 1024) onClose();
+                                      }}
+                                      className={`block w-full text-left text-[14px] transition-colors py-1 px-1.5 rounded-lg cursor-pointer ${
+                                        subItem.action === 'logout'
+                                          ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-50 font-medium'
+                                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 font-medium'
+                                      }`}
+                                    >
+                                      {subItem.name}
+                                    </button>
+                                  );
+                                }
+
                                 const active = isSubItemActive(subItem.path);
 
                                 return (
@@ -570,17 +730,223 @@ const Sidebar = ({ isOpen, onClose }) => {
           ))}
         </div>
 
-        {/* User Role Card at bottom */}
+        {/* User Role Card at bottom with collapsible options */}
         <div className="p-3.5 border-t border-slate-100 bg-slate-50/60">
-          <div className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between shadow-2xs">
-            <div className="min-w-0 pr-2">
-              <div className="text-xs font-semibold text-slate-900 truncate">{user?.name || 'Muralitharan'}</div>
-              <div className="text-[10px] text-blue-600 font-medium">{user?.role || 'Owner'} Account</div>
+          {expandedGroups.userCard && (
+            <div className="mb-2 bg-slate-50/90 rounded-2xl p-4 border border-slate-100 shadow-2xs">
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigate('/profile');
+                    if (window.innerWidth < 1024) onClose();
+                  }}
+                  className="block w-full text-left text-[14px] text-slate-600 hover:text-slate-900 font-medium py-1 px-1.5 rounded-lg hover:bg-slate-100/60 transition-colors cursor-pointer"
+                >
+                  My Profile
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(true)}
+                  className="block w-full text-left text-[14px] text-slate-600 hover:text-slate-900 font-medium py-1 px-1.5 rounded-lg hover:bg-slate-100/60 transition-colors cursor-pointer"
+                >
+                  Change Password
+                </button>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="block w-full text-left text-[14px] text-slate-600 hover:text-rose-600 font-medium py-1 px-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 flex-shrink-0" title="System Online" />
-          </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setExpandedGroups((prev) => ({ ...prev, userCard: !prev.userCard }))}
+            className="w-full text-left p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between shadow-2xs hover:border-blue-300 transition-colors cursor-pointer"
+          >
+            <div className="min-w-0 pr-2">
+              <div className="text-xs font-semibold text-slate-900 truncate">
+                {user?.name || 'Muralitharan'}
+              </div>
+              <div className="text-[10px] text-blue-600 font-medium">
+                {user?.role || 'Owner'} Account
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span
+                className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100 flex-shrink-0"
+                title="System Online"
+              />
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+                  expandedGroups.userCard ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+          </button>
         </div>
       </aside>
+
+      {/* ================= MODAL: MY PROFILE ================= */}
+      {showProfileModal && (
+        <Modal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          title="My Profile"
+          maxWidth="max-w-md"
+        >
+          <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs sm:text-sm">
+            {profileSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-medium">
+                {profileSuccess}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-600 font-semibold mb-1">Email Address</label>
+              <input
+                type="email"
+                disabled
+                value={user?.email || ''}
+                className="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">Phone Number</label>
+              <input
+                type="text"
+                value={profilePhone}
+                onChange={(e) => setProfilePhone(e.target.value)}
+                placeholder="10-digit mobile"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-600 font-semibold mb-1">Role</label>
+              <span className="inline-block px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-bold text-xs">
+                {user?.role || 'Owner'}
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-xs disabled:opacity-50"
+              >
+                {profileSaving ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ================= MODAL: CHANGE PASSWORD ================= */}
+      {showPasswordModal && (
+        <Modal
+          isOpen={showPasswordModal}
+          onClose={() => setShowPasswordModal(false)}
+          title="Change Password"
+          maxWidth="max-w-md"
+        >
+          <form onSubmit={handleChangePassword} className="space-y-4 text-xs sm:text-sm">
+            {passwordError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl font-medium">
+                {passwordError}
+              </div>
+            )}
+            {passwordSuccess && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-medium">
+                {passwordSuccess}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">
+                Current Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">
+                New Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-700 font-semibold mb-1">
+                Confirm New Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-xs disabled:opacity-50"
+              >
+                {passwordSaving ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </>
   );
 };

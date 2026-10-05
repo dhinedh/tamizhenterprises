@@ -7,15 +7,17 @@ const Invoice = require('../models/Invoice');
 const Delivery = require('../models/Delivery');
 
 // @desc    Get all orders
+// @desc    Get all orders
 // @route   GET /api/orders
 const getOrders = async (req, res) => {
   try {
-    const { status, storeId, salesmanId, search } = req.query;
+    const { status, storeId, salesmanId, search, shopName, startDate, endDate, from, to, orderType } = req.query;
     const filter = {};
 
-    if (status) filter.status = status;
+    if (status && status !== 'All') filter.status = status;
     if (storeId) filter.storeId = storeId;
     if (salesmanId) filter.salesmanId = salesmanId;
+    if (orderType) filter.orderType = orderType;
 
     if (req.user && req.user.role === 'Store' && req.user.storeId) {
       filter.storeId = req.user.storeId;
@@ -24,14 +26,39 @@ const getOrders = async (req, res) => {
       filter.salesmanId = req.user.salesmanId;
     }
 
-    if (search) {
-      filter.orderNumber = { $regex: search, $options: 'i' };
+    const start = startDate || from;
+    const end = endDate || to;
+    if (start || end) {
+      filter.orderDate = {};
+      if (start) {
+        const s = new Date(start);
+        s.setHours(0, 0, 0, 0);
+        filter.orderDate.$gte = s;
+      }
+      if (end) {
+        const e = new Date(end);
+        e.setHours(23, 59, 59, 999);
+        filter.orderDate.$lte = e;
+      }
+    }
+
+    const queryShop = shopName || search;
+    if (queryShop) {
+      const matchedStores = await Store.find({
+        name: { $regex: queryShop, $options: 'i' }
+      }).select('_id');
+      const storeIds = matchedStores.map(s => s._id);
+
+      filter.$or = [
+        { orderNumber: { $regex: queryShop, $options: 'i' } },
+        { storeId: { $in: storeIds } }
+      ];
     }
 
     const orders = await Order.find(filter)
-      .populate('storeId', 'name code city ownerName phone creditLimit outstandingBalance')
+      .populate('storeId', 'name code city district address ownerName phone creditLimit outstandingBalance')
       .populate('salesmanId', 'name employeeCode phone')
-      .sort({ createdAt: -1 });
+      .sort({ orderDate: -1, createdAt: -1 });
 
     res.json({ success: true, count: orders.length, data: orders });
   } catch (error) {
@@ -64,26 +91,66 @@ const getOrderById = async (req, res) => {
 // @route   POST /api/orders
 const createOrder = async (req, res) => {
   try {
-    const { storeId, salesmanId, items, paymentType, deliveryNotes } = req.body;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Order must contain at least one item' });
-    }
+    const {
+      storeId,
+      salesmanId,
+      salesmanName,
+      orderType = 'Get Order',
+      noOrderReason,
+      district,
+      division,
+      taluk,
+      notes,
+      orderDate,
+      shopLocation,
+      orderLocation,
+      items,
+      paymentType,
+      deliveryNotes
+    } = req.body;
 
     const store = await Store.findById(storeId);
     if (!store) {
       return res.status(404).json({ success: false, message: 'Store not found' });
     }
 
-    // Check credit limit warning
-    const currentOutstanding = store.outstandingBalance || 0;
-    const creditLimit = store.creditLimit || 50000;
+    const count = await Order.countDocuments();
+    const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
 
-    // Calculate item pricing & taxes
+    if (orderType === 'No Order') {
+      const order = await Order.create({
+        orderNumber,
+        storeId,
+        salesmanId: salesmanId || store.salesmanId || null,
+        salesmanName: salesmanName || (req.user?.name) || 'KARTHIBAN',
+        orderType: 'No Order',
+        noOrderReason: noOrderReason || notes || 'No order taken',
+        district: district || store.district || '',
+        division: division || '',
+        taluk: taluk || '',
+        notes: notes || '',
+        orderDate: orderDate ? new Date(orderDate) : new Date(),
+        status: 'Pending',
+        items: [],
+        subtotal: 0,
+        discountTotal: 0,
+        taxTotal: 0,
+        grandTotal: 0,
+        paymentType: paymentType || 'Credit',
+        deliveryNotes: deliveryNotes || '',
+        shopLocation: shopLocation || { lat: 13.0827, lng: 80.2707, address: store.address || '' },
+        orderLocation: orderLocation || { lat: 13.0827, lng: 80.2707, address: 'Field GPS Verified' }
+      });
+      return res.status(201).json({ success: true, message: 'No Order recorded successfully', data: order });
+    }
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'Order must contain at least one item' });
+    }
+
     let subtotal = 0;
     let discountTotal = 0;
     let taxTotal = 0;
-
     const formattedItems = [];
 
     for (const item of items) {
@@ -91,8 +158,7 @@ const createOrder = async (req, res) => {
       if (!product) continue;
 
       const qty = Number(item.quantity);
-      // Unit price: check custom store price first, else dealerPrice / sellingPrice
-      let unitPrice = Number(item.unitPrice || product.dealerPrice || product.sellingPrice);
+      let unitPrice = Number(item.unitPrice !== undefined ? item.unitPrice : (product.dealerPrice || product.sellingPrice));
       const custom = product.customStorePrices?.find(csp => csp.storeId?.toString() === storeId);
       if (custom && custom.specialPrice) {
         unitPrice = custom.specialPrice;
@@ -100,9 +166,12 @@ const createOrder = async (req, res) => {
 
       const discountPercent = Number(item.discountPercent || 0);
       const gross = qty * unitPrice;
-      const discount = (gross * discountPercent) / 100;
-      const taxable = gross - discount;
-      const gstRate = Number(product.gstRate || 18);
+      let discount = (gross * discountPercent) / 100;
+      if (item.discountAmount) {
+        discount = Number(item.discountAmount);
+      }
+      const taxable = Math.max(0, gross - discount);
+      const gstRate = Number(product.gstRate !== undefined ? product.gstRate : 0);
       const tax = (taxable * gstRate) / 100;
       const total = taxable + tax;
 
@@ -125,17 +194,19 @@ const createOrder = async (req, res) => {
       });
     }
 
-    const grandTotal = subtotal - discountTotal + taxTotal;
-
-    // Generate Order Number
-    const count = await Order.countDocuments();
-    const orderNumber = `ORD-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+    const grandTotal = Math.round((subtotal - discountTotal + taxTotal) * 100) / 100;
 
     const order = await Order.create({
       orderNumber,
       storeId,
       salesmanId: salesmanId || store.salesmanId || null,
-      orderDate: new Date(),
+      salesmanName: salesmanName || (req.user?.name) || 'KARTHIBAN',
+      orderType: 'Get Order',
+      district: district || store.district || '',
+      division: division || '',
+      taluk: taluk || '',
+      notes: notes || '',
+      orderDate: orderDate ? new Date(orderDate) : new Date(),
       status: 'Pending',
       items: formattedItems,
       subtotal,
@@ -143,16 +214,15 @@ const createOrder = async (req, res) => {
       taxTotal,
       grandTotal,
       paymentType: paymentType || 'Credit',
-      deliveryNotes: deliveryNotes || ''
+      deliveryNotes: deliveryNotes || '',
+      shopLocation: shopLocation || { lat: 13.0827, lng: 80.2707, address: store.address || '' },
+      orderLocation: orderLocation || { lat: 13.0827, lng: 80.2707, address: 'Field GPS Verified' }
     });
 
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
-      data: order,
-      creditWarning: (currentOutstanding + grandTotal) > creditLimit
-        ? `Order placed, but store total balance (₹${currentOutstanding + grandTotal}) will exceed credit limit (₹${creditLimit})`
-        : null
+      message: 'Field Order placed successfully',
+      data: order
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

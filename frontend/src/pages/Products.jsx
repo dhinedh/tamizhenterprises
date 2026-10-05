@@ -15,9 +15,23 @@ const Products = () => {
   const location = useLocation();
   const { isOwner } = useAuth();
   const { activeManufacturer } = useManufacturer();
-  const [products, setProducts] = useState([]);
-  const [manufacturers, setManufacturers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('tamil_erp_products');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [manufacturers, setManufacturers] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('tamil_erp_manufacturers');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(products.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -64,6 +78,9 @@ const Products = () => {
       const res = await api.get('/manufacturers');
       if (res.data.success) {
         setManufacturers(res.data.data);
+        try {
+          sessionStorage.setItem('tamil_erp_manufacturers', JSON.stringify(res.data.data));
+        } catch (e) {}
       }
     } catch (err) {
       console.error(err);
@@ -72,7 +89,9 @@ const Products = () => {
 
   const fetchProducts = async () => {
     try {
-      setLoading(true);
+      if (products.length === 0) {
+        setLoading(true);
+      }
       let query = `?search=${search}`;
       if (categoryFilter) query += `&category=${encodeURIComponent(categoryFilter)}`;
       if (lowStockFilter) query += `&lowStock=true`;
@@ -81,6 +100,11 @@ const Products = () => {
       const res = await api.get(`/products${query}`);
       if (res.data.success) {
         setProducts(res.data.data);
+        if (!search && !categoryFilter && !lowStockFilter && !activeManufacturer) {
+          try {
+            sessionStorage.setItem('tamil_erp_products', JSON.stringify(res.data.data));
+          } catch (e) {}
+        }
       }
     } catch (err) {
       console.error(err);

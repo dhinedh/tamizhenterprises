@@ -28,7 +28,8 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
-  DollarSign
+  DollarSign,
+  Upload
 } from 'lucide-react';
 import api from '../api/client';
 import Card from '../components/common/Card';
@@ -37,6 +38,7 @@ import { StatusBadge } from '../components/common/Badge';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useManufacturer } from '../context/ManufacturerContext';
+import AddShopView from '../components/stores/AddShopView';
 
 const Stores = () => {
   const navigate = useNavigate();
@@ -45,9 +47,23 @@ const Stores = () => {
   const { activeManufacturer } = useManufacturer();
 
   // Master Data
-  const [stores, setStores] = useState([]);
-  const [salesmen, setSalesmen] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stores, setStores] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('tamil_erp_stores');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [salesmen, setSalesmen] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('tamil_erp_salesmen');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [loading, setLoading] = useState(stores.length === 0);
 
   // Search & Filter State
   const [search, setSearch] = useState('');
@@ -108,6 +124,9 @@ const Stores = () => {
       const salesmenRes = await api.get('/salesmen');
       if (salesmenRes.data.success) {
         setSalesmen(salesmenRes.data.data);
+        try {
+          sessionStorage.setItem('tamil_erp_salesmen', JSON.stringify(salesmenRes.data.data));
+        } catch (e) {}
       }
     } catch (err) {
       console.error('Error fetching salesmen:', err);
@@ -116,12 +135,19 @@ const Stores = () => {
 
   const fetchStores = async () => {
     try {
-      setLoading(true);
+      if (stores.length === 0) {
+        setLoading(true);
+      }
       let query = `?search=${encodeURIComponent(search)}`;
       if (overdueOnly) query += '&overdueOnly=true';
       const res = await api.get(`/stores${query}`);
       if (res.data.success) {
         setStores(res.data.data);
+        if (!search && !overdueOnly) {
+          try {
+            sessionStorage.setItem('tamil_erp_stores', JSON.stringify(res.data.data));
+          } catch (e) {}
+        }
       }
     } catch (err) {
       console.error('Error fetching stores:', err);
@@ -273,6 +299,20 @@ const Stores = () => {
     };
   }, [stores]);
 
+  const isAddMode = location.search.includes('action=new') || location.search.includes('create=true');
+
+  if (isAddMode) {
+    return (
+      <AddShopView
+        onDone={() => {
+          fetchStores();
+          navigate('/stores', { replace: true });
+        }}
+        onCancel={() => navigate('/stores', { replace: true })}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Toast Notification */}
@@ -302,15 +342,22 @@ const Stores = () => {
           </div>
 
           {(isOwner || isSalesman) && (
-            <button
-              onClick={() => {
-                resetForm();
-                setIsCreateModalOpen(true);
-              }}
-              className="px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" /> Register New Shop
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => navigate('/stores?action=new&tab=bulk')}
+                className="px-3.5 py-2.5 bg-slate-800/90 hover:bg-slate-700 text-teal-300 border border-teal-500/30 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-sm"
+              >
+                <Upload className="w-4 h-4" /> Bulk Upload
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/stores?action=new')}
+                className="px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Register New Shop
+              </button>
+            </div>
           )}
         </div>
 

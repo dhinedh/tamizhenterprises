@@ -33,8 +33,28 @@ const orderSchema = new mongoose.Schema({
   orderDate: { type: Date, default: Date.now },
   status: { 
     type: String, 
-    enum: ['Pending', 'Approved', 'Processing', 'Dispatched', 'Delivered', 'Cancelled'], 
+    enum: ['Pending', 'Approved', 'Invoiced', 'Processing', 'Dispatched', 'Delivered', 'Cancelled'], 
     default: 'Pending' 
+  },
+  orderType: {
+    type: String,
+    enum: ['Get Order', 'No Order'],
+    default: 'Get Order'
+  },
+  salesmanName: { type: String, default: 'KARTHIBAN' },
+  noOrderReason: { type: String, default: '' },
+  district: { type: String, default: '' },
+  division: { type: String, default: '' },
+  taluk: { type: String, default: '' },
+  shopLocation: {
+    lat: { type: Number, default: 13.0827 },
+    lng: { type: Number, default: 80.2707 },
+    address: { type: String, default: '' }
+  },
+  orderLocation: {
+    lat: { type: Number, default: 13.0827 },
+    lng: { type: Number, default: 80.2707 },
+    address: { type: String, default: '' }
   },
   items: [orderItemSchema],
   subtotal: { type: Number, required: true, default: 0 },
@@ -47,6 +67,7 @@ const orderSchema = new mongoose.Schema({
     default: 'Credit' 
   },
   deliveryNotes: { type: String, default: '' },
+  notes: { type: String, default: '' },
   approvedBy: { type: String, default: '' },
   approvalDate: { type: Date },
   deliveryDate: { type: Date },
@@ -57,5 +78,8 @@ const orderSchema = new mongoose.Schema({
 });
 
 orderSchema.index({ orderNumber: 1, storeId: 1, salesmanId: 1, status: 1 });
+orderSchema.index({ orderDate: -1, status: 1 });
+orderSchema.index({ storeId: 1, orderDate: -1 });
+orderSchema.index({ salesmanId: 1, orderDate: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

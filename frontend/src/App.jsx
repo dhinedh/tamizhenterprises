@@ -19,6 +19,9 @@ import Returns from './pages/Returns';
 import Schemes from './pages/Schemes';
 import Reports from './pages/Reports';
 import StockManagement from './pages/StockManagement';
+import DemoDamage from './pages/DemoDamage';
+import Profile from './pages/Profile';
+import FieldOrders from './pages/FieldOrders';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -74,14 +77,17 @@ function App() {
               <Route path="stores" element={<Stores />} />
               <Route path="stores/:id" element={<StoreDetail />} />
               <Route path="customers" element={<Customers />} />
-              <Route path="orders" element={<Orders />} />
+              <Route path="orders" element={<FieldOrders />} />
+              <Route path="field-orders" element={<FieldOrders />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="salesmen" element={<Salesmen />} />
               <Route path="payments" element={<Payments />} />
               <Route path="deliveries" element={<Deliveries />} />
               <Route path="returns" element={<Returns />} />
+              <Route path="demo-damage" element={<DemoDamage />} />
               <Route path="schemes" element={<Schemes />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
             
             {/* Fallback */}

@@ -7,10 +7,25 @@ const Payment = require('../models/Payment');
 const Product = require('../models/Product');
 const Manufacturer = require('../models/Manufacturer');
 
+// In-memory cache for dashboard KPIs to prevent repeated heavy aggregations on rapid navigation
+let statsCache = null;
+let statsCacheTime = 0;
+const STATS_CACHE_TTL_MS = 25 * 1000; // 25 seconds cache TTL
+
+const invalidateDashboardCache = () => {
+  statsCache = null;
+  statsCacheTime = 0;
+};
+
 // @desc    Get complete dashboard overview KPIs & charts data
 // @route   GET /api/dashboard/stats
 const getDashboardStats = async (req, res) => {
   try {
+    // Return cached aggregated stats instantly if within TTL (unless forced fresh)
+    if (req.query.fresh !== 'true' && statsCache && (Date.now() - statsCacheTime < STATS_CACHE_TTL_MS)) {
+      return res.json(statsCache);
+    }
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -23,7 +38,7 @@ const getDashboardStats = async (req, res) => {
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0, 0, 0, 0);
 
-    // Run all database calls in ONE parallel batch using .lean()
+    // Run all database calls in ONE parallel batch using .lean() and selecting only needed fields
     const [
       allInvoices,
       allPurchases,
@@ -34,14 +49,33 @@ const getDashboardStats = async (req, res) => {
       products,
       manufacturers
     ] = await Promise.all([
-      Invoice.find({ invoiceDate: { $gte: sixMonthsAgo } }).lean(),
-      Purchase.find({ orderDate: { $gte: sixMonthsAgo } }).lean(),
-      Stock.find().populate('productId').lean(),
-      Store.find().select('outstandingBalance creditLimit name code city totalOrderValue status').lean(),
-      Payment.find({ paymentType: 'Store_Collection', paymentDate: { $gte: sixMonthsAgo } }).lean(),
-      Order.find({ status: 'Pending' }).populate('storeId', 'name city').sort({ orderDate: -1 }).limit(5).lean(),
-      Product.find().lean(),
-      Manufacturer.find({ status: 'Active' }).lean()
+      Invoice.find({ invoiceDate: { $gte: sixMonthsAgo } })
+        .select('invoiceDate grandTotal items.productId items.name items.quantity items.total')
+        .lean(),
+      Purchase.find({ orderDate: { $gte: sixMonthsAgo } })
+        .select('orderDate grandTotal manufacturerId poNumber status paymentStatus')
+        .lean(),
+      Stock.find()
+        .select('productId warehouseLocation currentStock reservedStock damagedStock minStockAlert')
+        .populate('productId', 'name sku brand purchasePrice sellingPrice unit minStockAlert')
+        .lean(),
+      Store.find()
+        .select('outstandingBalance creditLimit name code city totalOrderValue status')
+        .lean(),
+      Payment.find({ paymentType: 'Store_Collection', paymentDate: { $gte: sixMonthsAgo } })
+        .select('paymentDate amount')
+        .lean(),
+      Order.find({ status: 'Pending' })
+        .select('orderNumber orderDate grandTotal status storeId')
+        .populate('storeId', 'name city')
+        .sort({ orderDate: -1 })
+        .limit(5)
+        .lean(),
+      Product.find()
+        .select('name sku brand category purchasePrice dealerPrice sellingPrice mrp gstRate unit manufacturerId minStockAlert hsnCode')
+        .lean(),
+      Manufacturer.find({ status: 'Active' })
+        .lean()
     ]);
 
     // Fast product lookup map
@@ -317,7 +351,7 @@ const getDashboardStats = async (req, res) => {
       };
     });
 
-    res.json({
+    const responsePayload = {
       success: true,
       data: {
         kpis: {
@@ -344,10 +378,16 @@ const getDashboardStats = async (req, res) => {
         categoryDistribution,
         recentPendingOrders: pendingOrders
       }
-    });
+    };
+
+    // Cache computed stats
+    statsCache = responsePayload;
+    statsCacheTime = Date.now();
+
+    res.json(responsePayload);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-module.exports = { getDashboardStats };
+module.exports = { getDashboardStats, invalidateDashboardCache };

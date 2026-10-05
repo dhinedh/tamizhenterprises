@@ -239,9 +239,26 @@ const downloadInvoicePDF = async (req, res) => {
   }
 };
 
+// @desc    Void an invoice
+// @route   PUT /api/invoices/:id/void
+const voidInvoice = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+    invoice.status = 'Cancelled';
+    await invoice.save();
+    res.json({ success: true, message: 'Invoice has been voided successfully', data: invoice });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getInvoices,
   getInvoiceById,
   generateInvoiceFromOrder,
-  downloadInvoicePDF
+  downloadInvoicePDF,
+  voidInvoice
 };

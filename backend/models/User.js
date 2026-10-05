@@ -15,7 +15,28 @@ const userSchema = new mongoose.Schema({
   storeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Store', default: null },
   salesmanId: { type: mongoose.Schema.Types.ObjectId, ref: 'Salesman', default: null },
   avatar: { type: String, default: '' },
-  lastLogin: { type: Date }
+  lastLogin: { type: Date },
+
+  // Company & Business Profile Details
+  gstin: { type: String, default: '', trim: true },
+  companyName: { type: String, default: '', trim: true },
+  logo: { type: String, default: '' },
+  addressLine1: { type: String, default: '', trim: true },
+  addressLine2: { type: String, default: '', trim: true },
+  city: { type: String, default: '', trim: true },
+  state: { type: String, default: '', trim: true },
+  pincode: { type: String, default: '', trim: true },
+  deliveryAddress: { type: String, default: '', trim: true },
+
+  // Bank Details
+  bankDetails: {
+    accountName: { type: String, default: '', trim: true },
+    accountNumber: { type: String, default: '', trim: true },
+    bankName: { type: String, default: '', trim: true },
+    branchName: { type: String, default: '', trim: true },
+    ifscCode: { type: String, default: '', trim: true },
+    upiNumber: { type: String, default: '', trim: true }
+  }
 }, {
   timestamps: true
 });

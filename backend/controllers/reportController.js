@@ -222,9 +222,104 @@ const getManufacturerPerformance = async (req, res) => {
   }
 };
 
+// @desc    Shop Report — Sales & Payments (Aggregated by shop with invoices, billed, received, due, and date filters)
+// @route   GET /api/reports/shop-sales
+const getShopSalesReport = async (req, res) => {
+  try {
+    const { startDate, endDate, status, search } = req.query;
+    const invoiceFilter = {};
+
+    if (startDate || endDate) {
+      invoiceFilter.invoiceDate = {};
+      if (startDate) {
+        const s = new Date(startDate);
+        s.setHours(0, 0, 0, 0);
+        invoiceFilter.invoiceDate.$gte = s;
+      }
+      if (endDate) {
+        const e = new Date(endDate);
+        e.setHours(23, 59, 59, 999);
+        invoiceFilter.invoiceDate.$lte = e;
+      }
+    }
+
+    if (status && status !== 'All') {
+      invoiceFilter.status = status;
+    }
+
+    const stores = await Store.find().sort({ name: 1 });
+    const invoices = await Invoice.find(invoiceFilter);
+
+    // Group invoices by storeId
+    const storeInvoicesMap = {};
+    invoices.forEach(inv => {
+      if (inv.storeId) {
+        const sId = inv.storeId.toString();
+        if (!storeInvoicesMap[sId]) storeInvoicesMap[sId] = [];
+        storeInvoicesMap[sId].push(inv);
+      }
+    });
+
+    const reportList = stores.map(store => {
+      const storeInvs = storeInvoicesMap[store._id.toString()] || [];
+      const invoiceCount = storeInvs.length;
+      const billed = storeInvs.reduce((acc, i) => acc + (Number(i.grandTotal) || 0), 0);
+      const received = storeInvs.reduce((acc, i) => acc + (Number(i.paidAmount) || 0), 0);
+      const due = storeInvs.reduce((acc, i) => acc + (Number(i.balanceAmount) || 0), 0);
+
+      let paymentStatus = 'Not Paid';
+      if (billed > 0 && due <= 0) {
+        paymentStatus = 'Paid';
+      } else if (received > 0 && due > 0) {
+        paymentStatus = 'Partial';
+      } else if (billed === 0) {
+        paymentStatus = 'Not Paid';
+      }
+
+      return {
+        storeId: store._id,
+        name: store.name,
+        code: store.code || store.femi9RetailerId || `STORE-${store._id.toString().slice(-5).toUpperCase()}`,
+        phone: store.phone,
+        category: (store.category || store.storeType || 'SUPER MARKETS').toUpperCase(),
+        invoicesCount: invoiceCount,
+        billed,
+        received,
+        due,
+        status: paymentStatus,
+        invoices: storeInvs
+      };
+    });
+
+    // Summary stats
+    const totalShopsCount = stores.length;
+    const shopsWithSales = reportList.filter(s => s.invoicesCount > 0).length;
+    const totalInvoicesCount = invoices.length;
+    const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.grandTotal) || 0), 0);
+    const totalReceived = invoices.reduce((acc, i) => acc + (Number(i.paidAmount) || 0), 0);
+    const totalDue = invoices.reduce((acc, i) => acc + (Number(i.balanceAmount) || 0), 0);
+
+    res.json({
+      success: true,
+      summary: {
+        totalShopsCount,
+        shopsWithSales,
+        totalInvoicesCount,
+        totalBilled,
+        totalReceived,
+        totalDue
+      },
+      data: reportList
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getSalesReport,
   getProductPerformance,
   getStorePerformance,
-  getManufacturerPerformance
+  getManufacturerPerformance,
+  getShopSalesReport
 };

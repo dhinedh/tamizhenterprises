@@ -11,11 +11,18 @@ import InvoiceSuccessModal from '../components/stock/InvoiceSuccessModal';
 
 const Orders = () => {
   const { user, isOwner, isSalesman, isStore } = useAuth();
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('tamil_erp_orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [stores, setStores] = useState([]);
   const [salesmen, setSalesmen] = useState([]);
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(orders.length === 0);
   const [statusFilter, setStatusFilter] = useState('');
   const [successToast, setSuccessToast] = useState('');
 
@@ -57,11 +64,18 @@ const Orders = () => {
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
+      if (orders.length === 0) {
+        setLoading(true);
+      }
       let query = statusFilter ? `?status=${statusFilter}` : '';
       const res = await api.get(`/orders${query}`);
       if (res.data.success) {
         setOrders(res.data.data);
+        if (!statusFilter) {
+          try {
+            sessionStorage.setItem('tamil_erp_orders', JSON.stringify(res.data.data));
+          } catch (e) {}
+        }
       }
     } catch (err) {
       console.error(err);

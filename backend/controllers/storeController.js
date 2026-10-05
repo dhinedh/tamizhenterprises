@@ -115,17 +115,18 @@ const createBulkStores = async (req, res) => {
 
     for (let i = 0; i < rawStores.length; i++) {
       const s = rawStores[i];
+      const rawPhone = s.phone || s.mobileNumber || s.mobile || '';
       if (!s.name || !s.name.trim()) {
         errors.push(`Row #${i + 1}: Shop Name is required`);
         continue;
       }
-      if (!s.phone || !s.phone.trim()) {
+      if (!rawPhone || !rawPhone.trim()) {
         errors.push(`Row #${i + 1} (${s.name}): Mobile phone number is required`);
         continue;
       }
 
       // Generate clean unique store code
-      const cityClean = (s.city || 'MDU').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MDU';
+      const cityClean = (s.city || s.district || 'MDU').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MDU';
       count++;
       let candidate = `STR-${cityClean}-${String(count).padStart(2, '0')}`;
       let exists = await Store.findOne({ code: candidate });
@@ -147,16 +148,20 @@ const createBulkStores = async (req, res) => {
           manufacturerCode: s.manufacturerCode ? s.manufacturerCode.trim().toUpperCase() : '',
           femi9RetailerId: s.femi9RetailerId ? s.femi9RetailerId.trim().toUpperCase() : '',
           ownerName: s.ownerName ? s.ownerName.trim() : '',
-          phone: s.phone.trim(),
-          landline: s.landline ? s.landline.trim() : '',
-          email: s.email ? s.email.trim() : '',
+          countryCode: s.countryCode ? s.countryCode.trim() : '+91',
+          phone: rawPhone.trim(),
+          landline: s.landline || s.landlineNumber ? (s.landline || s.landlineNumber).trim() : '',
+          email: s.email || s.emailId ? (s.email || s.emailId).trim() : '',
           address: s.address ? s.address.trim() : '',
-          area: s.area ? s.area.trim() : '',
+          area: s.area || s.firka || s.firkaArea ? (s.area || s.firka || s.firkaArea).trim() : '',
+          firka: s.firka || s.firkaArea ? (s.firka || s.firkaArea).trim() : '',
+          division: s.division ? s.division.trim() : 'CHENNAI CENTRAL B',
+          taluk: s.taluk ? s.taluk.trim() : '',
           city: s.city ? s.city.trim() : 'Chennai',
-          district: s.district ? s.district.trim() : 'Chennai',
-          state: s.state ? s.state.trim() : 'Tamil Nadu',
+          district: s.district ? s.district.trim() : 'CHENNAI',
+          state: s.state ? s.state.trim() : 'Tamilnadu',
           pincode: s.pincode ? s.pincode.trim() : '',
-          gstNumber: s.gstNumber ? s.gstNumber.trim().toUpperCase() : '',
+          gstNumber: s.gstNumber || s.gstin ? (s.gstNumber || s.gstin).trim().toUpperCase() : '',
           salesmanId: cleanSalesmanId,
           creditLimit: Number(s.creditLimit) || 50000,
           creditPeriodDays: Number(s.creditPeriodDays) || 21,

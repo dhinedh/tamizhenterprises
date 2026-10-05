@@ -26,7 +26,12 @@ const schemeRoutes = require('./routes/schemeRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 
+const compression = require('compression');
+
 const app = express();
+
+// Enable Gzip/Brotli response compression for all API routes (drastically reduces payload transfer sizes)
+app.use(compression());
 
 // Connect to MongoDB
 connectDB();

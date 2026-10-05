@@ -10,8 +10,13 @@ const Layout = () => {
   const { activeManufacturer } = useManufacturer();
   const location = useLocation();
 
-  // If not on the main dashboard ('/') and no manufacturer is active, show the Manufacturer Selection cards
-  const requiresManufacturerSelection = !activeManufacturer && location.pathname !== '/';
+  // If not on the main dashboard ('/'), profile ('/profile'), field-orders, or add-shop, and no manufacturer is active, show the Manufacturer Selection cards
+  const requiresManufacturerSelection =
+    !activeManufacturer &&
+    location.pathname !== '/' &&
+    !location.pathname.startsWith('/profile') &&
+    !location.pathname.startsWith('/field-orders') &&
+    !(location.pathname.startsWith('/stores') && location.search.includes('action=new'));
 
   return (
     <div className="min-h-screen bg-slate-50 flex">

@@ -82,6 +82,16 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (userData) => {
+    setUser((prev) => ({ ...prev, ...userData }));
+    try {
+      const current = JSON.parse(localStorage.getItem('tamil_erp_user') || '{}');
+      localStorage.setItem('tamil_erp_user', JSON.stringify({ ...current, ...userData }));
+    } catch {
+      localStorage.setItem('tamil_erp_user', JSON.stringify(userData));
+    }
+  };
+
   const value = {
     user,
     token,
@@ -89,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     login,
     quickDemoLogin,
     logout,
+    updateUser,
     isOwner: user?.role === 'Owner',
     isSalesman: user?.role === 'Salesman',
     isStore: user?.role === 'Store'
