@@ -150,6 +150,19 @@ const Invoices = () => {
   // Added Products List for the new invoice
   const [addedItems, setAddedItems] = useState([]);
 
+  // Quick Add Customer Modal State
+  const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState({
+    name: '',
+    phone: '',
+    ownerName: '',
+    city: 'Madurai',
+    address: '',
+    gstNumber: ''
+  });
+  const [savingNewCustomer, setSavingNewCustomer] = useState(false);
+  const [newCustomerError, setNewCustomerError] = useState('');
+
   // "ADD PRODUCT" Box Input Fields
   const [currentProductId, setCurrentProductId] = useState('');
   const [itemQty, setItemQty] = useState('');
@@ -183,9 +196,9 @@ const Invoices = () => {
 
       if (invRes.data.success) {
         setInvoices(invRes.data.data || []);
-        // Next invoice number default (e.g. 905)
+        // Next invoice number default (e.g. 10 matching reference screenshot or sequential)
         const count = invRes.data.data?.length || 0;
-        setInvoiceNumberInput(String(900 + count + 1));
+        setInvoiceNumberInput(String(count > 0 ? count + 1 : 10));
       }
       if (storesRes.data.success) {
         setStores(storesRes.data.data || []);
@@ -208,6 +221,51 @@ const Invoices = () => {
       }
     } catch (err) {
       console.error('Failed to fetch invoices:', err);
+    }
+  };
+
+  // Handler for Quick Add Customer (+ New button in Add Invoice)
+  const handleQuickCreateCustomer = async (e) => {
+    e.preventDefault();
+    if (!newCustomerForm.name.trim()) {
+      setNewCustomerError('Customer / Shop name is required');
+      return;
+    }
+    if (!newCustomerForm.phone.trim()) {
+      setNewCustomerError('Mobile number is required');
+      return;
+    }
+    try {
+      setSavingNewCustomer(true);
+      setNewCustomerError('');
+      const res = await api.post('/stores', {
+        name: newCustomerForm.name.trim(),
+        phone: newCustomerForm.phone.trim(),
+        ownerName: newCustomerForm.ownerName.trim(),
+        city: newCustomerForm.city.trim() || 'Madurai',
+        address: newCustomerForm.address.trim(),
+        gstNumber: newCustomerForm.gstNumber.trim().toUpperCase()
+      });
+      if (res.data.success && res.data.data) {
+        const created = res.data.data;
+        setStores((prev) => [created, ...prev]);
+        setSelectedStoreId(created._id);
+        setIsNewCustomerModalOpen(false);
+        setNewCustomerForm({
+          name: '',
+          phone: '',
+          ownerName: '',
+          city: 'Madurai',
+          address: '',
+          gstNumber: ''
+        });
+        showToast(`Customer "${created.name}" created successfully!`);
+      }
+    } catch (err) {
+      console.error('Failed to create customer:', err);
+      setNewCustomerError(err.response?.data?.message || 'Failed to add customer.');
+    } finally {
+      setSavingNewCustomer(false);
     }
   };
 
@@ -600,33 +658,77 @@ const Invoices = () => {
       )}
 
       {isCreateMode ? (
-        /* ================= ADD INVOICE (INVOICE - SHOP) UI (EXACT MATCH) ================= */
-        <div className="space-y-5">
-          {/* Top Banner with Blue Receipt Icon, Title, and List Button on Right */}
-          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-4 sm:p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 3a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v18l-3-2-3 2-3-2-3 2-3-2-1 0.67V3zm3 4h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
-                </svg>
+        /* ================= ADD INVOICE (INVOICE – CUSTOMER) UI (EXACT SCREENSHOT MATCH) ================= */
+        <div className="space-y-4">
+          {/* Top Profile / Territory Partner Badge Bar */}
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 flex items-center justify-between">
+            {/* Left: Avatar & Profile Details */}
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-full bg-[#d97706] text-white flex items-center justify-center font-bold text-xl shadow-xs flex-shrink-0">
+                K
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#1e293b] tracking-tight">
-                Invoice - Shop
-              </h1>
+              <div className="flex flex-col justify-center leading-tight">
+                <span className="text-sm sm:text-base font-extrabold text-[#b45309] tracking-tight uppercase">
+                  K.TAMIZHMOZHI
+                </span>
+                <span className="text-xs font-semibold text-[#0284c7]">
+                  TP-0243
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  9841433607
+                </span>
+                <span className="text-[11px] text-teal-700 font-semibold tracking-wide">
+                  Territory Partner
+                </span>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate('/invoices')}
-              title="View All Invoices"
-              className="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
-            >
-              <List className="w-5 h-5 stroke-[2.5]" />
-            </button>
+            {/* Right: Wallet Balance & Femi9 Badge */}
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className="flex items-center gap-1.5 text-slate-700 font-bold text-sm sm:text-base bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/70">
+                <svg className="w-5 h-5 text-slate-600 inline-block" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M21 7H3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zm-1 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM3 5h16a1 1 0 0 0 0-2H3a1 1 0 0 0 0 2z" />
+                </svg>
+                <span>₹0.00</span>
+              </div>
+
+              {/* Femi9 Logo Yellow Badge */}
+              <div className="w-11 h-11 rounded-full bg-[#facc15] border border-amber-300 flex flex-col items-center justify-center shadow-xs flex-shrink-0 p-1">
+                <span className="font-serif italic font-extrabold text-[#713f12] text-xs leading-none">
+                  femi<span className="text-[10px]">9</span>
+                </span>
+                <span className="text-[6px] font-sans font-bold text-[#854d0e] tracking-tight leading-none scale-90 mt-0.5">
+                  born for dignity
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Main White Card Form Container */}
+          {/* Main White Card Container */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-7 space-y-6">
+            {/* Card Header with Blue Invoice Icon, Title, and List Button */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M4 3a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v18l-3-2-3 2-3-2-3 2-3-2-1 0.67V3zm3 4h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
+                  </svg>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-[#1e293b] tracking-tight">
+                  Invoice – Customer
+                </h1>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/invoices')}
+                title="View All Invoices"
+                className="w-10 h-10 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+              >
+                <List className="w-5 h-5 stroke-[2.5]" />
+              </button>
+            </div>
+
             {/* Section 1: INVOICE DETAILS */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -640,12 +742,12 @@ const Invoices = () => {
                 </h2>
               </div>
 
-              {/* 3 Columns Row: Invoice Number*, Shop Name*, Invoice Date* */}
+              {/* 3 Columns Row: Invoice Number*, Customer Name*, Invoice Date* */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* 1. Invoice Number * */}
                 <div>
                   <label className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">
-                    Invoice Number *
+                    Invoice Number*
                   </label>
                   <input
                     type="text"
@@ -655,11 +757,23 @@ const Invoices = () => {
                   />
                 </div>
 
-                {/* 2. Shop Name* */}
+                {/* 2. Customer Name* with + New */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">
-                    Shop Name*
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs sm:text-sm font-bold text-slate-800">
+                      Customer Name*
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCustomerError('');
+                        setIsNewCustomerModalOpen(true);
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
+                    >
+                      + New
+                    </button>
+                  </div>
                   <select
                     value={selectedStoreId}
                     onChange={(e) => setSelectedStoreId(e.target.value)}
@@ -668,19 +782,10 @@ const Invoices = () => {
                     <option value="">Select</option>
                     {stores.map((s) => (
                       <option key={s._id} value={s._id}>
-                        {s.name} ({s.city})
+                        {s.name} {s.city ? `(${s.city})` : ''}
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">
-                    Shops with a pending field order aren't listed
-                    <br />
-                    — invoice them from{' '}
-                    <Link to="/orders" className="text-blue-600 hover:underline font-medium">
-                      Manage Orders
-                    </Link>{' '}
-                    instead.
-                  </p>
                 </div>
 
                 {/* 3. Invoice Date* */}
@@ -688,12 +793,9 @@ const Invoices = () => {
                   <label className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">
                     Invoice Date*
                   </label>
-                  <input
-                    type="text"
-                    disabled
-                    value={todayFormatted}
-                    className="w-full px-4 py-2.5 bg-slate-100/90 border border-slate-200 rounded-xl font-bold text-slate-900 text-sm select-none"
-                  />
+                  <div className="w-full px-4 py-2.5 bg-[#e2e8f0] border border-slate-200 rounded-xl font-bold text-slate-900 text-sm flex items-center select-none">
+                    {todayFormatted}
+                  </div>
                 </div>
               </div>
             </div>
@@ -707,7 +809,7 @@ const Invoices = () => {
 
               {/* Row 1: PRODUCT, QTY, PRICE, MRP */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                <div className="md:col-span-6">
+                <div className="md:col-span-5">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     Product
                   </label>
@@ -739,14 +841,14 @@ const Invoices = () => {
                   />
                 </div>
 
-                <div className="md:col-span-2">
+                <div className="md:col-span-3">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     Price
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="Price"
+                    placeholder="Customer Pric"
                     value={itemPrice}
                     onChange={(e) => handlePriceChange(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -1731,6 +1833,135 @@ const Invoices = () => {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+      
+      {/* ================= MODAL: QUICK ADD CUSTOMER / SHOP ================= */}
+      {isNewCustomerModalOpen && (
+        <Modal
+          isOpen={isNewCustomerModalOpen}
+          onClose={() => setIsNewCustomerModalOpen(false)}
+          title="Add New Customer / Retail Shop"
+          maxWidth="max-w-md"
+        >
+          <form onSubmit={handleQuickCreateCustomer} className="space-y-4 pt-1">
+            {newCustomerError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{newCustomerError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Customer / Shop Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Sri Balaji Traders"
+                value={newCustomerForm.name}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, name: e.target.value })
+                }
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Mobile Number *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="e.g. 9841433607"
+                  value={newCustomerForm.phone}
+                  onChange={(e) =>
+                    setNewCustomerForm({ ...newCustomerForm, phone: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  City / Town
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Madurai"
+                  value={newCustomerForm.city}
+                  onChange={(e) =>
+                    setNewCustomerForm({ ...newCustomerForm, city: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Owner / Contact Person
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Murugan"
+                value={newCustomerForm.ownerName}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, ownerName: e.target.value })
+                }
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Shop Address
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 12 Bazaar Street"
+                value={newCustomerForm.address}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, address: e.target.value })
+                }
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                GSTIN (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 33AAAAA0000A1Z5"
+                value={newCustomerForm.gstNumber}
+                onChange={(e) =>
+                  setNewCustomerForm({ ...newCustomerForm, gstNumber: e.target.value })
+                }
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsNewCustomerModalOpen(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingNewCustomer}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {savingNewCustomer ? 'Saving...' : 'Add Customer'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>
