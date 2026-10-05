@@ -1623,7 +1623,7 @@ const Invoices = () => {
             {/* Header / Bill Details */}
             <div className="flex justify-between items-start border-b border-slate-200 pb-4">
               <div>
-                <div className="text-base font-bold text-teal-800">TAMIL ENTERPRISES</div>
+                <div className="text-base font-bold text-teal-800">TAMIZH ENTERPRISES</div>
                 <div className="text-[11px] text-slate-500">124, Goods Shed Road, Madurai - 625001</div>
                 <div className="text-[11px] text-slate-600 font-mono">GSTIN: 33AABCT9988C1Z4</div>
               </div>

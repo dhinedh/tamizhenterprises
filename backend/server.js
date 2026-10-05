@@ -70,7 +70,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    app: 'Tamil Enterprises ERP Backend',
+    app: 'Tamizh Enterprises ERP Backend',
     timestamp: new Date().toISOString()
   });
 });
@@ -105,5 +105,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Tamil Enterprises ERP Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`Tamizh Enterprises ERP Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

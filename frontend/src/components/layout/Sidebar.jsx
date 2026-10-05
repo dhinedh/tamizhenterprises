@@ -571,7 +571,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
                 <div className="min-w-0">
                   <div className="font-bold text-slate-900 text-xs tracking-tight truncate">
-                    Tamil Enterprises
+                    Tamizh Enterprises
                   </div>
                   <div className="text-[10px] text-blue-600 font-medium">
                     Madurai Central ERP

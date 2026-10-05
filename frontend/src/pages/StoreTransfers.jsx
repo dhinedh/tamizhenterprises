@@ -400,7 +400,7 @@ const StoreTransfers = () => {
 
     const text = encodeURIComponent(
       `வணக்கம் / Hello ${store?.name || 'Customer'},\n\n` +
-      `🏢 *TAMIL ENTERPRISES - DISPATCH & GST TAX INVOICE*\n` +
+      `🏢 *TAMIZH ENTERPRISES - DISPATCH & GST TAX INVOICE*\n` +
       `Goods have been transferred & dispatched from our central warehouse to your store.\n\n` +
       `📋 *Invoice Details:*\n` +
       `• Invoice No: *${invNum}*\n` +
@@ -411,7 +411,7 @@ const StoreTransfers = () => {
       `${itemLines || 'Stock transfer items'}\n\n` +
       `💰 *Grand Total: ₹ ${Number(total).toLocaleString('en-IN', { minimumFractionDigits: 2 })}*\n\n` +
       `🏦 *Payment Options:*\n` +
-      `• UPI ID: tamilenterprises@hdfcbank\n` +
+      `• UPI ID: tamizhenterprises@hdfcbank\n` +
       `• Bank: HDFC Bank, Madurai Main Branch\n` +
       `• A/C: 50200012345678 | IFSC: HDFC0000123\n\n` +
       `Thank you for your business!\n` +
@@ -431,11 +431,11 @@ const StoreTransfers = () => {
     const total = inv.grandTotal || invoiceData.grandTotal || 0;
 
     const summary =
-      `TAMIL ENTERPRISES - INVOICE ${invNum}\n` +
+      `TAMIZH ENTERPRISES - INVOICE ${invNum}\n` +
       `Shop: ${store?.name || ''} (${store?.city || ''})\n` +
       `Amount: ₹ ${Number(total).toLocaleString('en-IN')}\n` +
       `Challan: ${inv.deliveryChallanNo || ''}\n` +
-      `Payment UPI: tamilenterprises@hdfcbank`;
+      `Payment UPI: tamizhenterprises@hdfcbank`;
 
     navigator.clipboard.writeText(summary);
     setCopiedToast(true);
@@ -1391,7 +1391,7 @@ const StoreTransfers = () => {
             {/* Header / Bill Details */}
             <div className="flex justify-between items-start border-b border-slate-200 pb-4">
               <div>
-                <div className="text-base font-bold text-teal-800">TAMIL ENTERPRISES</div>
+                <div className="text-base font-bold text-teal-800">TAMIZH ENTERPRISES</div>
                 <div className="text-[11px] text-slate-500">124, Goods Shed Road, Madurai - 625001, Tamil Nadu</div>
                 <div className="text-[11px] text-slate-600 font-mono">GSTIN: 33AABCT9988C1Z4</div>
               </div>

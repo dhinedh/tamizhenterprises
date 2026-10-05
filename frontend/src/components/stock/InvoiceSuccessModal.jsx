@@ -24,7 +24,7 @@ const InvoiceSuccessModal = ({
 
   const handleShareWhatsApp = () => {
     const text = encodeURIComponent(
-      `வணக்கம் / Hello ${store?.name || 'Customer'},\n\nTamil Enterprises has issued Tax Invoice *${invNumber}* for *₹${Number(total).toLocaleString('en-IN')}*.\nDue Date: ${invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN') : 'Immediate'}\nChallan No: ${invoice?.deliveryChallanNo || ''}\n\nThank you for your business!`
+      `வணக்கம் / Hello ${store?.name || 'Customer'},\n\nTamizh Enterprises has issued Tax Invoice *${invNumber}* for *₹${Number(total).toLocaleString('en-IN')}*.\nDue Date: ${invoice?.dueDate ? new Date(invoice.dueDate).toLocaleDateString('en-IN') : 'Immediate'}\nChallan No: ${invoice?.deliveryChallanNo || ''}\n\nThank you for your business!`
     );
     const phone = store?.phone ? store.phone.replace(/[^0-9]/g, '') : '';
     window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${text}`, '_blank');
@@ -67,7 +67,7 @@ const InvoiceSuccessModal = ({
               </div>
             </div>
           </div>
-
+          
           <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
             <div>
               <span className="text-slate-400 block text-[10px]">Destination Store:</span>

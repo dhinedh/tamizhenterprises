@@ -452,7 +452,7 @@ const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
           {/* Footer Bar */}
           <div className="bg-slate-100 px-6 py-3.5 border-t border-slate-200 flex items-center justify-between">
             <span className="text-xs text-slate-500">
-              Tamil Enterprises Distribution ERP &bull; Manufacturer Profile #{manufacturer.code}
+              Tamizh Enterprises Distribution ERP &bull; Manufacturer Profile #{manufacturer.code}
             </span>
             <button
               onClick={onClose}

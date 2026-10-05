@@ -703,7 +703,7 @@ const Dashboard = () => {
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 mb-2">
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-500/20 text-teal-300 border border-teal-400/30 tracking-wider uppercase">
-                Tamil Enterprises Distribution ERP
+                Tamizh Enterprises Distribution ERP
               </span>
               <span className="text-xs text-slate-400">Madurai Central Warehouse Hub</span>
             </div>
@@ -711,7 +711,7 @@ const Dashboard = () => {
               Select Manufacturer / Brand
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-              Tamil Enterprises purchases and stocks goods from multiple principal manufacturers. Select or register a manufacturer below to open their dedicated workspace with live inventory, SKUs, and purchase history.
+              Tamizh Enterprises purchases and stocks goods from multiple principal manufacturers. Select or register a manufacturer below to open their dedicated workspace with live inventory, SKUs, and purchase history.
             </p>
           </div>
 

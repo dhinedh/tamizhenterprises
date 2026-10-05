@@ -1,6 +1,6 @@
-# Tamil Enterprises – Distribution & Dealer Management ERP
+# Tamizh Enterprises – Distribution & Dealer Management ERP
 
-A full-stack, enterprise-grade Distribution and Dealer Management ERP web application built for **Tamil Enterprises**, a wholesale distributor business based in Tamil Nadu that purchases consumer products from principal manufacturers (e.g., ITC, HUL, Britannia, Parle, Godrej), stocks them in a central warehouse, and distributes them to retail stores and supermarkets.
+A full-stack, enterprise-grade Distribution and Dealer Management ERP web application built for **Tamizh Enterprises**, a wholesale distributor business based in Tamil Nadu that purchases consumer products from principal manufacturers (e.g., ITC, HUL, Britannia, Parle, Godrej), stocks them in a central warehouse, and distributes them to retail stores and supermarkets.
 
 ---
 

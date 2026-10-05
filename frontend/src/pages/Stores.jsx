@@ -73,47 +73,12 @@ const Stores = () => {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [overLimitOnly, setOverLimitOnly] = useState(false);
 
-  // Modals State
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Toast State
   const [successToast, setSuccessToast] = useState('');
-
-  const handleCloseCreateModal = () => {
-    setIsCreateModalOpen(false);
-    if (location.search.includes('action=new') || location.search.includes('create=true')) {
-      navigate('/stores', { replace: true });
-    }
-  };
-
-  // Create Store Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    storeType: 'Supermarket',
-    ownerName: '',
-    phone: '',
-    email: '',
-    address: '',
-    area: '',
-    city: 'Madurai',
-    state: 'Tamil Nadu',
-    pincode: '',
-    gstNumber: '',
-    salesmanId: '',
-    creditLimit: 50000,
-    creditPeriodDays: 21
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     fetchInitialData();
   }, []);
-
-  useEffect(() => {
-    if (location.search.includes('action=new') || location.search.includes('create=true')) {
-      setIsCreateModalOpen(true);
-    }
-  }, [location.search]);
 
   useEffect(() => {
     fetchStores();
@@ -161,55 +126,6 @@ const Stores = () => {
     navigate(`/stores/${storeId}`);
   };
 
-  // Create New Store Handler
-  const handleCreateStore = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    setSubmitting(true);
-    try {
-      const payload = {
-        ...formData,
-        salesmanId: formData.salesmanId || null
-      };
-      const res = await api.post('/stores', payload);
-      if (res.data.success) {
-        setIsCreateModalOpen(false);
-        resetForm();
-        setSuccessToast(`Shop "${res.data.data.name}" registered successfully!`);
-        setTimeout(() => setSuccessToast(''), 5000);
-        fetchStores();
-        if (location.search.includes('action=new') || location.search.includes('create=true')) {
-          navigate('/stores', { replace: true });
-        }
-      }
-    } catch (err) {
-      setFormError(err.response?.data?.message || 'Error creating store');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      code: '',
-      storeType: 'Supermarket',
-      ownerName: '',
-      phone: '',
-      email: '',
-      address: '',
-      area: '',
-      city: 'Madurai',
-      state: 'Tamil Nadu',
-      pincode: '',
-      gstNumber: '',
-      salesmanId: salesmen[0]?._id || '',
-      creditLimit: 50000,
-      creditPeriodDays: 21
-    });
-    setFormError('');
-  };
-
   // Actions for Store 360
   const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
     try {
@@ -230,7 +146,7 @@ const Stores = () => {
     const balance = Number(store.outstandingBalance || 0);
     const text = encodeURIComponent(
       `வணக்கம் / Hello ${store.name || 'Store Partner'},\n\n` +
-      `🏢 *TAMIL ENTERPRISES - ACCOUNT STATEMENT*\n` +
+      `🏢 *TAMIZH ENTERPRISES - ACCOUNT STATEMENT*\n` +
       `Proprietor: ${store.ownerName || ''}\n` +
       `Store Code: ${store.code}\n\n` +
       `📊 *Current Credit Summary:*\n` +
@@ -238,7 +154,7 @@ const Stores = () => {
       `• Outstanding Balance Due: *₹ ${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}*\n` +
       `• Payment Terms: ${store.creditPeriodDays || 21} Days Credit\n\n` +
       `🏦 *Payment Options (UPI & Bank):*\n` +
-      `• UPI ID: tamilenterprises@hdfcbank\n` +
+      `• UPI ID: tamizhenterprises@hdfcbank\n` +
       `• A/C: 50200012345678 | IFSC: HDFC0000123\n\n` +
       `For any billing queries, contact: +91 94432 10987\n` +
       `Thank you for your continuous partnership!`
@@ -634,193 +550,6 @@ const Stores = () => {
           </div>
         )}
       </Card>
-
-      {/* ================= REGISTER NEW STORE MODAL ================= */}
-      {isCreateModalOpen && (
-        <Modal
-          isOpen={isCreateModalOpen}
-          onClose={handleCloseCreateModal}
-          title="Register New Retail Shop / Supermarket"
-          maxWidth="max-w-2xl"
-        >
-          <form onSubmit={handleCreateStore} className="space-y-4 text-xs">
-            {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{formError}</span>
-              </div>
-            )}
-
-            {/* Shop Name & Shop Type */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="sm:col-span-2">
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Shop Trade Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Meenakshi Supermarket"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Shop Type</label>
-                <select
-                  value={formData.storeType}
-                  onChange={(e) => setFormData({ ...formData, storeType: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none font-medium"
-                >
-                  <option value="Supermarket">Supermarket</option>
-                  <option value="Kirana">Kirana / Provision</option>
-                  <option value="Departmental">Departmental Shop</option>
-                  <option value="Wholesaler">Semi-Wholesaler</option>
-                  <option value="Pharmacy/FMCG">Pharmacy / FMCG</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Proprietor & Contact Phone */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Owner / Proprietor
-                </label>
-                <input
-                  type="text"
-                  placeholder="Mr. S. Kannan (Optional)"
-                  value={formData.ownerName}
-                  onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Mobile / WhatsApp Phone <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="+91 94430 00112"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl font-mono focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Address, City, State, Area, Pincode */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">City</label>
-                <input
-                  type="text"
-                  placeholder="Madurai (Default)"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Area / Locality</label>
-                <input
-                  type="text"
-                  placeholder="Goripalayam (Optional)"
-                  value={formData.area}
-                  onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">GSTIN Number (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="33AABCT9988C1Z4"
-                  value={formData.gstNumber}
-                  onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl font-mono uppercase focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Full Street Address</label>
-              <input
-                type="text"
-                placeholder="Door No, Main Road, Landmark (Optional)"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
-              />
-            </div>
-
-            {/* Credit Standing & Salesman */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Credit Limit (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.creditLimit}
-                  onChange={(e) => setFormData({ ...formData, creditLimit: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl font-bold focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Credit Period (Days)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.creditPeriodDays}
-                  onChange={(e) => setFormData({ ...formData, creditPeriodDays: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Assigned Salesman</label>
-                <select
-                  value={formData.salesmanId || ''}
-                  onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-slate-200 rounded-xl bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none font-medium"
-                >
-                  <option value="">Direct / Unassigned</option>
-                  {salesmen.map((s) => (
-                    <option key={s._id} value={s._id}>
-                      {s.name} ({s.territory || s.city || 'Sales'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={handleCloseCreateModal}
-                className="px-3.5 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-extrabold shadow-sm transition-all disabled:opacity-50"
-              >
-                {submitting ? 'Registering Shop...' : 'Register Shop in ERP'}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
     </div>
   );
 };

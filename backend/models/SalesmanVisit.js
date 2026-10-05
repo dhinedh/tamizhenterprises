@@ -11,6 +11,7 @@ const salesmanVisitSchema = new mongoose.Schema({
     ref: 'Store', 
     required: true 
   },
+  
   visitDate: { type: Date, default: Date.now },
   checkInTime: { type: Date, default: Date.now },
   checkOutTime: { type: Date },

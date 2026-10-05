@@ -44,7 +44,7 @@ const Login = () => {
           <div className="inline-flex w-14 h-14 rounded-2xl bg-teal-600 items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-teal-600/30">
             TE
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tamil Enterprises</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tamizh Enterprises</h1>
           <p className="text-xs text-slate-500">Distribution & Dealer Management ERP</p>
         </div>
 

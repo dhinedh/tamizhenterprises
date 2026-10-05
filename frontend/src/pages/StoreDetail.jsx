@@ -149,7 +149,7 @@ const StoreDetail = () => {
     const balance = Number(store.outstandingBalance || 0);
     const text = encodeURIComponent(
       `வணக்கம் / Hello ${store.name || 'Store Partner'},\n\n` +
-      `🏢 *TAMIL ENTERPRISES - COMPLETE ACCOUNT STATEMENT*\n` +
+      `🏢 *TAMIZH ENTERPRISES - COMPLETE ACCOUNT STATEMENT*\n` +
       `Proprietor: ${store.ownerName || ''}\n` +
       `Store Code: ${store.code}\n\n` +
       `📊 *Credit & Outstanding Status:*\n` +
@@ -158,11 +158,11 @@ const StoreDetail = () => {
       `• Payment Terms: ${store.creditPeriodDays || 21} Days Credit\n` +
       `• Lifetime Orders: ${store.totalOrdersCount || 0} orders (₹ ${Number(store.totalOrderValue || 0).toLocaleString('en-IN')})\n\n` +
       `🏦 *Payment Options (UPI & Bank):*\n` +
-      `• UPI ID: tamilenterprises@hdfcbank\n` +
+      `• UPI ID: tamizhenterprises@hdfcbank\n` +
       `• Bank: HDFC Bank, Madurai Main Branch\n` +
       `• A/C: 50200012345678 | IFSC: HDFC0000123\n\n` +
       `For any invoice queries, helpline: +91 94432 10987\n` +
-      `Thank you for your continuous business with Tamil Enterprises Central Depot!`
+      `Thank you for your continuous business with Tamizh Enterprises Central Depot!`
     );
     const phone = store.phone ? store.phone.replace(/[^0-9]/g, '') : '';
     window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${text}`, '_blank');
@@ -957,7 +957,7 @@ const StoreDetail = () => {
           <div className="space-y-4 text-xs">
             <div className="flex justify-between items-start border-b border-slate-200 pb-3">
               <div>
-                <div className="font-extrabold text-teal-800 text-sm">TAMIL ENTERPRISES</div>
+                <div className="font-extrabold text-teal-800 text-sm">TAMIZH ENTERPRISES</div>
                 <div className="text-slate-500 text-[11px]">124, Goods Shed Road, Madurai - 625001</div>
                 <div className="text-slate-600 font-mono text-[10px]">GSTIN: 33AABCT9988C1Z4</div>
               </div>

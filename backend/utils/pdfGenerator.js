@@ -4,12 +4,11 @@ function generateInvoicePDF(invoice, store, res) {
   const doc = new PDFDocument({ margin: 36, size: 'A4' });
 
   doc.pipe(res);
-
   // Header
-  doc.fontSize(18).font('Helvetica-Bold').fillColor('#0f766e').text('TAMIL ENTERPRISES', 36, 36);
+  doc.fontSize(18).font('Helvetica-Bold').fillColor('#0f766e').text('TAMIZH ENTERPRISES', 36, 36);
   doc.fontSize(9).font('Helvetica').fillColor('#334155').text('Wholesale Distributor & FMCG Goods Dealer', 36, 58);
   doc.text('124, Goods Shed Road, Madurai - 625001, Tamil Nadu', 36, 70);
-  doc.text('GSTIN: 33AABCT9988C1Z4 | Contact: +91 94432 10987 | Email: billing@tamilenterprises.com', 36, 82);
+  doc.text('GSTIN: 33AABCT9988C1Z4 | Contact: +91 94432 10987 | Email: billing@tamizhenterprises.com', 36, 82);
 
   // Badge / Title
   doc.fontSize(14).font('Helvetica-Bold').fillColor('#0f172a').text('TAX INVOICE', 420, 36, { align: 'right' });
@@ -83,10 +82,10 @@ function generateInvoicePDF(invoice, store, res) {
   const summaryTop = Math.max(y, 450);
   doc.fontSize(8).font('Helvetica').fillColor('#475569');
   doc.text('Bank Details for NEFT / RTGS Payment:', 36, summaryTop);
-  doc.text('Account Name: TAMIL ENTERPRISES', 36, summaryTop + 14);
+  doc.text('Account Name: TAMIZH ENTERPRISES', 36, summaryTop + 14);
   doc.text('Bank: HDFC Bank, Goods Shed Road Branch', 36, summaryTop + 26);
   doc.text('A/C No: 50200088991234 | IFSC: HDFC0001244', 36, summaryTop + 38);
-  doc.text('UPI ID: tamilenterprises@hdfcbank', 36, summaryTop + 50);
+  doc.text('UPI ID: tamizhenterprises@hdfcbank', 36, summaryTop + 50);
 
   // Summary box right side
   doc.rect(340, summaryTop - 4, 218, 95).fill('#f8fafc').strokeColor('#e2e8f0').stroke();
@@ -110,7 +109,7 @@ function generateInvoicePDF(invoice, store, res) {
   const signY = summaryTop + 115;
   doc.fontSize(8).font('Helvetica').fillColor('#64748b')
     .text('Customer Seal & Signature', 60, signY + 30)
-    .text('For TAMIL ENTERPRISES (Authorized Signatory)', 360, signY + 30);
+    .text('For TAMIZH ENTERPRISES (Authorized Signatory)', 360, signY + 30);
   doc.moveTo(40, signY + 25).lineTo(180, signY + 25).strokeColor('#94a3b8').stroke();
   doc.moveTo(350, signY + 25).lineTo(540, signY + 25).strokeColor('#94a3b8').stroke();
 
