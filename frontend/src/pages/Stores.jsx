@@ -173,10 +173,34 @@ const Stores = () => {
   // Filtered Stores
   const filteredStores = useMemo(() => {
     return stores.filter((s) => {
-      const matchBrand = !activeManufacturer || s.manufacturerCode === activeManufacturer.code || s.manufacturerId?._id === activeManufacturer._id || s.manufacturerId === activeManufacturer._id;
-      const matchCity = cityFilter === 'All' || s.city?.toLowerCase() === cityFilter.toLowerCase() || s.district?.toLowerCase() === cityFilter.toLowerCase();
-      const matchArea = areaFilter === 'All' || s.area?.toLowerCase() === areaFilter.toLowerCase();
-      const matchType = typeFilter === 'All' || s.storeType?.toLowerCase() === typeFilter.toLowerCase() || s.category?.toLowerCase() === typeFilter.toLowerCase();
+      // Universal stores (no manufacturerCode/Id) are accessible under all manufacturers
+      // Stores with manufacturerCode match if it equals activeManufacturer.code or ID
+      const matchBrand =
+        !activeManufacturer ||
+        !s.manufacturerCode ||
+        !s.manufacturerId ||
+        s.manufacturerCode?.toUpperCase() === activeManufacturer.code?.toUpperCase() ||
+        s.manufacturerId?._id?.toString() === activeManufacturer._id?.toString() ||
+        s.manufacturerId?.toString() === activeManufacturer._id?.toString();
+
+      const matchCity =
+        cityFilter === 'All' ||
+        s.city?.toLowerCase() === cityFilter.toLowerCase() ||
+        s.district?.toLowerCase() === cityFilter.toLowerCase();
+
+      const matchArea =
+        areaFilter === 'All' ||
+        s.area?.toLowerCase() === areaFilter.toLowerCase();
+
+      const matchType =
+        typeFilter === 'All' ||
+        s.storeType?.toLowerCase() === typeFilter.toLowerCase() ||
+        s.category?.toLowerCase() === typeFilter.toLowerCase() ||
+        (typeFilter === 'Pharmacy/FMCG' && (s.storeType?.toLowerCase()?.includes('pharm') || s.category?.toLowerCase()?.includes('medic') || s.category?.toLowerCase()?.includes('clinic'))) ||
+        (typeFilter === 'Supermarket' && (s.storeType?.toLowerCase()?.includes('super') || s.category?.toLowerCase()?.includes('super'))) ||
+        (typeFilter === 'Kirana' && (s.storeType?.toLowerCase()?.includes('kirana') || s.category?.toLowerCase()?.includes('provision') || s.category?.toLowerCase()?.includes('general'))) ||
+        (typeFilter === 'Departmental' && (s.storeType?.toLowerCase()?.includes('depart') || s.category?.toLowerCase()?.includes('depart')));
+
       const matchOverLimit = !overLimitOnly || (s.outstandingBalance || 0) > (s.creditLimit || 50000);
       return matchBrand && matchCity && matchArea && matchType && matchOverLimit;
     });
@@ -243,10 +267,15 @@ const Stores = () => {
       <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-6 rounded-2xl border border-teal-500/20 shadow-sm relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-teal-500/20 text-teal-300 border border-teal-500/30">
                 Shop Master & Distribution Network
               </span>
+              {activeManufacturer && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Brand Scope: {activeManufacturer.name || activeManufacturer.code}
+                </span>
+              )}
             </div>
             <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
               <Store className="w-6 h-6 text-teal-400" />
@@ -452,9 +481,13 @@ const Stores = () => {
                             <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200">
                               {store.code}
                             </span>
-                            {store.manufacturerCode === 'FEMI9' && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 border border-teal-200">
-                                FEMI9
+                            {store.manufacturerCode ? (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 border border-teal-200 uppercase">
+                                {store.manufacturerCode}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 border border-slate-200">
+                                Retail Partner
                               </span>
                             )}
                           </div>

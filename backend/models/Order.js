@@ -23,7 +23,12 @@ const orderSchema = new mongoose.Schema({
   storeId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Store', 
-    required: true 
+    default: null 
+  },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    default: null
   },
   salesmanId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -80,6 +85,7 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ orderNumber: 1, storeId: 1, salesmanId: 1, status: 1 });
 orderSchema.index({ orderDate: -1, status: 1 });
 orderSchema.index({ storeId: 1, orderDate: -1 });
+orderSchema.index({ customerId: 1, orderDate: -1 });
 orderSchema.index({ salesmanId: 1, orderDate: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -27,12 +27,17 @@ const invoiceSchema = new mongoose.Schema({
   orderId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Order', 
-    required: true 
+    default: null 
   },
   storeId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Store', 
-    required: true 
+    default: null 
+  },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    default: null
   },
   salesmanId: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -68,5 +73,6 @@ const invoiceSchema = new mongoose.Schema({
 invoiceSchema.index({ invoiceNumber: 1, storeId: 1, status: 1, invoiceDate: -1 });
 invoiceSchema.index({ invoiceDate: -1, status: 1 });
 invoiceSchema.index({ storeId: 1, status: 1 });
+invoiceSchema.index({ customerId: 1, status: 1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

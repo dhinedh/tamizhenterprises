@@ -1,20 +1,23 @@
 const Invoice = require('../models/Invoice');
 const Order = require('../models/Order');
 const Store = require('../models/Store');
+const Customer = require('../models/Customer');
 const Stock = require('../models/Stock');
 const StockLedger = require('../models/StockLedger');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const { generateInvoicePDF } = require('../utils/pdfGenerator');
 
 // @desc    Get all invoices
 // @route   GET /api/invoices
 const getInvoices = async (req, res) => {
   try {
-    const { status, storeId, search, startDate, endDate } = req.query;
+    const { status, storeId, customerId, search, startDate, endDate } = req.query;
     const filter = {};
 
     if (status) filter.status = status;
     if (storeId) filter.storeId = storeId;
+    if (customerId) filter.customerId = customerId;
 
     if (req.user && req.user.role === 'Store' && req.user.storeId) {
       filter.storeId = req.user.storeId;
@@ -38,6 +41,7 @@ const getInvoices = async (req, res) => {
 
     const invoices = await Invoice.find(filter)
       .populate('storeId', 'name code phone city gstNumber')
+      .populate('customerId', 'name phone address email gstNumber')
       .populate('orderId', 'orderNumber orderDate')
       .sort({ invoiceDate: -1 });
 
@@ -53,6 +57,7 @@ const getInvoiceById = async (req, res) => {
   try {
     const invoice = await Invoice.findById(req.params.id)
       .populate('storeId')
+      .populate('customerId')
       .populate('orderId')
       .populate('salesmanId')
       .populate('items.productId');
@@ -223,17 +228,19 @@ const generateInvoiceFromOrder = async (req, res) => {
 // @route   GET /api/invoices/:id/pdf
 const downloadInvoicePDF = async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id);
+    const invoice = await Invoice.findById(req.params.id).populate('items.productId');
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
 
-    const store = await Store.findById(invoice.storeId);
+    let store = invoice.storeId ? await Store.findById(invoice.storeId) : null;
+    let customer = invoice.customerId ? await Customer.findById(invoice.customerId) : null;
+    const owner = await User.findOne({ role: 'Owner' });
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=Invoice-${invoice.invoiceNumber}.pdf`);
+    res.setHeader('Content-Disposition', `inline; filename=Invoice-${invoice.invoiceNumber}.pdf`);
 
-    generateInvoicePDF(invoice, store, res);
+    generateInvoicePDF(invoice, store || customer, res, owner);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

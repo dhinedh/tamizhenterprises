@@ -14,6 +14,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import api from '../../api/client';
+import { useManufacturer } from '../../context/ManufacturerContext';
 
 const CATEGORIES = [
   'Select',
@@ -71,6 +72,7 @@ const parseCSV = (text) => {
 const AddShopView = ({ onDone, onCancel }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { activeManufacturer } = useManufacturer();
 
   const initialTab = searchParams.get('tab') === 'bulk' ? 'bulk' : 'single';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -146,26 +148,40 @@ const AddShopView = ({ onDone, onCancel }) => {
 
     setSavingSingle(true);
     try {
+      const resolvedCategory = formData.category && formData.category !== 'Select' ? formData.category : 'SUPER MARKETS';
+      const resolvedStoreType =
+        resolvedCategory === 'MEDICALS' ? 'Pharmacy/FMCG' :
+        resolvedCategory === 'SUPER MARKETS' ? 'Supermarket' :
+        resolvedCategory === 'PROVISION STORES' ? 'Kirana' :
+        resolvedCategory === 'DEPARTMENTAL STORES' ? 'Departmental' : 'Supermarket';
+
       const payload = {
         name: formData.name.trim(),
-        category: formData.category && formData.category !== 'Select' ? formData.category : '',
+        category: resolvedCategory,
+        storeType: resolvedStoreType,
         state: formData.state.trim() || 'Tamilnadu',
         district: formData.district.trim() || 'CHENNAI',
+        city: formData.district.trim() || 'Chennai',
         division: formData.division.trim() || 'CHENNAI CENTRAL B',
         taluk: formData.taluk.trim(),
         firka: formData.firka.trim(),
-        area: formData.firka.trim(),
+        area: formData.firka.trim() || formData.taluk.trim() || '',
         pincode: formData.pincode.trim(),
         countryCode: '+91',
         phone: formData.phone.trim(),
         landline: formData.landline.trim(),
         email: formData.email.trim(),
         address: formData.address.trim(),
-        gstNumber: formData.gstNumber.trim().toUpperCase()
+        gstNumber: formData.gstNumber.trim().toUpperCase(),
+        manufacturerId: activeManufacturer?._id || null,
+        manufacturerCode: activeManufacturer?.code || ''
       };
 
       const res = await api.post('/stores', payload);
       if (res.data.success) {
+        try {
+          sessionStorage.removeItem('tamil_erp_stores');
+        } catch (e) {}
         setSuccessMsg(`Shop "${formData.name}" added successfully!`);
         setTimeout(() => {
           if (onDone) onDone();
@@ -301,23 +317,34 @@ const AddShopView = ({ onDone, onCancel }) => {
 
           const isValid = Boolean(name.trim() && phone.trim());
 
+          const resolvedCat = category || 'SUPER MARKETS';
+          const resolvedType =
+            resolvedCat === 'MEDICALS' ? 'Pharmacy/FMCG' :
+            resolvedCat === 'SUPER MARKETS' ? 'Supermarket' :
+            resolvedCat === 'PROVISION STORES' ? 'Kirana' :
+            resolvedCat === 'DEPARTMENTAL STORES' ? 'Departmental' : 'Supermarket';
+
           return {
             rowNum: idx + 1,
             name,
             phone,
-            category,
+            category: resolvedCat,
+            storeType: resolvedType,
             state,
             district,
+            city: district || 'Chennai',
             division,
             taluk,
             firka,
-            area: firka,
+            area: firka || taluk || '',
             pincode,
             countryCode: '+91',
             landline,
             email,
             address,
             gstNumber,
+            manufacturerId: activeManufacturer?._id || null,
+            manufacturerCode: activeManufacturer?.code || '',
             isValid,
             error: !name.trim()
               ? 'Missing Name'
@@ -352,6 +379,9 @@ const AddShopView = ({ onDone, onCancel }) => {
     try {
       const res = await api.post('/stores/bulk', { stores: validRows });
       if (res.data.success) {
+        try {
+          sessionStorage.removeItem('tamil_erp_stores');
+        } catch (e) {}
         setBulkReport({
           total: bulkData.length,
           uploaded: res.data.count,

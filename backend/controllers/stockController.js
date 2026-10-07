@@ -2,6 +2,7 @@ const Stock = require('../models/Stock');
 const StockLedger = require('../models/StockLedger');
 const Product = require('../models/Product');
 const Store = require('../models/Store');
+const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const Invoice = require('../models/Invoice');
 const Manufacturer = require('../models/Manufacturer');
@@ -470,6 +471,7 @@ const transferStockToStore = async (req, res) => {
   try {
     const {
       storeId,
+      customerId,
       salesmanId,
       orderId,
       items,
@@ -479,17 +481,26 @@ const transferStockToStore = async (req, res) => {
       driverName = ''
     } = req.body;
 
-    if (!storeId) {
-      return res.status(400).json({ success: false, message: 'Destination Store is required for stock transfer' });
+    if (!storeId && !customerId) {
+      return res.status(400).json({ success: false, message: 'Destination Store or Customer is required for invoice creation' });
     }
 
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one product item is required for stock transfer' });
     }
 
-    const store = await Store.findById(storeId);
-    if (!store) {
-      return res.status(404).json({ success: false, message: 'Destination store not found' });
+    let store = null;
+    let customer = null;
+    if (storeId) {
+      store = await Store.findById(storeId);
+    }
+    if (customerId) {
+      customer = await Customer.findById(customerId);
+    }
+
+    const billingEntity = store || customer;
+    if (!billingEntity) {
+      return res.status(404).json({ success: false, message: 'Destination store or customer not found' });
     }
 
     // Check stock availability for all items first
@@ -513,7 +524,8 @@ const transferStockToStore = async (req, res) => {
     // Generate Invoice Number
     const invCount = await Invoice.countDocuments();
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invCount + 1).padStart(5, '0')}`;
-    const isInterstate = store.state && store.state.toLowerCase() !== 'tamil nadu';
+    const entityState = (billingEntity.state || 'Tamil Nadu').toLowerCase();
+    const isInterstate = entityState !== 'tamil nadu' && entityState !== 'tamilnadu';
 
     let taxableSubtotal = 0;
     let totalDiscount = 0;
@@ -556,7 +568,7 @@ const transferStockToStore = async (req, res) => {
         unitPrice: Number(item.unitPrice || product.dealerPrice || product.sellingPrice),
         totalAmount: qty * Number(item.unitPrice || product.dealerPrice || product.sellingPrice),
         billNumber: invoiceNumber,
-        notes: `Stock Transfer & Billed to ${store.name} (${store.city}) [Challan: DC-${invoiceNumber}]`,
+        notes: `Stock Transfer & Billed to ${billingEntity.name} (${billingEntity.city || billingEntity.address || ''}) [Challan: DC-${invoiceNumber}]`,
         performedBy: req.user ? req.user.name : 'Store Dispatch Admin',
         date: new Date()
       });
@@ -564,7 +576,7 @@ const transferStockToStore = async (req, res) => {
       // Price calculation
       let unitPrice = Number(item.unitPrice);
       if (isNaN(unitPrice) || unitPrice <= 0) {
-        const custom = product.customStorePrices?.find(csp => csp.storeId?.toString() === storeId);
+        const custom = store ? product.customStorePrices?.find(csp => csp.storeId?.toString() === storeId) : null;
         unitPrice = (custom && custom.specialPrice) ? custom.specialPrice : (product.dealerPrice || product.sellingPrice || 0);
       }
 
@@ -626,7 +638,7 @@ const transferStockToStore = async (req, res) => {
 
     const taxTotal = cgstTotal + sgstTotal + igstTotal;
     const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + (store.creditPeriodDays || 15));
+    dueDate.setDate(dueDate.getDate() + (store ? (store.creditPeriodDays || 15) : 15));
 
     // Handle Order (create new or update existing order from salesperson)
     let order;
@@ -651,8 +663,9 @@ const transferStockToStore = async (req, res) => {
       const orderNumber = `ORD-${new Date().getFullYear()}-${String(orderCount + 1).padStart(5, '0')}`;
       order = await Order.create({
         orderNumber,
-        storeId,
-        salesmanId: salesmanId || store.salesmanId || null,
+        storeId: store ? store._id : null,
+        customerId: customer ? customer._id : null,
+        salesmanId: salesmanId || (store ? store.salesmanId : null),
         orderDate: new Date(),
         status: 'Dispatched',
         items: formattedOrderItems,
@@ -661,7 +674,7 @@ const transferStockToStore = async (req, res) => {
         taxTotal,
         grandTotal,
         paymentType,
-        deliveryNotes: notes || `Direct Stock Transfer to Store via ${vehicleNumber || 'Dispatch Van'}`,
+        deliveryNotes: notes || `Direct Billed to ${billingEntity.name} via ${vehicleNumber || 'Dispatch Van'}`,
         approvedBy: req.user ? req.user.name : 'Owner / Dispatch Admin',
         approvalDate: new Date()
       });
@@ -672,8 +685,9 @@ const transferStockToStore = async (req, res) => {
     const invoice = await Invoice.create({
       invoiceNumber,
       orderId: order._id,
-      storeId: store._id,
-      salesmanId: salesmanId || order.salesmanId || store.salesmanId || null,
+      storeId: store ? store._id : null,
+      customerId: customer ? customer._id : null,
+      salesmanId: salesmanId || order.salesmanId || (store ? store.salesmanId : null),
       invoiceDate: new Date(),
       dueDate,
       items: invoiceItems,
@@ -690,25 +704,28 @@ const transferStockToStore = async (req, res) => {
       saleType: paymentType,
       eWayBillNo: grandTotal > 50000 ? `EWB-${Math.floor(100000000000 + Math.random() * 900000000000)}` : '',
       deliveryChallanNo: `DC-${invoiceNumber}`,
-      notes: notes || `Stock transfer dispatched to store. Vehicle: ${vehicleNumber || 'Van'}, Driver: ${driverName || 'Depot Driver'}`
+      notes: notes || `Billed to ${billingEntity.name}. Vehicle: ${vehicleNumber || 'Van'}, Driver: ${driverName || 'Depot Driver'}`
     });
 
     // Link Invoice to Order
     order.invoiceId = invoice._id;
     await order.save();
 
-    // Update Store balance and stats
-    if (!isCash) {
-      store.outstandingBalance = (store.outstandingBalance || 0) + grandTotal;
+    // Update Store balance and stats if billed to a store
+    if (store) {
+      if (!isCash) {
+        store.outstandingBalance = (store.outstandingBalance || 0) + grandTotal;
+      }
+      store.totalOrdersCount = (store.totalOrdersCount || 0) + 1;
+      store.totalOrderValue = (store.totalOrderValue || 0) + grandTotal;
+      store.lastOrderDate = new Date();
+      await store.save();
     }
-    store.totalOrdersCount = (store.totalOrdersCount || 0) + 1;
-    store.totalOrderValue = (store.totalOrderValue || 0) + grandTotal;
-    store.lastOrderDate = new Date();
-    await store.save();
 
     // Populate for response
     const populatedInvoice = await Invoice.findById(invoice._id)
       .populate('storeId')
+      .populate('customerId')
       .populate('salesmanId')
       .populate('items.productId');
 

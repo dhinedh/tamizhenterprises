@@ -20,9 +20,19 @@ const getStores = async (req, res) => {
     if (status) filter.status = status;
     if (manufacturerId) {
       if (mongoose.Types.ObjectId.isValid(manufacturerId)) {
-        filter.manufacturerId = manufacturerId;
+        filter.$or = [
+          { manufacturerId: manufacturerId },
+          { manufacturerId: null },
+          { manufacturerId: { $exists: false } }
+        ];
       } else {
-        filter.manufacturerCode = manufacturerId.toUpperCase();
+        const codeUpper = manufacturerId.toUpperCase();
+        filter.$or = [
+          { manufacturerCode: codeUpper },
+          { manufacturerCode: '' },
+          { manufacturerCode: null },
+          { manufacturerCode: { $exists: false } }
+        ];
       }
     }
 
@@ -126,7 +136,7 @@ const createBulkStores = async (req, res) => {
       }
 
       // Generate clean unique store code
-      const cityClean = (s.city || s.district || 'MDU').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MDU';
+      const cityClean = (s.city || s.district || 'CHE').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'CHE';
       count++;
       let candidate = `STR-${cityClean}-${String(count).padStart(2, '0')}`;
       let exists = await Store.findOne({ code: candidate });
@@ -203,22 +213,22 @@ const createStore = async (req, res) => {
   }
 
   try {
-    const { name, code, ownerName, phone, address, city, salesmanId, creditLimit } = req.body;
+    const { name, code, ownerName, phone, address, city, district, salesmanId, creditLimit, manufacturerId, manufacturerCode } = req.body;
     if (!name || !phone) {
       return res.status(400).json({ success: false, message: 'Shop Name and Phone number are required' });
     }
 
     let finalCode = (code || '').trim().toUpperCase();
     if (!finalCode) {
-      // Auto-generate clean, unique store code (e.g. STR-MDU-05)
-      const cityClean = (city || 'STR').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'MDU';
+      // Auto-generate clean, unique store code (e.g. STR-CHE-01)
+      const loc = (city || district || 'CHE').replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() || 'CHE';
       const count = await Store.countDocuments();
-      let candidate = `STR-${cityClean}-${String(count + 1).padStart(2, '0')}`;
+      let candidate = `STR-${loc}-${String(count + 1).padStart(2, '0')}`;
       let exists = await Store.findOne({ code: candidate });
       let counter = count + 1;
       while (exists) {
         counter++;
-        candidate = `STR-${cityClean}-${String(counter).padStart(2, '0')}`;
+        candidate = `STR-${loc}-${String(counter).padStart(2, '0')}`;
         exists = await Store.findOne({ code: candidate });
       }
       finalCode = candidate;
@@ -230,11 +240,16 @@ const createStore = async (req, res) => {
     }
 
     const cleanSalesmanId = (salesmanId && mongoose.Types.ObjectId.isValid(salesmanId)) ? salesmanId : null;
+    const cleanMfgId = (manufacturerId && mongoose.Types.ObjectId.isValid(manufacturerId)) ? manufacturerId : null;
 
     const store = await Store.create({
       ...req.body,
+      city: city || district || 'Chennai',
+      district: district || city || 'CHENNAI',
       code: finalCode,
       salesmanId: cleanSalesmanId,
+      manufacturerId: cleanMfgId,
+      manufacturerCode: manufacturerCode ? manufacturerCode.trim().toUpperCase() : '',
       creditLimit: creditLimit || 50000
     });
 

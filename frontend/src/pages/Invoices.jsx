@@ -140,8 +140,11 @@ const Invoices = () => {
   const [removeInvoiceTarget, setRemoveInvoiceTarget] = useState(null);
   const [successToast, setSuccessToast] = useState('');
 
-  // ================= Add Invoice (Invoice - Shop) Form State =================
+  // ================= Add Invoice Form State =================
   const [invoiceNumberInput, setInvoiceNumberInput] = useState('905');
+  const [billingType, setBillingType] = useState('customer'); // 'customer' | 'store'
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [invoicePaymentType, setInvoicePaymentType] = useState('Credit');
   const [invoiceNotes, setInvoiceNotes] = useState('');
@@ -150,15 +153,16 @@ const Invoices = () => {
   // Added Products List for the new invoice
   const [addedItems, setAddedItems] = useState([]);
 
-  // Quick Add Customer Modal State
+  // Quick Add Customer / Shop Modal State
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState({
     name: '',
     phone: '',
     ownerName: '',
-    city: 'Madurai',
+    city: 'Chennai',
     address: '',
-    gstNumber: ''
+    gstNumber: '',
+    email: ''
   });
   const [savingNewCustomer, setSavingNewCustomer] = useState(false);
   const [newCustomerError, setNewCustomerError] = useState('');
@@ -189,17 +193,21 @@ const Invoices = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const [invRes, storesRes, prodsRes] = await Promise.all([
+      const [invRes, custRes, storesRes, prodsRes] = await Promise.all([
         api.get('/invoices'),
+        api.get('/customers'),
         api.get('/stores'),
         api.get('/products')
       ]);
 
       if (invRes.data.success) {
         setInvoices(invRes.data.data || []);
-        // Next invoice number default (e.g. 10 matching reference screenshot or sequential)
+        // Next invoice number default (sequential or count + 1)
         const count = invRes.data.data?.length || 0;
         setInvoiceNumberInput(String(count > 0 ? count + 1 : 10));
+      }
+      if (custRes.data.success) {
+        setCustomers(custRes.data.data || []);
       }
       if (storesRes.data.success) {
         setStores(storesRes.data.data || []);
@@ -225,11 +233,11 @@ const Invoices = () => {
     }
   };
 
-  // Handler for Quick Add Customer (+ New button in Add Invoice)
+  // Handler for Quick Add Customer / Shop (+ New button in Add Invoice)
   const handleQuickCreateCustomer = async (e) => {
     e.preventDefault();
     if (!newCustomerForm.name.trim()) {
-      setNewCustomerError('Customer / Shop name is required');
+      setNewCustomerError('Name is required');
       return;
     }
     if (!newCustomerForm.phone.trim()) {
@@ -239,32 +247,60 @@ const Invoices = () => {
     try {
       setSavingNewCustomer(true);
       setNewCustomerError('');
-      const res = await api.post('/stores', {
-        name: newCustomerForm.name.trim(),
-        phone: newCustomerForm.phone.trim(),
-        ownerName: newCustomerForm.ownerName.trim(),
-        city: newCustomerForm.city.trim() || 'Madurai',
-        address: newCustomerForm.address.trim(),
-        gstNumber: newCustomerForm.gstNumber.trim().toUpperCase()
-      });
-      if (res.data.success && res.data.data) {
-        const created = res.data.data;
-        setStores((prev) => [created, ...prev]);
-        setSelectedStoreId(created._id);
-        setIsNewCustomerModalOpen(false);
-        setNewCustomerForm({
-          name: '',
-          phone: '',
-          ownerName: '',
-          city: 'Madurai',
-          address: '',
-          gstNumber: ''
+
+      if (billingType === 'customer') {
+        const res = await api.post('/customers', {
+          name: newCustomerForm.name.trim(),
+          phone: newCustomerForm.phone.trim(),
+          email: newCustomerForm.email ? newCustomerForm.email.trim() : '',
+          address: newCustomerForm.address.trim(),
+          gstNumber: newCustomerForm.gstNumber.trim().toUpperCase()
         });
-        showToast(`Customer "${created.name}" created successfully!`);
+        if (res.data.success && res.data.data) {
+          const created = res.data.data;
+          setCustomers((prev) => [created, ...prev]);
+          setSelectedCustomerId(created._id);
+          setIsNewCustomerModalOpen(false);
+          setNewCustomerForm({
+            name: '',
+            phone: '',
+            ownerName: '',
+            city: 'Chennai',
+            address: '',
+            gstNumber: '',
+            email: ''
+          });
+          showToast(`Customer "${created.name}" created and selected!`);
+        }
+      } else {
+        const res = await api.post('/stores', {
+          name: newCustomerForm.name.trim(),
+          phone: newCustomerForm.phone.trim(),
+          ownerName: newCustomerForm.ownerName.trim(),
+          city: newCustomerForm.city.trim() || 'Chennai',
+          address: newCustomerForm.address.trim(),
+          gstNumber: newCustomerForm.gstNumber.trim().toUpperCase()
+        });
+        if (res.data.success && res.data.data) {
+          const created = res.data.data;
+          setStores((prev) => [created, ...prev]);
+          setSelectedStoreId(created._id);
+          setIsNewCustomerModalOpen(false);
+          setNewCustomerForm({
+            name: '',
+            phone: '',
+            ownerName: '',
+            city: 'Chennai',
+            address: '',
+            gstNumber: '',
+            email: ''
+          });
+          showToast(`Retail Shop "${created.name}" created and selected!`);
+        }
       }
     } catch (err) {
-      console.error('Failed to create customer:', err);
-      setNewCustomerError(err.response?.data?.message || 'Failed to add customer.');
+      console.error('Failed to create customer/shop:', err);
+      setNewCustomerError(err.response?.data?.message || 'Failed to add record.');
     } finally {
       setSavingNewCustomer(false);
     }
@@ -331,15 +367,15 @@ const Invoices = () => {
       result = result.filter((inv) => {
         const invNum = (inv.invoiceNumber || '').toLowerCase();
         const displayNum = formatInvoiceNumber(inv.invoiceNumber).toLowerCase();
-        const shop = (inv.storeId?.name || '').toLowerCase();
-        const phone = (inv.storeId?.phone || '').toLowerCase();
+        const party = (inv.customerId?.name || inv.storeId?.name || '').toLowerCase();
+        const phone = (inv.customerId?.phone || inv.storeId?.phone || '').toLowerCase();
         const dateStr = formatInvoiceDate(inv.invoiceDate).toLowerCase();
         const amountStr = String(inv.grandTotal || '');
         const status = (inv.status || '').toLowerCase();
         return (
           invNum.includes(q) ||
           displayNum.includes(q) ||
-          shop.includes(q) ||
+          party.includes(q) ||
           phone.includes(q) ||
           dateStr.includes(q) ||
           amountStr.includes(q) ||
@@ -358,8 +394,8 @@ const Invoices = () => {
           valB = b.invoiceNumber || '';
           break;
         case 'shopName':
-          valA = (a.storeId?.name || '').toLowerCase();
-          valB = (b.storeId?.name || '').toLowerCase();
+          valA = (a.customerId?.name || a.storeId?.name || '').toLowerCase();
+          valB = (b.customerId?.name || b.storeId?.name || '').toLowerCase();
           break;
         case 'invoiceDate':
           valA = new Date(a.invoiceDate || 0).getTime();
@@ -675,7 +711,11 @@ const Invoices = () => {
   }, [addedItems]);
 
   const handleGenerateInvoice = async () => {
-    if (!selectedStoreId) {
+    if (billingType === 'customer' && !selectedCustomerId) {
+      alert('Please select a customer.');
+      return;
+    }
+    if (billingType === 'store' && !selectedStoreId) {
       alert('Please select a destination shop.');
       return;
     }
@@ -686,8 +726,7 @@ const Invoices = () => {
 
     try {
       setSubmittingInvoice(true);
-      const res = await api.post('/stock/transfer-to-store', {
-        storeId: selectedStoreId,
+      const payload = {
         paymentType: invoicePaymentType,
         notes: invoiceNotes,
         items: addedItems.map((item) => ({
@@ -698,11 +737,20 @@ const Invoices = () => {
           discountAmount: item.discountAmount || 0,
           gstRate: item.gstRate || 18
         }))
-      });
+      };
+
+      if (billingType === 'customer') {
+        payload.customerId = selectedCustomerId;
+      } else {
+        payload.storeId = selectedStoreId;
+      }
+
+      const res = await api.post('/stock/transfer-to-store', payload);
 
       if (res.data.success) {
-        showToast('Tax invoice generated and stock transferred successfully!');
+        showToast('Tax invoice generated successfully!');
         setAddedItems([]);
+        setSelectedCustomerId('');
         setSelectedStoreId('');
         await fetchInvoices();
         navigate('/invoices');
@@ -775,8 +823,8 @@ const Invoices = () => {
 
           {/* Main White Card Container */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-7 space-y-6">
-            {/* Card Header with Blue Invoice Icon, Title, and List Button */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            {/* Card Header with Blue Invoice Icon, Title, Billing Type Toggle, and List Button */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
                   <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
@@ -784,18 +832,46 @@ const Invoices = () => {
                   </svg>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-extrabold text-[#1e293b] tracking-tight">
-                  Invoice – Customer
+                  {billingType === 'customer' ? 'Invoice – Customer' : 'Invoice – Retail Shop'}
                 </h1>
               </div>
 
-              <button
-                type="button"
-                onClick={() => navigate('/invoices')}
-                title="View All Invoices"
-                className="w-10 h-10 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
-              >
-                <List className="w-5 h-5 stroke-[2.5]" />
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Billing Type Toggle */}
+                <div className="bg-slate-100 p-1 rounded-xl flex items-center text-xs font-bold border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setBillingType('customer')}
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      billingType === 'customer'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Customer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingType('store')}
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      billingType === 'store'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Retail Shop
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/invoices')}
+                  title="View All Invoices"
+                  className="w-10 h-10 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
+                >
+                  <List className="w-5 h-5 stroke-[2.5]" />
+                </button>
+              </div>
             </div>
 
             {/* Section 1: INVOICE DETAILS */}
@@ -811,7 +887,7 @@ const Invoices = () => {
                 </h2>
               </div>
 
-              {/* 3 Columns Row: Invoice Number*, Customer Name*, Invoice Date* */}
+              {/* 3 Columns Row: Invoice Number*, Customer/Shop Name*, Invoice Date* */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* 1. Invoice Number * */}
                 <div>
@@ -826,11 +902,11 @@ const Invoices = () => {
                   />
                 </div>
 
-                {/* 2. Customer Name* with + New */}
+                {/* 2. Customer Name* (or Shop Name*) with + New */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs sm:text-sm font-bold text-slate-800">
-                      Customer Name*
+                      {billingType === 'customer' ? 'Customer Name*' : 'Shop Name*'}
                     </label>
                     <button
                       type="button"
@@ -843,18 +919,33 @@ const Invoices = () => {
                       + New
                     </button>
                   </div>
-                  <select
-                    value={selectedStoreId}
-                    onChange={(e) => setSelectedStoreId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer text-sm"
-                  >
-                    <option value="">Select</option>
-                    {stores.map((s) => (
-                      <option key={s._id} value={s._id}>
-                        {s.name} {s.city ? `(${s.city})` : ''}
-                      </option>
-                    ))}
-                  </select>
+                  {billingType === 'customer' ? (
+                    <select
+                      value={selectedCustomerId}
+                      onChange={(e) => setSelectedCustomerId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer text-sm"
+                    >
+                      <option value="">Select</option>
+                      {customers.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name} {c.phone ? `(${c.phone})` : ''} {c.address ? `- ${c.address}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      value={selectedStoreId}
+                      onChange={(e) => setSelectedStoreId(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer text-sm"
+                    >
+                      <option value="">Select</option>
+                      {stores.map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {s.name} {s.city ? `(${s.city})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 {/* 3. Invoice Date* */}
@@ -1253,7 +1344,7 @@ const Invoices = () => {
                       className="py-3 px-3 cursor-pointer hover:text-slate-800 whitespace-nowrap"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Shop Name</span>
+                        <span>Customer / Shop</span>
                         <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
                       </div>
                     </th>
@@ -1361,21 +1452,27 @@ const Invoices = () => {
                             </button>
                           </td>
 
-                          {/* 3. Shop Name */}
+                          {/* 3. Customer / Shop Name */}
                           <td className="py-4 px-3 align-top">
                             <div className="font-medium text-slate-800 leading-snug">
-                              {inv.storeId?.name || 'Shop'}
+                              {inv.customerId?.name || inv.storeId?.name || 'Customer / Shop'}
                             </div>
                             <div className="text-xs text-slate-500 font-normal mt-0.5">
-                              M: {inv.storeId?.phone || 'N/A'}
+                              M: {inv.customerId?.phone || inv.storeId?.phone || 'N/A'}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenShopUpdate(inv.storeId)}
-                              className="mt-1 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 border border-blue-500 rounded-md hover:bg-blue-50 transition-colors cursor-pointer inline-block"
-                            >
-                              Update
-                            </button>
+                            {inv.customerId ? (
+                              <span className="mt-1 inline-block px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded">
+                                Customer
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenShopUpdate(inv.storeId)}
+                                className="mt-1 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 border border-blue-500 rounded-md hover:bg-blue-50 transition-colors cursor-pointer inline-block"
+                              >
+                                Update
+                              </button>
+                            )}
                           </td>
 
                           {/* 4. Invoice Date */}
@@ -1636,7 +1733,9 @@ const Invoices = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Shop / Customer:</span>
-                <span className="font-semibold text-slate-800">{historyInvoice.storeId?.name}</span>
+                <span className="font-semibold text-slate-800">
+                  {historyInvoice.customerId?.name || historyInvoice.storeId?.name || 'N/A'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Invoice Date:</span>
@@ -1691,7 +1790,7 @@ const Invoices = () => {
               <strong className="text-slate-900 font-mono">
                 {returnInvoiceTarget.invoiceNumber}
               </strong>{' '}
-              for <strong className="text-slate-900">{returnInvoiceTarget.storeId?.name}</strong>.
+              for <strong className="text-slate-900">{returnInvoiceTarget.customerId?.name || returnInvoiceTarget.storeId?.name || 'Customer / Shop'}</strong>.
             </p>
             <div className="bg-blue-50 p-3 rounded-xl border border-blue-200 text-blue-800 text-xs">
               Would you like to open the Returns module to select items and reasons for return?
@@ -1827,12 +1926,20 @@ const Invoices = () => {
 
             <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
               <div>
-                <span className="font-bold text-slate-800 block mb-1">Customer / Billed To:</span>
-                <div className="font-semibold text-slate-900">{selectedInvoice.storeId?.name}</div>
-                <div className="text-slate-500">{selectedInvoice.storeId?.city || 'Tamil Nadu'}</div>
-                <div className="text-slate-500">Phone: {selectedInvoice.storeId?.phone || '-'}</div>
+                <span className="font-bold text-slate-800 block mb-1">
+                  {selectedInvoice.customerId ? 'Customer / Billed To:' : 'Shop / Billed To:'}
+                </span>
+                <div className="font-semibold text-slate-900">
+                  {selectedInvoice.customerId?.name || selectedInvoice.storeId?.name || 'N/A'}
+                </div>
+                <div className="text-slate-500">
+                  {selectedInvoice.customerId?.address || selectedInvoice.storeId?.address || selectedInvoice.storeId?.city || 'Tamil Nadu'}
+                </div>
+                <div className="text-slate-500">
+                  Phone: {selectedInvoice.customerId?.phone || selectedInvoice.storeId?.phone || '-'}
+                </div>
                 <div className="text-slate-500 font-mono">
-                  GSTIN: {selectedInvoice.storeId?.gstNumber || 'URP'}
+                  GSTIN: {selectedInvoice.customerId?.gstNumber || selectedInvoice.storeId?.gstNumber || 'URP'}
                 </div>
               </div>
               <div className="text-right">
@@ -1928,7 +2035,7 @@ const Invoices = () => {
         <Modal
           isOpen={isNewCustomerModalOpen}
           onClose={() => setIsNewCustomerModalOpen(false)}
-          title="Add New Customer / Retail Shop"
+          title={billingType === 'customer' ? 'Add New Customer' : 'Add New Retail Shop'}
           maxWidth="max-w-md"
         >
           <form onSubmit={handleQuickCreateCustomer} className="space-y-4 pt-1">
@@ -1941,12 +2048,12 @@ const Invoices = () => {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Customer / Shop Name *
+                {billingType === 'customer' ? 'Customer Name *' : 'Shop Name *'}
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Sri Balaji Traders"
+                placeholder={billingType === 'customer' ? 'e.g. Sudha' : 'e.g. Sri Balaji Supermarket'}
                 value={newCustomerForm.name}
                 onChange={(e) =>
                   setNewCustomerForm({ ...newCustomerForm, name: e.target.value })
@@ -1977,7 +2084,7 @@ const Invoices = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Madurai"
+                  placeholder="e.g. Chennai"
                   value={newCustomerForm.city}
                   onChange={(e) =>
                     setNewCustomerForm({ ...newCustomerForm, city: e.target.value })
@@ -1987,28 +2094,30 @@ const Invoices = () => {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Owner / Contact Person
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Murugan"
-                value={newCustomerForm.ownerName}
-                onChange={(e) =>
-                  setNewCustomerForm({ ...newCustomerForm, ownerName: e.target.value })
-                }
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              />
-            </div>
+            {billingType === 'store' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Owner / Contact Person
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Murugan"
+                  value={newCustomerForm.ownerName}
+                  onChange={(e) =>
+                    setNewCustomerForm({ ...newCustomerForm, ownerName: e.target.value })
+                  }
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Shop Address
+                {billingType === 'customer' ? 'Customer Address' : 'Shop Address'}
               </label>
               <input
                 type="text"
-                placeholder="e.g. 12 Bazaar Street"
+                placeholder={billingType === 'customer' ? 'e.g. 15, Anna Nagar, Chennai' : 'e.g. 12 Bazaar Street'}
                 value={newCustomerForm.address}
                 onChange={(e) =>
                   setNewCustomerForm({ ...newCustomerForm, address: e.target.value })
@@ -2045,7 +2154,7 @@ const Invoices = () => {
                 disabled={savingNewCustomer}
                 className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
               >
-                {savingNewCustomer ? 'Saving...' : 'Add Customer'}
+                {savingNewCustomer ? 'Saving...' : billingType === 'customer' ? 'Add Customer' : 'Add Shop'}
               </button>
             </div>
           </form>
