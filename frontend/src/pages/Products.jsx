@@ -833,7 +833,6 @@ const Products = () => {
                       <ArrowUpDown className="w-3 h-3 text-slate-400" />
                     </div>
                   </th>
-                  <th className="py-3 px-3 text-right">Dealer (₹)</th>
                   <th
                     className="py-3 px-3 text-right cursor-pointer hover:bg-slate-100/70"
                     onClick={() => {
@@ -923,11 +922,6 @@ const Products = () => {
                         {/* Purchase Price */}
                         <td className="py-3 px-3 text-right font-medium text-slate-700 font-mono">
                           ₹ {pPrice.toFixed(2)}
-                        </td>
-
-                        {/* Dealer Price */}
-                        <td className="py-3 px-3 text-right font-medium text-slate-700 font-mono">
-                          ₹ {dPrice.toFixed(2)}
                         </td>
 
                         {/* MRP */}
@@ -1025,7 +1019,7 @@ const Products = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center">
+                    <td colSpan={8} className="py-12 text-center">
                       <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">
                         <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
                           <Package className="w-6 h-6" />

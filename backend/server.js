@@ -1,3 +1,6 @@
+const dns = require('node:dns');
+try { dns.setServers(['8.8.8.8', '1.1.1.1']); } catch (e) {}
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');

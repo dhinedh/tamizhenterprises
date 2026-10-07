@@ -16,6 +16,12 @@ const DEFAULT_STOCKS = [
   { _id: '7', name: '290mm L (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
   { _id: '8', name: '290mm L (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
   { _id: '9', name: 'Femi9 Natural Intimate Foam Hygiene Wash (100ml)', closingQty: 0, brand: 'femi9' },
+  // Lumi9 Baby Diapers (femi9)
+  { _id: '14', name: 'Lumi9 Baby Diaper L(24)', closingQty: 0, brand: 'femi9' },
+  { _id: '15', name: 'Lumi9 Baby Diaper L(54)', closingQty: 0, brand: 'femi9' },
+  { _id: '16', name: 'Lumi9 Baby Diaper M(24)', closingQty: 0, brand: 'femi9' },
+  { _id: '17', name: 'Lumi9 Baby Diaper M(54)', closingQty: 0, brand: 'femi9' },
+  { _id: '18', name: 'Lumi9 Baby Diaper NB(24)', closingQty: 0, brand: 'femi9' },
   // mansarafoods.com Products
   { _id: '10', name: 'Mansara Instant Chettinad Kulambu Masala Paste (200g)', closingQty: 0, brand: 'mansarafoods.com' },
   { _id: '11', name: 'Mansara Traditional Gunpowder / Idli Podi (250g)', closingQty: 0, brand: 'mansarafoods.com' },
