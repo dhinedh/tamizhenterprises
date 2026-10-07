@@ -1,14 +1,16 @@
 const Product = require('../models/Product');
 const Stock = require('../models/Stock');
+const Manufacturer = require('../models/Manufacturer');
 
 // @desc    Get all products with stock information
 // @route   GET /api/products
 const getProducts = async (req, res) => {
   try {
-    const { search, category, brand, manufacturerId, status, lowStock } = req.query;
+    const { search, category, subCategory, brand, manufacturerId, status, lowStock } = req.query;
     const filter = {};
 
     if (category) filter.category = category;
+    if (subCategory) filter.subCategory = subCategory;
     if (brand) filter.brand = brand;
     if (manufacturerId) filter.manufacturerId = manufacturerId;
     if (status) filter.status = status;
@@ -145,17 +147,69 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const payload = { ...req.body };
+    delete payload._id;
+    delete payload.__v;
+    delete payload.createdAt;
+    delete payload.updatedAt;
+
     if (!payload.manufacturerId || payload.manufacturerId === '') {
       payload.manufacturerId = null;
     }
 
+    // Number field casting and sanitization
+    if (payload.mrp !== undefined && payload.mrp !== '') {
+      payload.mrp = Number(payload.mrp);
+    }
+    if (payload.purchasePrice !== undefined && payload.purchasePrice !== '') {
+      payload.purchasePrice = Number(payload.purchasePrice);
+    }
+    if (payload.dealerPrice !== undefined && payload.dealerPrice !== '') {
+      payload.dealerPrice = Number(payload.dealerPrice);
+    }
+    if (payload.sellingPrice !== undefined && payload.sellingPrice !== '') {
+      payload.sellingPrice = Number(payload.sellingPrice);
+    } else if (payload.dealerPrice !== undefined) {
+      payload.sellingPrice = Number(payload.dealerPrice);
+    }
+    if (payload.gstRate !== undefined && payload.gstRate !== '') {
+      payload.gstRate = Number(payload.gstRate);
+    }
+    if (payload.minStockAlert !== undefined && payload.minStockAlert !== '') {
+      payload.minStockAlert = Number(payload.minStockAlert);
+    }
+    if (payload.unitQuantityPerPack !== undefined && payload.unitQuantityPerPack !== '') {
+      payload.unitQuantityPerPack = Number(payload.unitQuantityPerPack);
+    }
+    if (payload.barcode !== undefined) {
+      payload.barcode = payload.barcode ? String(payload.barcode).trim() : '';
+    }
+
+    // Check duplicate SKU if changed
+    if (payload.sku) {
+      payload.sku = String(payload.sku).trim().toUpperCase();
+      const existingSku = await Product.findOne({ sku: payload.sku, _id: { $ne: req.params.id } });
+      if (existingSku) {
+        return res.status(400).json({ success: false, message: `Product SKU "${payload.sku}" already exists on another item` });
+      }
+    }
+
     const product = await Product.findByIdAndUpdate(req.params.id, payload, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true
     }).populate('manufacturerId');
+
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
+
+    // Sync minStockAlert with Stock model if updated
+    if (payload.minStockAlert !== undefined) {
+      await Stock.findOneAndUpdate(
+        { productId: product._id },
+        { minStockAlert: Number(payload.minStockAlert) }
+      );
+    }
+
     res.json({ success: true, data: product });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

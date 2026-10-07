@@ -15,7 +15,7 @@ router.route('/')
 
 router.route('/:id')
   .get(protect, getProductById)
-  .put(protect, authorize('Owner'), updateProduct)
+  .put(protect, authorize('Owner', 'Salesman'), updateProduct)
   .delete(protect, authorize('Owner'), deleteProduct);
 
 module.exports = router;

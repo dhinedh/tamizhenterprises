@@ -165,9 +165,10 @@ const Invoices = () => {
 
   // "ADD PRODUCT" Box Input Fields
   const [currentProductId, setCurrentProductId] = useState('');
-  const [itemQty, setItemQty] = useState('');
-  const [itemPrice, setItemPrice] = useState('');
   const [itemMrp, setItemMrp] = useState('');
+  const [itemQty, setItemQty] = useState('');
+  const [itemShopPercent, setItemShopPercent] = useState('');
+  const [itemPrice, setItemPrice] = useState('');
   const [itemTotal, setItemTotal] = useState('');
   const [itemDiscPercent, setItemDiscPercent] = useState('');
   const [itemDiscRs, setItemDiscRs] = useState('');
@@ -457,9 +458,10 @@ const Invoices = () => {
   const handleProductSelect = (pId) => {
     setCurrentProductId(pId);
     if (!pId) {
-      setItemPrice('');
       setItemMrp('');
       setItemQty('');
+      setItemShopPercent('');
+      setItemPrice('');
       setItemTotal('');
       setItemDiscPercent('');
       setItemDiscRs('');
@@ -467,18 +469,56 @@ const Invoices = () => {
     }
     const prod = products.find((p) => p._id === pId);
     if (prod) {
-      const price = prod.dealerPrice || prod.sellingPrice || 0;
-      const mrp = prod.mrp || prod.sellingPrice || 0;
+      const mrp = Number(prod.mrp || 0);
+      const price = Number(prod.dealerPrice || prod.sellingPrice || mrp || 0);
       const defaultQty = 1;
-      setItemPrice(price ? String(price) : '');
+
       setItemMrp(mrp ? String(mrp) : '');
       setItemQty(String(defaultQty));
+
+      // Calculate initial shop % from MRP and dealer price
+      if (mrp > 0 && price > 0 && mrp >= price) {
+        const pct = (((mrp - price) / mrp) * 100).toFixed(1);
+        setItemShopPercent(pct === '0.0' ? '0' : pct);
+        setItemPrice(String(price));
+      } else if (mrp > 0) {
+        setItemShopPercent('0');
+        setItemPrice(String(mrp));
+      } else {
+        setItemShopPercent('0');
+        setItemPrice(price ? String(price) : '');
+      }
+
       setItemDiscPercent('');
       setItemDiscRs('');
-      setItemTotal(calculateTotal(defaultQty, price, 0));
+      const activePrice = price > 0 ? price : mrp;
+      setItemTotal(calculateTotal(defaultQty, activePrice, 0));
     }
   };
 
+  // When MRP changes
+  const handleMrpChange = (val) => {
+    setItemMrp(val);
+    const m = Number(val) || 0;
+    const shopPct = Number(itemShopPercent) || 0;
+    let newPrice = Number(itemPrice) || 0;
+
+    if (m > 0 && shopPct > 0) {
+      newPrice = Math.max(0, m - (m * shopPct) / 100);
+      setItemPrice(newPrice ? newPrice.toFixed(2) : '0.00');
+    }
+
+    const q = Number(itemQty) || 0;
+    const discPercent = Number(itemDiscPercent) || 0;
+    let discRs = Number(itemDiscRs) || 0;
+    if (discPercent > 0) {
+      discRs = (q * newPrice * discPercent) / 100;
+      setItemDiscRs(discRs ? discRs.toFixed(2) : '');
+    }
+    setItemTotal(calculateTotal(q, newPrice, discRs));
+  };
+
+  // When Quantity changes
   const handleQtyChange = (val) => {
     setItemQty(val);
     const q = Number(val) || 0;
@@ -492,17 +532,43 @@ const Invoices = () => {
     setItemTotal(calculateTotal(val, itemPrice, discRs));
   };
 
+  // When Shop % changes: reduces % price from MRP and updates Shop Price input
+  const handleShopPercentChange = (val) => {
+    setItemShopPercent(val);
+    const m = Number(itemMrp) || 0;
+    const pct = Number(val) || 0;
+    const reducedPrice = Math.max(0, m - (m * pct) / 100);
+    const priceStr = reducedPrice ? reducedPrice.toFixed(2) : '0.00';
+    setItemPrice(priceStr);
+
+    const q = Number(itemQty) || 0;
+    const discPercent = Number(itemDiscPercent) || 0;
+    let discRs = Number(itemDiscRs) || 0;
+    if (discPercent > 0) {
+      discRs = (q * reducedPrice * discPercent) / 100;
+      setItemDiscRs(discRs ? discRs.toFixed(2) : '');
+    }
+    setItemTotal(calculateTotal(q, reducedPrice, discRs));
+  };
+
+  // When Shop Price changes directly: recalculates Shop % from MRP
   const handlePriceChange = (val) => {
     setItemPrice(val);
-    const q = Number(itemQty) || 0;
+    const m = Number(itemMrp) || 0;
     const p = Number(val) || 0;
+    if (m > 0) {
+      const pct = Math.max(0, ((m - p) / m) * 100);
+      setItemShopPercent(pct ? pct.toFixed(1) : '0');
+    }
+
+    const q = Number(itemQty) || 0;
     const discPercent = Number(itemDiscPercent) || 0;
     let discRs = Number(itemDiscRs) || 0;
     if (discPercent > 0) {
       discRs = (q * p * discPercent) / 100;
       setItemDiscRs(discRs ? discRs.toFixed(2) : '');
     }
-    setItemTotal(calculateTotal(itemQty, val, discRs));
+    setItemTotal(calculateTotal(q, val, discRs));
   };
 
   const handleDiscPercentChange = (val) => {
@@ -543,6 +609,7 @@ const Invoices = () => {
 
     const p = Number(itemPrice) || 0;
     const mrp = Number(itemMrp) || 0;
+    const shopPercent = Number(itemShopPercent) || 0;
     const discPercent = Number(itemDiscPercent) || 0;
     const discAmount = Number(itemDiscRs) || (q * p * discPercent) / 100;
     const taxableValue = Math.max(0, q * p - discAmount);
@@ -560,6 +627,7 @@ const Invoices = () => {
         quantity: q,
         unitPrice: p,
         mrp,
+        shopPercent,
         discountPercent: discPercent,
         discountAmount: discAmount,
         taxableValue,
@@ -571,9 +639,10 @@ const Invoices = () => {
 
     // Reset ADD PRODUCT input box
     setCurrentProductId('');
-    setItemQty('');
-    setItemPrice('');
     setItemMrp('');
+    setItemQty('');
+    setItemShopPercent('');
+    setItemPrice('');
     setItemTotal('');
     setItemDiscPercent('');
     setItemDiscRs('');
@@ -807,9 +876,9 @@ const Invoices = () => {
                 <span>Add Product</span>
               </div>
 
-              {/* Row 1: PRODUCT, QTY, PRICE, MRP */}
+              {/* Row 1: PRODUCT, MRP, QTY, SHOP %, SHOP PRICE */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-                <div className="md:col-span-5">
+                <div className="md:col-span-4">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     Product
                   </label>
@@ -821,10 +890,24 @@ const Invoices = () => {
                     <option value="">Select Product</option>
                     {products.map((p) => (
                       <option key={p._id} value={p._id}>
-                        {p.name} {p.sku ? `(${p.sku})` : ''} - ₹{p.dealerPrice || p.sellingPrice}
+                        {p.name} {p.sku ? `(${p.sku})` : ''} - MRP: ₹{p.mrp || p.sellingPrice}
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    MRP
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="MRP"
+                    value={itemMrp}
+                    onChange={(e) => handleMrpChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
                 </div>
 
                 <div className="md:col-span-2">
@@ -837,35 +920,37 @@ const Invoices = () => {
                     placeholder="Qty"
                     value={itemQty}
                     onChange={(e) => handleQtyChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div className="md:col-span-3">
-                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    Price
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Customer Pric"
-                    value={itemPrice}
-                    onChange={(e) => handlePriceChange(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold"
                   />
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                    MRP
+                    Shop %
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    placeholder="Shop %"
+                    value={itemShopPercent}
+                    onChange={(e) => handleShopPercentChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Shop Price
                   </label>
                   <input
                     type="number"
                     step="0.01"
-                    placeholder="MRP"
-                    value={itemMrp}
-                    onChange={(e) => setItemMrp(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Shop Price"
+                    value={itemPrice}
+                    onChange={(e) => handlePriceChange(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 font-bold text-emerald-700"
                   />
                 </div>
               </div>
@@ -942,9 +1027,10 @@ const Invoices = () => {
                       <tr>
                         <th className="py-2.5 px-3">#</th>
                         <th className="py-2.5 px-3">Product</th>
-                        <th className="py-2.5 px-3 text-right">Qty</th>
-                        <th className="py-2.5 px-3 text-right">Price</th>
                         <th className="py-2.5 px-3 text-right">MRP</th>
+                        <th className="py-2.5 px-3 text-right">Qty</th>
+                        <th className="py-2.5 px-3 text-right">Shop %</th>
+                        <th className="py-2.5 px-3 text-right">Shop Price</th>
                         <th className="py-2.5 px-3 text-right">Discount</th>
                         <th className="py-2.5 px-3 text-right">Taxable</th>
                         <th className="py-2.5 px-3 text-center">GST</th>
@@ -957,9 +1043,10 @@ const Invoices = () => {
                         <tr key={idx} className="hover:bg-slate-50/60">
                           <td className="py-2.5 px-3 font-medium">{idx + 1}</td>
                           <td className="py-2.5 px-3 font-semibold text-slate-900">{item.name}</td>
-                          <td className="py-2.5 px-3 text-right font-bold">{item.quantity}</td>
-                          <td className="py-2.5 px-3 text-right">₹{Number(item.unitPrice).toFixed(2)}</td>
                           <td className="py-2.5 px-3 text-right text-slate-500">₹{Number(item.mrp || 0).toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-right font-bold">{item.quantity}</td>
+                          <td className="py-2.5 px-3 text-right text-blue-600 font-semibold">{Number(item.shopPercent || 0).toFixed(1)}%</td>
+                          <td className="py-2.5 px-3 text-right font-bold text-emerald-700">₹{Number(item.unitPrice).toFixed(2)}</td>
                           <td className="py-2.5 px-3 text-right text-red-600">
                             ₹{Number(item.discountAmount || 0).toFixed(2)}
                           </td>

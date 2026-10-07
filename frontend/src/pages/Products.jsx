@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
+  Archive,
   Package,
   Plus,
   Search,
@@ -109,17 +110,39 @@ const Products = () => {
   const [isInwardModalOpen, setIsInwardModalOpen] = useState(false);
   const [inwardProduct, setInwardProduct] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [femi9Option, setFemi9Option] = useState('Napkin'); // 'Napkin' | 'Lumi Diaper' | 'ALL'
+
+  // Helper to distinguish Lumi Diapers vs Sanitary Napkins
+  const isProductLumi = (p) => {
+    if (!p) return false;
+    const sub = (p.subCategory || '').toLowerCase();
+    const cat = (p.category || '').toLowerCase();
+    const name = (p.name || '').toLowerCase();
+    const brand = (p.brand || '').toLowerCase();
+    return (
+      sub.includes('lumi') ||
+      sub.includes('diaper') ||
+      cat.includes('diaper') ||
+      cat.includes('baby') ||
+      name.includes('lumi') ||
+      name.includes('diaper') ||
+      brand.includes('lumi')
+    );
+  };
+
+  const isProductNapkin = (p) => !isProductLumi(p);
 
   // Form State for Add / Edit
   const [formData, setFormData] = useState({
     name: '',
-    brand: activeManufacturer?.name || '',
-    category: 'General',
-    manufacturerId: activeManufacturer?._id || '',
+    brand: 'femi9',
+    category: 'Sanitary Hygiene',
+    subCategory: 'Napkin',
+    manufacturerId: '',
     sku: '',
     barcode: '',
-    hsnCode: '190590',
-    unit: 'Pcs',
+    hsnCode: '96190010',
+    unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: '',
     purchasePrice: '',
@@ -189,14 +212,13 @@ const Products = () => {
         query += `?manufacturerId=${activeManufacturer._id}`;
       }
 
-      const res = await api.get(`/products${query}`);
+      const res = await api.get(`/products${query}`, { cache: false });
       if (res.data?.success) {
-        setProducts(res.data.data || []);
-        if (!activeManufacturer) {
-          try {
-            sessionStorage.setItem('tamil_erp_products', JSON.stringify(res.data.data || []));
-          } catch (e) {}
-        }
+        const fetched = res.data.data || [];
+        setProducts(fetched);
+        try {
+          sessionStorage.setItem('tamil_erp_products', JSON.stringify(fetched));
+        } catch (e) {}
       }
     } catch (err) {
       console.error('Failed to fetch products:', err);
@@ -205,16 +227,20 @@ const Products = () => {
     }
   };
 
-  const resetForm = () => {
+  const resetForm = (targetSubCategory) => {
+    const subCat = targetSubCategory || (femi9Option !== 'ALL' ? femi9Option : 'Napkin');
+    const isLumi = subCat === 'Lumi Diaper';
+    const femiMfg = manufacturers.find(m => m.code === 'FEMI9' || m.name?.toLowerCase().includes('femi9')) || activeManufacturer;
     setFormData({
       name: '',
-      brand: activeManufacturer?.name || (manufacturers.length > 0 ? manufacturers[0].name : 'Tamizh Enterprises'),
-      category: 'General',
-      manufacturerId: activeManufacturer?._id || (manufacturers.length > 0 ? manufacturers[0]._id : ''),
+      brand: 'femi9',
+      category: isLumi ? 'Baby Diaper' : 'Sanitary Hygiene',
+      subCategory: subCat,
+      manufacturerId: femiMfg?._id || activeManufacturer?._id || (manufacturers.length > 0 ? manufacturers[0]._id : ''),
       sku: '',
       barcode: '',
-      hsnCode: '190590',
-      unit: 'Pcs',
+      hsnCode: isLumi ? '96190020' : '96190010',
+      unit: 'Pack',
       unitQuantityPerPack: 1,
       mrp: '',
       purchasePrice: '',
@@ -228,9 +254,9 @@ const Products = () => {
     setFormError('');
   };
 
-  const handleOpenAddModal = () => {
+  const handleOpenAddModal = (targetSubCat) => {
     setEditingProduct(null);
-    resetForm();
+    resetForm(targetSubCat || (femi9Option !== 'ALL' ? femi9Option : 'Napkin'));
     setIsModalOpen(true);
   };
 
@@ -245,22 +271,30 @@ const Products = () => {
 
   const handleEdit = (prod) => {
     setEditingProduct(prod);
+    const sub = prod.subCategory || (
+      (prod.name || '').toLowerCase().includes('diaper') ||
+      (prod.name || '').toLowerCase().includes('lumi') ||
+      (prod.category || '').toLowerCase().includes('diaper')
+        ? 'Lumi Diaper'
+        : 'Napkin'
+    );
     setFormData({
       name: prod.name || '',
       brand: prod.brand || '',
-      category: prod.category || 'General',
+      category: prod.category || (sub === 'Lumi Diaper' ? 'Baby Diaper' : 'Sanitary Hygiene'),
+      subCategory: sub,
       manufacturerId: prod.manufacturerId?._id || prod.manufacturerId || '',
       sku: prod.sku || '',
       barcode: prod.barcode || '',
-      hsnCode: prod.hsnCode || '190590',
-      unit: prod.unit || 'Pcs',
+      hsnCode: prod.hsnCode || (sub === 'Lumi Diaper' ? '96190020' : '96190010'),
+      unit: prod.unit || 'Pack',
       unitQuantityPerPack: prod.unitQuantityPerPack || 1,
-      mrp: prod.mrp !== undefined ? prod.mrp : '',
-      purchasePrice: prod.purchasePrice !== undefined ? prod.purchasePrice : '',
-      dealerPrice: prod.dealerPrice !== undefined ? prod.dealerPrice : '',
-      sellingPrice: prod.sellingPrice !== undefined ? prod.sellingPrice : '',
-      gstRate: prod.gstRate !== undefined ? prod.gstRate : 18,
-      minStockAlert: prod.minStockAlert !== undefined ? prod.minStockAlert : 10,
+      mrp: prod.mrp !== undefined && prod.mrp !== null ? prod.mrp : '',
+      purchasePrice: prod.purchasePrice !== undefined && prod.purchasePrice !== null ? prod.purchasePrice : '',
+      dealerPrice: prod.dealerPrice !== undefined && prod.dealerPrice !== null ? prod.dealerPrice : '',
+      sellingPrice: prod.sellingPrice !== undefined && prod.sellingPrice !== null ? prod.sellingPrice : '',
+      gstRate: prod.gstRate !== undefined && prod.gstRate !== null ? prod.gstRate : 18,
+      minStockAlert: prod.minStockAlert !== undefined && prod.minStockAlert !== null ? prod.minStockAlert : 10,
       initialStock: 0,
       description: prod.description || ''
     });
@@ -289,43 +323,58 @@ const Products = () => {
     try {
       const pPrice = Number(formData.purchasePrice || 0);
       const mPrice = Number(formData.mrp || 0);
-      const dPrice = Number(formData.dealerPrice || pPrice);
-      const sPrice = Number(formData.sellingPrice || dPrice);
+      const dPrice = formData.dealerPrice !== '' && formData.dealerPrice !== undefined && formData.dealerPrice !== null
+        ? Number(formData.dealerPrice)
+        : pPrice;
+      const sPrice = formData.sellingPrice !== '' && formData.sellingPrice !== undefined && formData.sellingPrice !== null
+        ? Number(formData.sellingPrice)
+        : dPrice;
 
       const autoSku = formData.sku && formData.sku.trim()
         ? formData.sku.trim().toUpperCase()
         : `${(formData.brand || 'PRD').replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
       const payload = {
-        ...formData,
         name: formData.name.trim(),
-        brand: formData.brand.trim() || 'General Brand',
-        category: formData.category || 'General',
+        brand: formData.brand.trim() || 'femi9',
+        category: formData.category || 'Sanitary Hygiene',
+        subCategory: formData.subCategory || 'Napkin',
         manufacturerId: formData.manufacturerId || null,
         sku: autoSku,
-        barcode: formData.barcode ? formData.barcode.trim() : '',
-        hsnCode: formData.hsnCode?.trim() || '190590',
-        unit: formData.unit || 'Pcs',
+        barcode: formData.barcode ? String(formData.barcode).trim() : '',
+        hsnCode: formData.hsnCode?.trim() || (formData.subCategory === 'Lumi Diaper' ? '96190020' : '96190010'),
+        unit: formData.unit || 'Pack',
         unitQuantityPerPack: Number(formData.unitQuantityPerPack || 1),
         mrp: mPrice,
         purchasePrice: pPrice,
         dealerPrice: dPrice,
         sellingPrice: sPrice,
-        gstRate: Number(formData.gstRate || 18),
+        gstRate: formData.gstRate !== '' && formData.gstRate !== undefined && formData.gstRate !== null
+          ? Number(formData.gstRate)
+          : 18,
         minStockAlert: Number(formData.minStockAlert || 10),
-        initialStock: Number(formData.initialStock || 0),
         description: formData.description?.trim() || ''
       };
+
+      if (!editingProduct) {
+        payload.initialStock = Number(formData.initialStock || 0);
+      }
 
       if (editingProduct) {
         const res = await api.put(`/products/${editingProduct._id}`, payload);
         if (res.data?.success) {
+          const updated = res.data.data;
           showToast(`Product "${payload.name}" updated successfully!`);
+          // Optimistically update product in local state immediately
+          setProducts((prev) =>
+            prev.map((p) => (p._id === updated._id ? { ...p, ...updated } : p))
+          );
         }
       } else {
         const res = await api.post('/products', payload);
         if (res.data?.success) {
           showToast(`Product "${payload.name}" created successfully with SKU ${autoSku}!`);
+          setProducts((prev) => [res.data.data, ...prev]);
         }
       }
 
@@ -334,7 +383,8 @@ const Products = () => {
       await fetchProducts();
     } catch (err) {
       console.error('Save product error:', err);
-      setFormError(err.response?.data?.message || 'Error saving product. Please check values.');
+      const msg = err.response?.data?.message || (err.response?.status === 502 ? 'Backend server is temporarily unavailable (502). Please retry in a few moments.' : 'Error saving product. Please check values.');
+      setFormError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -361,6 +411,13 @@ const Products = () => {
   // Filter & Sort Logic
   const filteredProducts = useMemo(() => {
     let result = [...products];
+
+    // Femi9 Option filter (Napkin vs Lumi Diaper)
+    if (femi9Option === 'Napkin') {
+      result = result.filter(p => isProductNapkin(p));
+    } else if (femi9Option === 'Lumi Diaper') {
+      result = result.filter(p => isProductLumi(p));
+    }
 
     // Search query filter
     if (search.trim()) {
@@ -410,7 +467,7 @@ const Products = () => {
     });
 
     return result;
-  }, [products, search, categoryFilter, stockStatusFilter, sortField, sortOrder]);
+  }, [products, femi9Option, search, categoryFilter, stockStatusFilter, sortField, sortOrder]);
 
   // Pagination
   const totalPages = pageSize === 'all' ? 1 : Math.ceil(filteredProducts.length / Number(pageSize));
@@ -422,14 +479,20 @@ const Products = () => {
 
   // Top KPI Metrics
   const metrics = useMemo(() => {
-    const totalCount = products.length;
+    const targetProducts = femi9Option === 'Napkin'
+      ? products.filter(p => isProductNapkin(p))
+      : femi9Option === 'Lumi Diaper'
+      ? products.filter(p => isProductLumi(p))
+      : products;
+
+    const totalCount = targetProducts.length;
     let totalStockUnits = 0;
     let totalInventoryValueCost = 0;
     let totalInventoryValueMRP = 0;
     let lowStockCount = 0;
     let outOfStockCount = 0;
 
-    products.forEach(p => {
+    targetProducts.forEach(p => {
       const avail = p.stock?.availableStock ?? 0;
       totalStockUnits += avail;
       totalInventoryValueCost += avail * (Number(p.purchasePrice) || 0);
@@ -449,7 +512,7 @@ const Products = () => {
       lowStockCount,
       outOfStockCount
     };
-  }, [products]);
+  }, [products, femi9Option]);
 
   // Categories list
   const existingCategories = useMemo(() => {
@@ -492,14 +555,14 @@ const Products = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-              Manage Products & Catalog
+              Femi9 Product Management
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800">
-              {products.length} SKUs
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">
+              {femi9Option === 'ALL' ? `${products.length} SKUs` : `${filteredProducts.length} ${femi9Option} SKUs`}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Full SKU Master with CRUD controls, multi-tier wholesale pricing (Purchase &bull; Dealer &bull; MRP), GST rates, and real-time inventory
+            Femi9 Sanitary Napkins &bull; Lumi Baby Diapers &bull; SKU Catalog, Wholesale Pricing &amp; Real-time Inventory
           </p>
         </div>
 
@@ -581,44 +644,77 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Brand Selection Tabs if Manufacturers Exist */}
-      {manufacturers.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      {/* Femi9 Category Selector Cards (Napkin vs Lumi Diaper) */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Napkin Card */}
           <button
             type="button"
-            onClick={() => clearActiveManufacturer()}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
-              !activeManufacturer
-                ? 'bg-teal-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+            onClick={() => setFemi9Option(femi9Option === 'Napkin' ? 'ALL' : 'Napkin')}
+            className={`w-full py-7 px-6 rounded-2xl bg-white flex flex-col items-center justify-center text-center transition-all cursor-pointer select-none ${
+              femi9Option === 'Napkin'
+                ? 'border-2 border-[#4f46e5] shadow-xs ring-1 ring-[#4f46e5]/10'
+                : 'border border-slate-200/90 hover:border-slate-300 hover:shadow-2xs'
             }`}
           >
-            <span>All Products (All Brands)</span>
-            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${!activeManufacturer ? 'bg-teal-700 text-teal-100' : 'bg-slate-100 text-slate-600'}`}>
-              {products.length} SKUs
-            </span>
+            <div className="w-12 h-12 flex items-center justify-center mb-2">
+              <Archive className="w-9 h-9 text-[#4f46e5]" strokeWidth={1.75} />
+            </div>
+            <div className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Napkin
+            </div>
+            <div className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
+              Femi9 Sanitary Napkin products
+            </div>
           </button>
 
-          {manufacturers.map((mfg) => {
-            const isSelected = activeManufacturer?._id === mfg._id;
-            return (
-              <button
-                key={mfg._id}
-                type="button"
-                onClick={() => setActiveManufacturer(mfg)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all whitespace-nowrap cursor-pointer ${
-                  isSelected
-                    ? 'bg-teal-600 text-white shadow-xs'
-                    : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                <Building2 className="w-3.5 h-3.5 opacity-70" />
-                <span>{mfg.name}</span>
-              </button>
-            );
-          })}
+          {/* Lumi Diaper Card */}
+          <button
+            type="button"
+            onClick={() => setFemi9Option(femi9Option === 'Lumi Diaper' ? 'ALL' : 'Lumi Diaper')}
+            className={`w-full py-7 px-6 rounded-2xl bg-white flex flex-col items-center justify-center text-center transition-all cursor-pointer select-none ${
+              femi9Option === 'Lumi Diaper'
+                ? 'border-2 border-[#4f46e5] shadow-xs ring-1 ring-[#4f46e5]/10'
+                : 'border border-slate-200/90 hover:border-slate-300 hover:shadow-2xs'
+            }`}
+          >
+            <div className="w-12 h-12 flex items-center justify-center mb-2">
+              <Archive className="w-9 h-9 text-[#4f46e5]" strokeWidth={1.75} />
+            </div>
+            <div className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+              Lumi Diaper
+            </div>
+            <div className="text-xs sm:text-sm text-slate-500 mt-1 font-normal">
+              Lumi Baby Diaper products
+            </div>
+          </button>
         </div>
-      )}
+
+        {/* Filter State / Toggle helper */}
+        <div className="flex items-center justify-between px-1 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span>Active View:</span>
+            <span className="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2.5 py-0.5 rounded-full">
+              {femi9Option === 'Napkin'
+                ? 'Femi9 Sanitary Napkins'
+                : femi9Option === 'Lumi Diaper'
+                ? 'Lumi Baby Diapers'
+                : 'All Femi9 Catalog'}
+            </span>
+            <span className="text-slate-400">({filteredProducts.length} SKUs shown)</span>
+          </div>
+
+          {femi9Option !== 'ALL' && (
+            <button
+              type="button"
+              onClick={() => setFemi9Option('ALL')}
+              className="text-indigo-600 hover:text-indigo-800 hover:underline font-semibold cursor-pointer"
+            >
+              Show All Products ({products.length})
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Search & Advanced Filters Bar */}
       <Card>
@@ -775,15 +871,26 @@ const Products = () => {
                     const isZero = avail <= 0;
                     const pPrice = Number(prod.purchasePrice) || 0;
                     const mPrice = Number(prod.mrp) || 0;
-                    const dPrice = Number(prod.dealerPrice) || pPrice;
+                    const dPrice = prod.dealerPrice !== undefined && prod.dealerPrice !== null && prod.dealerPrice !== ''
+                      ? Number(prod.dealerPrice)
+                      : pPrice;
                     const grossMargin = mPrice > 0 ? (((mPrice - pPrice) / mPrice) * 100).toFixed(1) : '0';
 
                     return (
                       <tr key={prod._id} className="hover:bg-teal-50/30 transition-colors">
                         {/* Product Details */}
                         <td className="py-3 px-3">
-                          <div className="font-bold text-slate-900 flex items-center gap-2">
+                          <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
                             <span>{prod.name}</span>
+                            {isProductLumi(prod) ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                Lumi Diaper
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-50 text-pink-700 border border-pink-200">
+                                Napkin
+                              </span>
+                            )}
                             {prod.sku && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-600 border border-slate-200">
                                 {prod.sku}
@@ -844,7 +951,7 @@ const Products = () => {
                         {/* GST % */}
                         <td className="py-3 px-3 text-center">
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                            {prod.gstRate}%
+                            {prod.gstRate !== undefined && prod.gstRate !== null ? `${prod.gstRate}%` : '18%'}
                           </span>
                         </td>
 
@@ -1010,6 +1117,66 @@ const Products = () => {
             </div>
           )}
 
+          {/* Femi9 Product Line Toggle in Modal */}
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1.5">
+              Product Category <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    subCategory: 'Napkin',
+                    category: 'Sanitary Hygiene',
+                    hsnCode: prev.hsnCode === '96190020' ? '96190010' : (prev.hsnCode || '96190010'),
+                    brand: 'femi9'
+                  }));
+                }}
+                className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                  formData.subCategory === 'Napkin'
+                    ? 'border-[#4f46e5] bg-indigo-50/50 text-indigo-950 ring-1 ring-[#4f46e5]'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-indigo-100/70 flex items-center justify-center shrink-0">
+                  <Archive className="w-4 h-4 text-[#4f46e5]" strokeWidth={2} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">Napkin</div>
+                  <div className="text-[10px] text-slate-500 font-normal">Femi9 Sanitary Napkin</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(prev => ({
+                    ...prev,
+                    subCategory: 'Lumi Diaper',
+                    category: 'Baby Diaper',
+                    hsnCode: prev.hsnCode === '96190010' ? '96190020' : (prev.hsnCode || '96190020'),
+                    brand: 'femi9'
+                  }));
+                }}
+                className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
+                  formData.subCategory === 'Lumi Diaper'
+                    ? 'border-[#4f46e5] bg-indigo-50/50 text-indigo-950 ring-1 ring-[#4f46e5]'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-indigo-100/70 flex items-center justify-center shrink-0">
+                  <Archive className="w-4 h-4 text-[#4f46e5]" strokeWidth={2} />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900">Lumi Diaper</div>
+                  <div className="text-[10px] text-slate-500 font-normal">Lumi Baby Diaper</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Basic Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -1022,7 +1189,7 @@ const Products = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-teal-500"
-                placeholder="e.g. Marie Gold Biscuits 250g"
+                placeholder={formData.subCategory === 'Lumi Diaper' ? 'e.g. Lumi Baby Diaper (Pants XL - 32 Pcs)' : 'e.g. 290mm L (6 PCS) - Femi9 Premium Sanitary Napkin'}
               />
             </div>
             <div>
@@ -1035,7 +1202,7 @@ const Products = () => {
                 value={formData.brand}
                 onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-teal-500"
-                placeholder="e.g. Britannia / ITC / Femi9"
+                placeholder="femi9"
               />
             </div>
           </div>
@@ -1080,8 +1247,8 @@ const Products = () => {
             </div>
           </div>
 
-          {/* SKU, Barcode, Packaging */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* SKU, Packaging */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
                 SKU Code <span className="text-[10px] text-slate-400 font-normal">(Auto if blank)</span>
@@ -1092,16 +1259,6 @@ const Products = () => {
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono uppercase focus:outline-teal-500"
                 placeholder="e.g. BRIT-MAR-250G"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Barcode (EAN / UPC)</label>
-              <input
-                type="text"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg font-mono focus:outline-teal-500"
-                placeholder="e.g. 8901030800000"
               />
             </div>
             <div>
@@ -1122,7 +1279,7 @@ const Products = () => {
           <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
-                Multi-Tier Pricing Structure (INR)
+                Pricing Structure (INR)
               </span>
               {liveMargin && (
                 <span className="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
@@ -1131,7 +1288,7 @@ const Products = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">
                   Purchase Cost (₹) <span className="text-rose-500">*</span>
@@ -1144,20 +1301,6 @@ const Products = () => {
                   onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-teal-500 font-mono font-bold"
                   placeholder="e.g. 25.00"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Dealer Wholesale Price (₹)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.dealerPrice}
-                  onChange={(e) => setFormData({ ...formData, dealerPrice: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white focus:outline-teal-500 font-mono"
-                  placeholder="e.g. 28.50"
                 />
               </div>
 
@@ -1275,14 +1418,10 @@ const Products = () => {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200 text-slate-600">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200 text-slate-600">
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase">HSN Code</span>
                   <span className="font-mono font-semibold text-slate-800">{viewingProduct.hsnCode || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Barcode</span>
-                  <span className="font-mono font-semibold text-slate-800">{viewingProduct.barcode || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase">Packaging Unit</span>
@@ -1294,19 +1433,13 @@ const Products = () => {
             {/* Price & Margins Card */}
             <div className="p-4 bg-teal-50/50 rounded-xl border border-teal-200/80 space-y-2">
               <span className="font-bold text-teal-900 block text-[11px] uppercase tracking-wider">
-                Price Tiers & Profit Analysis
+                Price & Profit Analysis
               </span>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white p-2.5 rounded-lg border border-teal-100 text-center">
                   <span className="text-[10px] text-slate-400 uppercase block">Purchase Cost</span>
                   <span className="font-bold text-slate-800 font-mono text-sm">
                     ₹ {Number(viewingProduct.purchasePrice).toFixed(2)}
-                  </span>
-                </div>
-                <div className="bg-white p-2.5 rounded-lg border border-teal-100 text-center">
-                  <span className="text-[10px] text-slate-400 uppercase block">Dealer Price</span>
-                  <span className="font-bold text-slate-800 font-mono text-sm">
-                    ₹ {Number(viewingProduct.dealerPrice || viewingProduct.purchasePrice).toFixed(2)}
                   </span>
                 </div>
                 <div className="bg-white p-2.5 rounded-lg border border-teal-100 text-center">

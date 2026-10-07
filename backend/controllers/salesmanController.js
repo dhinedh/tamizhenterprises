@@ -8,7 +8,24 @@ const Order = require('../models/Order');
 const getSalesmen = async (req, res) => {
   try {
     const salesmen = await Salesman.find().populate('userId', 'email role avatar').sort({ name: 1 });
-    res.json({ success: true, count: salesmen.length, data: salesmen });
+    
+    // Dynamically calculate assigned store count per salesman
+    const storeCounts = await Store.aggregate([
+      { $match: { salesmanId: { $ne: null } } },
+      { $group: { _id: '$salesmanId', count: { $sum: 1 } } }
+    ]);
+    const countsMap = {};
+    storeCounts.forEach((c) => {
+      countsMap[c._id.toString()] = c.count;
+    });
+
+    const data = salesmen.map((s) => {
+      const obj = s.toObject();
+      obj.assignedStoresCount = countsMap[s._id.toString()] !== undefined ? countsMap[s._id.toString()] : (obj.assignedStoresCount || 0);
+      return obj;
+    });
+
+    res.json({ success: true, count: data.length, data });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -39,6 +56,7 @@ const getSalesmanById = async (req, res) => {
       data: {
         ...salesman.toObject(),
         assignedStores,
+        assignedStoresCount: assignedStores.length,
         visits,
         recentOrders: orders
       }
@@ -57,14 +75,14 @@ const createSalesman = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Name, Employee Code, Phone, and Territory are required' });
     }
 
-    const existing = await Salesman.findOne({ employeeCode: employeeCode.toUpperCase() });
+    const existing = await Salesman.findOne({ employeeCode: employeeCode.toUpperCase().trim() });
     if (existing) {
       return res.status(400).json({ success: false, message: 'Employee Code already exists' });
     }
 
     const salesman = await Salesman.create({
       ...req.body,
-      employeeCode: employeeCode.toUpperCase()
+      employeeCode: employeeCode.toUpperCase().trim()
     });
 
     res.status(201).json({ success: true, data: salesman });
@@ -77,11 +95,47 @@ const createSalesman = async (req, res) => {
 // @route   PUT /api/salesmen/:id
 const updateSalesman = async (req, res) => {
   try {
-    const salesman = await Salesman.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { employeeCode } = req.body;
+    if (employeeCode) {
+      const existing = await Salesman.findOne({
+        employeeCode: employeeCode.toUpperCase().trim(),
+        _id: { $ne: req.params.id }
+      });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Employee Code already exists on another salesman' });
+      }
+      req.body.employeeCode = employeeCode.toUpperCase().trim();
+    }
+
+    const salesman = await Salesman.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!salesman) {
       return res.status(404).json({ success: false, message: 'Salesman not found' });
     }
     res.json({ success: true, data: salesman });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete salesman
+// @route   DELETE /api/salesmen/:id
+const deleteSalesman = async (req, res) => {
+  try {
+    const salesman = await Salesman.findById(req.params.id);
+    if (!salesman) {
+      return res.status(404).json({ success: false, message: 'Salesman not found' });
+    }
+
+    // Unlink stores assigned to this salesman
+    await Store.updateMany({ salesmanId: salesman._id }, { $unset: { salesmanId: 1 } });
+
+    // Clean up visits recorded by this salesman
+    await SalesmanVisit.deleteMany({ salesmanId: salesman._id });
+
+    // Delete salesman
+    await Salesman.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: `Salesman "${salesman.name}" (${salesman.employeeCode}) deleted successfully` });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -124,6 +178,58 @@ const recordVisit = async (req, res) => {
   }
 };
 
+// @desc    Update Field Visit
+// @route   PUT /api/salesmen/visits/:id
+const updateVisit = async (req, res) => {
+  try {
+    const visit = await SalesmanVisit.findById(req.params.id);
+    if (!visit) {
+      return res.status(404).json({ success: false, message: 'Field visit not found' });
+    }
+
+    const oldOrderValue = Number(visit.orderValue || 0);
+    const newOrderValue = req.body.orderValue !== undefined ? Number(req.body.orderValue || 0) : oldOrderValue;
+
+    if (newOrderValue !== oldOrderValue) {
+      const diff = newOrderValue - oldOrderValue;
+      await Salesman.findByIdAndUpdate(visit.salesmanId, {
+        $inc: { currentMonthAchievement: diff }
+      });
+    }
+
+    const updated = await SalesmanVisit.findByIdAndUpdate(req.params.id, req.body, { new: true })
+      .populate('salesmanId', 'name employeeCode phone')
+      .populate('storeId', 'name code city area ownerName phone');
+
+    res.json({ success: true, message: 'Field visit updated successfully', data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete Field Visit
+// @route   DELETE /api/salesmen/visits/:id
+const deleteVisit = async (req, res) => {
+  try {
+    const visit = await SalesmanVisit.findById(req.params.id);
+    if (!visit) {
+      return res.status(404).json({ success: false, message: 'Field visit not found' });
+    }
+
+    // Revert achievement if orderValue was recorded
+    if (visit.orderValue && Number(visit.orderValue) > 0) {
+      await Salesman.findByIdAndUpdate(visit.salesmanId, {
+        $inc: { currentMonthAchievement: -Number(visit.orderValue) }
+      });
+    }
+
+    await SalesmanVisit.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Field visit deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Get all visits
 // @route   GET /api/salesmen/visits
 const getVisits = async (req, res) => {
@@ -149,6 +255,9 @@ module.exports = {
   getSalesmanById,
   createSalesman,
   updateSalesman,
+  deleteSalesman,
   recordVisit,
+  updateVisit,
+  deleteVisit,
   getVisits
 };

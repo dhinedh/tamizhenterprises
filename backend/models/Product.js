@@ -4,6 +4,7 @@ const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   brand: { type: String, required: true, trim: true },
   category: { type: String, default: 'General', trim: true },
+  subCategory: { type: String, default: 'Napkin', trim: true },
   manufacturerId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Manufacturer', 

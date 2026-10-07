@@ -103,7 +103,16 @@ app.use((err, req, res, next) => {
   });
 });
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Tamizh Enterprises ERP Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
+
