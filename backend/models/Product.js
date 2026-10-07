@@ -7,7 +7,8 @@ const productSchema = new mongoose.Schema({
   manufacturerId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Manufacturer', 
-    required: true 
+    required: false,
+    default: null
   },
   sku: { type: String, sparse: true, uppercase: true, trim: true },
   barcode: { type: String, trim: true },

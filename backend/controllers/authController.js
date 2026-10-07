@@ -48,13 +48,31 @@ const registerUser = async (req, res) => {
   }
 };
 
-// @desc    Auth user & get token
+// @desc    Auth user & get token (supports Email or Mobile Number)
 // @route   POST /api/auth/login
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, identifier, password } = req.body;
+    const loginIdentifier = (identifier || email || phone || '').trim();
 
-    const user = await User.findOne({ email }).populate('storeId').populate('salesmanId');
+    if (!loginIdentifier || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide email or phone number and password' });
+    }
+
+    const userQueries = [
+      { email: loginIdentifier.toLowerCase() },
+      { phone: loginIdentifier }
+    ];
+
+    // Normalize phone number to match various formats (+91 94432 10987, 9443210987, etc.)
+    const digitsOnly = loginIdentifier.replace(/\D/g, '');
+    if (digitsOnly.length >= 7) {
+      const last10 = digitsOnly.slice(-10);
+      const flexiblePattern = last10.split('').join('[\\s-]*');
+      userQueries.push({ phone: { $regex: flexiblePattern, $options: 'i' } });
+    }
+
+    const user = await User.findOne({ $or: userQueries }).populate('storeId').populate('salesmanId');
 
     if (user && (await user.matchPassword(password))) {
       user.lastLogin = new Date();
@@ -74,7 +92,7 @@ const loginUser = async (req, res) => {
         }
       });
     } else {
-      res.status(401).json({ success: false, message: 'Invalid email or password' });
+      res.status(401).json({ success: false, message: 'Invalid email/phone number or password' });
     }
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

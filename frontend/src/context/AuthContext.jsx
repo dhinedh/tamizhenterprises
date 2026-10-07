@@ -45,9 +45,14 @@ export const AuthProvider = ({ children }) => {
     fetchUser();
   }, [token]);
 
-  const login = async (email, password) => {
+  const login = async (emailOrPhone, password) => {
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', {
+        email: emailOrPhone,
+        identifier: emailOrPhone,
+        phone: emailOrPhone,
+        password
+      });
       if (res.data.success) {
         const { token: newToken, ...userData } = res.data.data;
         localStorage.setItem('tamil_erp_token', newToken);

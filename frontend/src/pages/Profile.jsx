@@ -231,18 +231,23 @@ const Profile = () => {
               />
             </div>
 
-            {/* Mobile Number (Disabled/Read-only in reference UI) */}
+            {/* Mobile Number */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
                 Mobile Number
               </label>
               <input
-                type="text"
+                type="tel"
                 name="phone"
                 value={formData.phone}
-                readOnly
-                className="w-full px-3.5 py-2.5 bg-[#e9ecef] border border-slate-300 rounded-lg text-slate-900 font-semibold text-sm cursor-not-allowed select-none"
+                onChange={handleChange}
+                required
+                placeholder="+91 94432 10987"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
+              <p className="text-[11px] text-slate-500 mt-1">
+                You can log in to the ERP portal using either this mobile number or your email ID.
+              </p>
             </div>
 
             {/* Email ID */}

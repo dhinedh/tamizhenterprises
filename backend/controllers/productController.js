@@ -109,8 +109,13 @@ const createProduct = async (req, res) => {
       hsnCode = '190590';
     }
 
+    const payload = { ...req.body };
+    if (!payload.manufacturerId || payload.manufacturerId === '') {
+      payload.manufacturerId = null;
+    }
+
     const product = await Product.create({
-      ...req.body,
+      ...payload,
       sku,
       hsnCode,
       category: (category && category.trim()) ? category.trim() : 'General',
@@ -128,7 +133,8 @@ const createProduct = async (req, res) => {
       warehouseLocation: req.body.warehouseLocation || 'Warehouse Main - Bay A'
     });
 
-    res.status(201).json({ success: true, data: product });
+    const populatedProduct = await Product.findById(product._id).populate('manufacturerId');
+    res.status(201).json({ success: true, data: populatedProduct });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -138,10 +144,15 @@ const createProduct = async (req, res) => {
 // @route   PUT /api/products/:id
 const updateProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+    const payload = { ...req.body };
+    if (!payload.manufacturerId || payload.manufacturerId === '') {
+      payload.manufacturerId = null;
+    }
+
+    const product = await Product.findByIdAndUpdate(req.params.id, payload, {
       new: true,
       runValidators: true
-    });
+    }).populate('manufacturerId');
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }

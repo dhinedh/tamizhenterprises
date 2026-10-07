@@ -274,7 +274,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     children: [
       { name: 'Overall Stock', path: '/stock' },
       { name: 'Update Stock', path: '/stock?action=update' },
-      { name: 'Add New Product', path: '/products?action=new' }
+      { name: 'Add New Product', path: '/products?action=new' },
+      { name: 'Manage Products', path: '/products' }
     ]
   };
 
