@@ -6,16 +6,16 @@ import { useManufacturer } from '../context/ManufacturerContext';
 import Modal from '../components/common/Modal';
 
 const DEFAULT_STOCKS = [
-  // femi9.in Products
-  { _id: '1', name: '180mm (30 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '2', name: 'Combo pack - Femi9 Sanitary Napkins', closingQty: 0, brand: 'femi9.in' },
-  { _id: '3', name: '330mm XL (SW-9 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '4', name: '290mm L (SW-9 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '5', name: '330mm XL (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '6', name: '330mm XL (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '7', name: '290mm L (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '8', name: '290mm L (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9.in' },
-  { _id: '9', name: 'Femi9 Natural Intimate Foam Hygiene Wash (100ml)', closingQty: 0, brand: 'femi9.in' },
+  // femi9 Products
+  { _id: '1', name: '180mm (30 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '2', name: 'Combo pack - Femi9 Sanitary Napkins', closingQty: 0, brand: 'femi9' },
+  { _id: '3', name: '330mm XL (SW-9 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '4', name: '290mm L (SW-9 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '5', name: '330mm XL (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '6', name: '330mm XL (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '7', name: '290mm L (6 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '8', name: '290mm L (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
+  { _id: '9', name: 'Femi9 Natural Intimate Foam Hygiene Wash (100ml)', closingQty: 0, brand: 'femi9' },
   // mansarafoods.com Products
   { _id: '10', name: 'Mansara Instant Chettinad Kulambu Masala Paste (200g)', closingQty: 0, brand: 'mansarafoods.com' },
   { _id: '11', name: 'Mansara Traditional Gunpowder / Idli Podi (250g)', closingQty: 0, brand: 'mansarafoods.com' },
