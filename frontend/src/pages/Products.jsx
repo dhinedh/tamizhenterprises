@@ -33,6 +33,7 @@ import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useManufacturer } from '../context/ManufacturerContext';
 import QuickStockInwardModal from '../components/stock/QuickStockInwardModal';
+import { compareProducts, sortProducts } from '../utils/productSorter';
 
 const CATEGORY_OPTIONS = [
   'General',
@@ -214,7 +215,7 @@ const Products = () => {
 
       const res = await api.get(`/products${query}`, { cache: false });
       if (res.data?.success) {
-        const fetched = res.data.data || [];
+        const fetched = sortProducts(res.data.data || []);
         setProducts(fetched);
         try {
           sessionStorage.setItem('tamil_erp_products', JSON.stringify(fetched));
@@ -454,6 +455,11 @@ const Products = () => {
       if (sortField === 'stock') {
         valA = a.stock?.availableStock ?? 0;
         valB = b.stock?.availableStock ?? 0;
+      }
+
+      if (sortField === 'name') {
+        const comp = compareProducts(a, b);
+        return sortOrder === 'asc' ? comp : -comp;
       }
 
       if (typeof valA === 'string') {

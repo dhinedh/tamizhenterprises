@@ -22,6 +22,7 @@ import {
   Globe
 } from 'lucide-react';
 import { StatusBadge } from '../common/Badge';
+import { sortProducts } from '../../utils/productSorter';
 
 const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('products');
@@ -30,10 +31,12 @@ const ManufacturerDetailModal = ({ manufacturer, isOpen, onClose }) => {
   if (!isOpen || !manufacturer) return null;
 
   const products = manufacturer.products || [];
-  const filteredProducts = products.filter(p =>
-    (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = sortProducts(
+    products.filter(p =>
+      (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const purchases = manufacturer.recentPurchases || [];

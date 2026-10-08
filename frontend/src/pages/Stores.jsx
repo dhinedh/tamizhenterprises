@@ -40,7 +40,7 @@ import { StatusBadge } from '../components/common/Badge';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useManufacturer } from '../context/ManufacturerContext';
-import AddShopView from '../components/stores/AddShopView';
+import AddShopView, { TALUK_OPTIONS, FIRKA_OPTIONS_MAP, ALL_FIRKAS } from '../components/stores/AddShopView';
 
 const CATEGORIES = [
   'MEDICALS',
@@ -189,6 +189,8 @@ const Stores = () => {
       district: store.district || store.city || 'CHENNAI',
       city: store.city || 'Chennai',
       area: store.area || '',
+      taluk: store.taluk || '',
+      firka: store.firka || '',
       address: store.address || '',
       pincode: store.pincode || '',
       gstNumber: store.gstNumber || '',
@@ -891,6 +893,68 @@ const Stores = () => {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
                   placeholder="e.g. Annanagar, Kilpauk"
                 />
+              </div>
+            </div>
+
+            {/* Row 4B: TALUK & FIRKA (AREA) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-1.5 tracking-wide">
+                  TALUK
+                </label>
+                <select
+                  value={editFormData.taluk || ''}
+                  onChange={(e) => {
+                    const newTaluk = e.target.value;
+                    const allowedFirkas = newTaluk ? (FIRKA_OPTIONS_MAP[newTaluk] || []) : ALL_FIRKAS;
+                    const keepFirka = allowedFirkas.includes(editFormData.firka) ? editFormData.firka : '';
+                    setEditFormData({ ...editFormData, taluk: newTaluk, firka: keepFirka });
+                  }}
+                  style={{
+                    backgroundColor: '#fef9a7',
+                    borderColor: '#60a5fa',
+                    color: '#0f172a'
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[#fef9a7] border-[1.5px] border-[#60a5fa] rounded-xl text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+                >
+                  <option value="" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>Select TALUK</option>
+                  <option value="Aminjikarai" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>Aminjikarai</option>
+                  <option value="Ambattur" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>Ambattur</option>
+                  {editFormData.taluk && !['', 'Aminjikarai', 'Ambattur'].includes(editFormData.taluk) && (
+                    <option value={editFormData.taluk} style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>{editFormData.taluk}</option>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-1.5 tracking-wide">
+                  FIRKA (AREA)
+                </label>
+                <select
+                  value={editFormData.firka || ''}
+                  onChange={(e) => {
+                    const newFirka = e.target.value;
+                    let autoTaluk = editFormData.taluk;
+                    if (!autoTaluk) {
+                      if (FIRKA_OPTIONS_MAP['Ambattur']?.includes(newFirka)) autoTaluk = 'Ambattur';
+                      else if (FIRKA_OPTIONS_MAP['Aminjikarai']?.includes(newFirka)) autoTaluk = 'Aminjikarai';
+                    }
+                    setEditFormData({ ...editFormData, firka: newFirka, taluk: autoTaluk });
+                  }}
+                  style={{
+                    backgroundColor: '#fef9a7',
+                    borderColor: '#60a5fa',
+                    color: '#0f172a'
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[#fef9a7] border-[1.5px] border-[#60a5fa] rounded-xl text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+                >
+                  <option value="" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>Select FIRKA (AREA)</option>
+                  {((editFormData.taluk && FIRKA_OPTIONS_MAP[editFormData.taluk]) ? FIRKA_OPTIONS_MAP[editFormData.taluk] : ALL_FIRKAS).map((f) => (
+                    <option key={f} value={f} style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>{f}</option>
+                  ))}
+                  {editFormData.firka && !ALL_FIRKAS.includes(editFormData.firka) && (
+                    <option value={editFormData.firka} style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>{editFormData.firka}</option>
+                  )}
+                </select>
               </div>
             </div>
 

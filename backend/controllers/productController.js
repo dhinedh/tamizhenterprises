@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const Stock = require('../models/Stock');
 const Manufacturer = require('../models/Manufacturer');
+const { sortProducts } = require('../utils/productSorter');
 
 // @desc    Get all products with stock information
 // @route   GET /api/products
@@ -60,6 +61,8 @@ const getProducts = async (req, res) => {
     if (lowStock === 'true') {
       products = products.filter(p => p.stock.isLowStock);
     }
+
+    products = sortProducts(products);
 
     res.json({ success: true, count: products.length, data: products });
   } catch (error) {

@@ -87,7 +87,11 @@ const Navbar = ({ onOpenSidebar, hasSidebar }) => {
               </>
             ) : (
               <>
-                <Layers className="w-4 h-4 text-teal-600 shrink-0" />
+                <img
+                  src="/logo.jpg"
+                  alt="Tamizh Enterprises"
+                  className="w-5 h-5 rounded-full object-cover shrink-0 border border-slate-200 shadow-2xs"
+                />
                 <div className="flex items-center gap-1.5 text-left">
                   <span className="font-bold text-xs sm:text-sm text-slate-800">
                     All Manufacturers
@@ -216,7 +220,12 @@ const Navbar = ({ onOpenSidebar, hasSidebar }) => {
 
       <div className="flex items-center gap-3">
         {/* User Badge & Logout */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <img
+            src={user?.logo || '/logo.jpg'}
+            alt="User"
+            className="w-7 h-7 rounded-full object-cover border border-slate-200 shadow-2xs"
+          />
           <div className="hidden sm:flex flex-col text-right">
             <span className="text-xs font-medium text-slate-800 leading-tight">{user?.name}</span>
             <span className="text-[10px] text-teal-600 font-semibold uppercase">{user?.role}</span>

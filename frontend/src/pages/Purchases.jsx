@@ -21,6 +21,7 @@ import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { useManufacturer } from '../context/ManufacturerContext';
+import { sortProducts } from '../utils/productSorter';
 
 const Purchases = () => {
   const { activeManufacturer } = useManufacturer();
@@ -93,7 +94,7 @@ const Purchases = () => {
     try {
       const res = await api.get('/products');
       if (res.data.success) {
-        setProducts(res.data.data);
+        setProducts(sortProducts(res.data.data || []));
       }
     } catch (err) {
       console.error(err);
@@ -102,12 +103,14 @@ const Purchases = () => {
 
   // Filter products by selected manufacturer
   const targetMfgId = formData.manufacturerId || activeManufacturer?._id;
-  const filteredProducts = targetMfgId
-    ? products.filter(p => {
-        const pMfgId = p.manufacturerId?._id ? p.manufacturerId._id.toString() : p.manufacturerId ? p.manufacturerId.toString() : '';
-        return pMfgId === targetMfgId.toString();
-      })
-    : products;
+  const filteredProducts = sortProducts(
+    targetMfgId
+      ? products.filter(p => {
+          const pMfgId = p.manufacturerId?._id ? p.manufacturerId._id.toString() : p.manufacturerId ? p.manufacturerId.toString() : '';
+          return pMfgId === targetMfgId.toString();
+        })
+      : products
+  );
 
   const handleProductChange = (prodId) => {
     const prod = products.find(p => p._id === prodId);

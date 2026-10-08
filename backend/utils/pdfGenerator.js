@@ -160,10 +160,22 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   strokeBorder(midX, 46.7, midX, 413.2);
 
   // 3. Top-Left Seller Section (Y: 46.7 -> 177.1)
-  const logoPath = path.join(__dirname, '../assets/logo.png');
-  if (fs.existsSync(logoPath)) {
+  let logoImg = null;
+  if (owner?.logo && typeof owner.logo === 'string' && owner.logo.includes('base64,')) {
     try {
-      doc.image(logoPath, 22.8, 51.5, { fit: [105.8, 106.4], align: 'center', valign: 'center' });
+      logoImg = Buffer.from(owner.logo.split('base64,')[1], 'base64');
+    } catch (e) {}
+  }
+  if (!logoImg) {
+    const defaultLogoJpg = path.join(__dirname, '../assets/logo.jpg');
+    const defaultLogoPng = path.join(__dirname, '../assets/logo.png');
+    if (fs.existsSync(defaultLogoJpg)) logoImg = defaultLogoJpg;
+    else if (fs.existsSync(defaultLogoPng)) logoImg = defaultLogoPng;
+  }
+
+  if (logoImg) {
+    try {
+      doc.image(logoImg, 22.8, 51.5, { fit: [105.8, 106.4], align: 'center', valign: 'center' });
     } catch (e) {
       doc.rect(22.8, 51.5, 105.8, 106.4).strokeColor('#cccccc').stroke();
     }

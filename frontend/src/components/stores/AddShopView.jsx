@@ -28,6 +28,33 @@ const CATEGORIES = [
   'OTHERS'
 ];
 
+export const TALUK_OPTIONS = [
+  'Aminjikarai',
+  'Ambattur'
+];
+
+export const FIRKA_OPTIONS_MAP = {
+  'Ambattur': [
+    'Ambattur, Oragadam, pudur, Kallikuppam, Pattravakkam, Ayyampakkam & Korattur',
+    'Villivakkam - Area',
+    'Padi - Area'
+  ],
+  'Aminjikarai': [
+    'Aminjikarai, Anna Nagar & Shenoy Nagar',
+    'Arumbakkam & Koyambedu - Area',
+    'Villivakkam - Area'
+  ]
+};
+
+export const ALL_FIRKAS = [
+  'Ambattur, Oragadam, pudur, Kallikuppam, Pattravakkam, Ayyampakkam & Korattur',
+  'Villivakkam - Area',
+  'Padi - Area',
+  'Aminjikarai, Anna Nagar & Shenoy Nagar',
+  'Arumbakkam & Koyambedu - Area'
+];
+
+
 const parseCSVLine = (line) => {
   const result = [];
   let current = '';
@@ -126,6 +153,45 @@ const AddShopView = ({ onDone, onCancel }) => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const availableFirkas = React.useMemo(() => {
+    if (formData.taluk && FIRKA_OPTIONS_MAP[formData.taluk]) {
+      return FIRKA_OPTIONS_MAP[formData.taluk];
+    }
+    return ALL_FIRKAS;
+  }, [formData.taluk]);
+
+  const handleTalukChange = (e) => {
+    const newTaluk = e.target.value;
+    setFormData((prev) => {
+      const allowedFirkas = newTaluk ? (FIRKA_OPTIONS_MAP[newTaluk] || []) : ALL_FIRKAS;
+      const keepFirka = allowedFirkas.includes(prev.firka) ? prev.firka : '';
+      return {
+        ...prev,
+        taluk: newTaluk,
+        firka: keepFirka
+      };
+    });
+  };
+
+  const handleFirkaChange = (e) => {
+    const newFirka = e.target.value;
+    setFormData((prev) => {
+      let autoTaluk = prev.taluk;
+      if (!autoTaluk) {
+        if (FIRKA_OPTIONS_MAP['Ambattur']?.includes(newFirka)) {
+          autoTaluk = 'Ambattur';
+        } else if (FIRKA_OPTIONS_MAP['Aminjikarai']?.includes(newFirka)) {
+          autoTaluk = 'Aminjikarai';
+        }
+      }
+      return {
+        ...prev,
+        firka: newFirka,
+        taluk: autoTaluk
+      };
+    });
   };
 
   const handleSingleSubmit = async (e) => {
@@ -555,32 +621,67 @@ const AddShopView = ({ onDone, onCancel }) => {
 
               {/* TALUK */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-1.5 tracking-wide">
                   TALUK
                 </label>
-                <input
-                  type="text"
+                <select
                   name="taluk"
-                  placeholder="Select TALUK"
                   value={formData.taluk}
-                  onChange={handleSingleChange}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
+                  onChange={handleTalukChange}
+                  style={{
+                    backgroundColor: '#fef9a7',
+                    borderColor: '#60a5fa',
+                    color: '#0f172a'
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[#fef9a7] border-[1.5px] border-[#60a5fa] rounded-xl text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+                >
+                  <option value="" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Select TALUK
+                  </option>
+                  <option value="Aminjikarai" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Aminjikarai
+                  </option>
+                  <option value="Ambattur" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Ambattur
+                  </option>
+                  {formData.taluk && !['', 'Aminjikarai', 'Ambattur'].includes(formData.taluk) && (
+                    <option value={formData.taluk} style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                      {formData.taluk}
+                    </option>
+                  )}
+                </select>
               </div>
 
               {/* FIRKA (AREA) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-1.5 tracking-wide">
                   FIRKA (AREA)
                 </label>
-                <input
-                  type="text"
+                <select
                   name="firka"
-                  placeholder="Select FIRKA (AREA)"
                   value={formData.firka}
-                  onChange={handleSingleChange}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
+                  onChange={handleFirkaChange}
+                  style={{
+                    backgroundColor: '#fef9a7',
+                    borderColor: '#60a5fa',
+                    color: '#0f172a'
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[#fef9a7] border-[1.5px] border-[#60a5fa] rounded-xl text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+                >
+                  <option value="" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Select FIRKA (AREA)
+                  </option>
+                  {availableFirkas.map((f) => (
+                    <option key={f} value={f} style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                      {f}
+                    </option>
+                  ))}
+                  {formData.firka && !availableFirkas.includes(formData.firka) && (
+                    <option value={formData.firka} style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                      {formData.firka}
+                    </option>
+                  )}
+                </select>
               </div>
 
               {/* Pincode* */}

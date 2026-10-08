@@ -41,9 +41,11 @@ const Login = () => {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 space-y-6">
         {/* Brand header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex w-14 h-14 rounded-2xl bg-teal-600 items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-teal-600/30">
-            TE
-          </div>
+          <img
+            src="/logo.jpg"
+            alt="Tamizh Enterprises Logo"
+            className="inline-block w-20 h-20 rounded-full object-cover shadow-lg border-2 border-white ring-4 ring-teal-500/20"
+          />
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Tamizh Enterprises</h1>
           <p className="text-xs text-slate-500">Distribution & Dealer Management ERP</p>
         </div>

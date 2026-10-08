@@ -573,9 +573,11 @@ const Sidebar = ({ isOpen, onClose }) => {
             /* Central Hub Header */
             <div className="flex items-center justify-between gap-2 p-1">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-sm shadow-sm flex-shrink-0">
-                  TE
-                </div>
+                <img
+                  src="/logo.jpg"
+                  alt="Tamizh Enterprises"
+                  className="w-10 h-10 rounded-full object-cover shadow-sm flex-shrink-0 border border-slate-200 ring-2 ring-teal-500/10"
+                />
                 <div className="min-w-0">
                   <div className="font-bold text-slate-900 text-xs tracking-tight truncate">
                     Tamizh Enterprises
@@ -775,12 +777,19 @@ const Sidebar = ({ isOpen, onClose }) => {
             onClick={() => setExpandedGroups((prev) => ({ ...prev, userCard: !prev.userCard }))}
             className="w-full text-left p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between shadow-2xs hover:border-blue-300 transition-colors cursor-pointer"
           >
-            <div className="min-w-0 pr-2">
-              <div className="text-xs font-semibold text-slate-900 truncate">
-                {user?.name || 'Muralitharan'}
-              </div>
-              <div className="text-[10px] text-blue-600 font-medium">
-                {user?.role || 'Owner'} Account
+            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+              <img
+                src={user?.logo || '/logo.jpg'}
+                alt="Profile"
+                className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-2xs flex-shrink-0"
+              />
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-slate-900 truncate">
+                  {user?.name || 'Muralitharan'}
+                </div>
+                <div className="text-[10px] text-blue-600 font-medium">
+                  {user?.role || 'Owner'} Account
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-1.5">

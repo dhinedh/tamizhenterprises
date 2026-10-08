@@ -4,6 +4,7 @@ const Payment = require('../models/Payment');
 const Product = require('../models/Product');
 const Stock = require('../models/Stock');
 const StockLedger = require('../models/StockLedger');
+const { sortProducts } = require('../utils/productSorter');
 
 // @desc    Get all manufacturers
 // @route   GET /api/manufacturers
@@ -143,7 +144,7 @@ const getManufacturerById = async (req, res) => {
         totalPhysicalStock,
         totalAvailableStock,
         stockValuation,
-        products: productsWithStock
+        products: sortProducts(productsWithStock)
       }
     });
   } catch (error) {

@@ -25,23 +25,8 @@ const DEFAULT_PROFILE = {
   }
 };
 
-// Default logo SVG matching the circular multi-color branded badge in reference screenshot
-const DEFAULT_LOGO_SVG = `data:image/svg+xml;utf8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
-  <defs>
-    <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ec4899" />
-      <stop offset="25%" stop-color="#8b5cf6" />
-      <stop offset="50%" stop-color="#06b6d4" />
-      <stop offset="75%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#f59e0b" />
-    </linearGradient>
-  </defs>
-  <circle cx="100" cy="100" r="92" fill="#ffffff" stroke="url(#ringGrad)" stroke-width="12" />
-  <text x="100" y="95" font-family="'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="700" fill="#0f766e" text-anchor="middle">Tamizh</text>
-  <text x="100" y="125" font-family="'Brush Script MT', cursive, sans-serif" font-size="20" font-style="italic" fill="#0f766e" text-anchor="middle">Enterprises</text>
-</svg>
-`)}`;
+// Default official Tamizh Enterprises Logo
+const DEFAULT_LOGO_IMAGE = '/logo.jpg';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -72,7 +57,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [logoPreview, setLogoPreview] = useState(DEFAULT_LOGO_SVG);
+  const [logoPreview, setLogoPreview] = useState(DEFAULT_LOGO_IMAGE);
 
   useEffect(() => {
     // Populate form with user data, falling back to reference defaults
@@ -103,7 +88,7 @@ const Profile = () => {
       if (user.logo) {
         setLogoPreview(user.logo);
       } else {
-        setLogoPreview(DEFAULT_LOGO_SVG);
+        setLogoPreview(DEFAULT_LOGO_IMAGE);
       }
     }
   }, [user]);
@@ -162,7 +147,7 @@ const Profile = () => {
         phone: formData.phone,
         gstin: formData.gstin,
         companyName: formData.companyName,
-        logo: formData.logo || (logoPreview !== DEFAULT_LOGO_SVG ? logoPreview : ''),
+        logo: formData.logo || (logoPreview !== DEFAULT_LOGO_IMAGE ? logoPreview : ''),
         addressLine1: formData.addressLine1,
         addressLine2: formData.addressLine2,
         city: formData.city,

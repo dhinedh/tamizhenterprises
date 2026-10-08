@@ -36,6 +36,7 @@ import Modal from '../components/common/Modal';
 import { StatusBadge } from '../components/common/Badge';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { useManufacturer } from '../context/ManufacturerContext';
+import { sortProducts } from '../utils/productSorter';
 
 const StoreTransfers = () => {
   const navigate = useNavigate();
@@ -108,9 +109,10 @@ const StoreTransfers = () => {
       }
 
       if (productsRes.data.success) {
-        setProducts(productsRes.data.data);
+        const sortedProds = sortProducts(productsRes.data.data || []);
+        setProducts(sortedProds);
         // Default first item with first product
-        const prods = productsRes.data.data;
+        const prods = sortedProds;
         if (prods.length > 0) {
           setItems([
             {
@@ -147,7 +149,7 @@ const StoreTransfers = () => {
         api.get('/products')
       ]);
       if (invoicesRes.data.success) setInvoices(invoicesRes.data.data);
-      if (productsRes.data.success) setProducts(productsRes.data.data);
+      if (productsRes.data.success) setProducts(sortProducts(productsRes.data.data || []));
     } catch (err) {
       console.error('Error refreshing data:', err);
     } finally {
@@ -184,6 +186,7 @@ const StoreTransfers = () => {
 
   // Filtered Products for transfer item selection
   const selectableProducts = useMemo(() => {
+    let prods = products;
     if (filterBrandOnly && activeManufacturer) {
       const brandFiltered = products.filter(
         p =>
@@ -192,9 +195,9 @@ const StoreTransfers = () => {
           p.brand?.toLowerCase() === activeManufacturer.code?.toLowerCase() ||
           p.brand?.toLowerCase() === activeManufacturer.name?.toLowerCase()
       );
-      return brandFiltered.length > 0 ? brandFiltered : products;
+      prods = brandFiltered.length > 0 ? brandFiltered : products;
     }
-    return products;
+    return sortProducts(prods);
   }, [products, filterBrandOnly, activeManufacturer]);
 
   // Product Selection on row

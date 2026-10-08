@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/common/Modal';
+import { sortProducts } from '../utils/productSorter';
 
 // --- Custom Detailed Icons to match screenshot exactly ---
 
@@ -222,7 +223,7 @@ const Invoices = () => {
         setStores(storesRes.data.data || []);
       }
       if (prodsRes.data.success) {
-        setProducts(prodsRes.data.data || []);
+        setProducts(sortProducts(prodsRes.data.data || []));
       }
     } catch (err) {
       console.error('Failed to load initial data:', err);
@@ -918,9 +919,11 @@ const Invoices = () => {
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-3.5 sm:p-4 flex items-center justify-between">
             {/* Left: Avatar & Profile Details */}
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-full bg-[#d97706] text-white flex items-center justify-center font-bold text-xl shadow-xs flex-shrink-0">
-                K
-              </div>
+              <img
+                src="/logo.jpg"
+                alt="Tamizh Enterprises"
+                className="w-13 h-13 rounded-full object-cover shadow-xs flex-shrink-0 border-2 border-amber-300 ring-2 ring-amber-100"
+              />
               <div className="flex flex-col justify-center leading-tight">
                 <span className="text-sm sm:text-base font-extrabold text-[#b45309] tracking-tight uppercase">
                   K.TAMIZHMOZHI
@@ -1116,7 +1119,7 @@ const Invoices = () => {
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                   >
                     <option value="">Select Product</option>
-                    {products.map((p) => (
+                    {sortProducts(products).map((p) => (
                       <option key={p._id} value={p._id}>
                         {p.name} {p.sku ? `(${p.sku})` : ''} - MRP: ₹{p.mrp || p.sellingPrice}
                       </option>

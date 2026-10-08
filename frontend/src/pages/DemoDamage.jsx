@@ -19,6 +19,7 @@ import {
 import api from '../api/client';
 import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
+import { sortProducts } from '../utils/productSorter';
 
 const DemoDamage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -78,7 +79,7 @@ const DemoDamage = () => {
         setStores(storesRes.value.data.data || []);
       }
       if (productsRes.status === 'fulfilled' && productsRes.value.data.success) {
-        const prodList = productsRes.value.data.data || [];
+        const prodList = sortProducts(productsRes.value.data.data || []);
         setProducts(prodList);
         if (prodList.length > 0 && !formData.productId) {
           setFormData((prev) => ({
@@ -481,7 +482,7 @@ const DemoDamage = () => {
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
                   required
                 >
-                  {products.map((p) => (
+                  {sortProducts(products).map((p) => (
                     <option key={p._id} value={p._id}>
                       {p.name} ({p.sku || p.brand || 'Item'})
                     </option>

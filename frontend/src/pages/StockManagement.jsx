@@ -4,6 +4,7 @@ import { Search, RefreshCw, Package, Factory, Boxes, Sparkles, PackagePlus, Plus
 import api from '../api/client';
 import { useManufacturer } from '../context/ManufacturerContext';
 import Modal from '../components/common/Modal';
+import { sortProducts } from '../utils/productSorter';
 
 const DEFAULT_STOCKS = [
   // femi9 Products
@@ -17,16 +18,16 @@ const DEFAULT_STOCKS = [
   { _id: '8', name: '290mm L (3 PCS) - Femi9 Premium Sanitary Napkin', closingQty: 0, brand: 'femi9' },
   { _id: '9', name: 'Femi9 Natural Intimate Foam Hygiene Wash (100ml)', closingQty: 0, brand: 'femi9' },
   // Lumi9 Baby Diapers (femi9)
-  { _id: '14', name: 'Lumi9 Baby Diaper L(24)', closingQty: 0, brand: 'femi9' },
-  { _id: '15', name: 'Lumi9 Baby Diaper L(54)', closingQty: 0, brand: 'femi9' },
-  { _id: '16', name: 'Lumi9 Baby Diaper M(24)', closingQty: 0, brand: 'femi9' },
-  { _id: '17', name: 'Lumi9 Baby Diaper M(54)', closingQty: 0, brand: 'femi9' },
   { _id: '18', name: 'Lumi9 Baby Diaper NB(3)', closingQty: 0, brand: 'femi9' },
   { _id: '19', name: 'Lumi9 Baby Diaper NB(24)', closingQty: 0, brand: 'femi9' },
   { _id: '20', name: 'Lumi9 Baby Diaper NB(54)', closingQty: 0, brand: 'femi9' },
   { _id: '21', name: 'Lumi9 Baby Diaper S(3)', closingQty: 0, brand: 'femi9' },
   { _id: '22', name: 'Lumi9 Baby Diaper S(24)', closingQty: 0, brand: 'femi9' },
   { _id: '23', name: 'Lumi9 Baby Diaper S(54)', closingQty: 0, brand: 'femi9' },
+  { _id: '16', name: 'Lumi9 Baby Diaper M(24)', closingQty: 0, brand: 'femi9' },
+  { _id: '17', name: 'Lumi9 Baby Diaper M(54)', closingQty: 0, brand: 'femi9' },
+  { _id: '14', name: 'Lumi9 Baby Diaper L(24)', closingQty: 0, brand: 'femi9' },
+  { _id: '15', name: 'Lumi9 Baby Diaper L(54)', closingQty: 0, brand: 'femi9' },
   { _id: '24', name: 'Lumi9 Baby Diaper XL(24)', closingQty: 0, brand: 'femi9' },
   { _id: '25', name: 'Lumi9 Baby Diaper XL(54)', closingQty: 0, brand: 'femi9' },
   // mansarafoods.com Products
@@ -145,13 +146,13 @@ const StockManagement = () => {
       }
 
       if (items.length > 0) {
-        setStocks(items);
+        setStocks(sortProducts(items));
       } else {
-        setStocks(DEFAULT_STOCKS);
+        setStocks(sortProducts(DEFAULT_STOCKS));
       }
     } catch (err) {
       console.error('Failed to fetch stock data:', err);
-      setStocks(DEFAULT_STOCKS);
+      setStocks(sortProducts(DEFAULT_STOCKS));
     } finally {
       setLoading(false);
     }

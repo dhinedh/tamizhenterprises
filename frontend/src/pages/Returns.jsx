@@ -6,6 +6,7 @@ import Modal from '../components/common/Modal';
 import { StatusBadge } from '../components/common/Badge';
 import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
+import { sortProducts } from '../utils/productSorter';
 
 const Returns = () => {
   const { isOwner } = useAuth();
@@ -65,12 +66,13 @@ const Returns = () => {
     try {
       const res = await api.get('/products');
       if (res.data.success) {
-        setProducts(res.data.data);
-        if (res.data.data.length > 0) {
+        const sorted = sortProducts(res.data.data || []);
+        setProducts(sorted);
+        if (sorted.length > 0) {
           setFormData(prev => ({
             ...prev,
-            productId: res.data.data[0]._id,
-            unitPrice: res.data.data[0].dealerPrice || 30
+            productId: sorted[0]._id,
+            unitPrice: sorted[0].dealerPrice || 30
           }));
         }
       }
@@ -252,7 +254,7 @@ const Returns = () => {
                 onChange={(e) => handleProductChange(e.target.value)}
                 className="w-full px-3 py-1.5 border border-slate-200 rounded-lg bg-white"
               >
-                {products.map((p) => (
+                {sortProducts(products).map((p) => (
                   <option key={p._id} value={p._id}>{p.name}</option>
                 ))}
               </select>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Truck, Plus, Trash2, AlertCircle, FileText, CheckCircle2, IndianRupee, Store, UserCheck } from 'lucide-react';
 import Modal from '../common/Modal';
 import api from '../../api/client';
+import { sortProducts } from '../../utils/productSorter';
 
 const StoreTransferModal = ({
   isOpen,
@@ -336,7 +337,7 @@ const StoreTransferModal = ({
                             className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
                           >
                             <option value="">Select SKU...</option>
-                            {productsList.map((p) => (
+                            {sortProducts(productsList).map((p) => (
                               <option key={p._id} value={p._id}>
                                 {p.name} ({p.sku}) &bull; Avail: {p.stock?.currentStock ?? 0}
                               </option>

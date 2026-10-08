@@ -21,6 +21,7 @@ import {
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
+import { sortProducts } from '../utils/productSorter';
 
 const FieldOrders = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -52,7 +53,7 @@ const FieldOrders = () => {
   const [products, setProducts] = useState(() => {
     try {
       const saved = sessionStorage.getItem('tamil_erp_products');
-      return saved ? JSON.parse(saved) : [];
+      return saved ? sortProducts(JSON.parse(saved)) : [];
     } catch {
       return [];
     }
@@ -182,7 +183,7 @@ const FieldOrders = () => {
     try {
       const res = await api.get('/products');
       if (res.data.success) {
-        setProducts(res.data.data || []);
+        setProducts(sortProducts(res.data.data || []));
       }
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -207,9 +208,13 @@ const FieldOrders = () => {
           (s.city && s.city.toLowerCase() === districtFilter.toLowerCase());
         if (!matchesDistrict) return false;
       }
+      if (talukFilter) {
+        const matchesTaluk = s.taluk && s.taluk.toLowerCase().includes(talukFilter.toLowerCase());
+        if (!matchesTaluk) return false;
+      }
       return true;
     });
-  }, [stores, districtFilter]);
+  }, [stores, districtFilter, talukFilter]);
 
   // Handle Product Select in Line Item Staging
   const handleProductSelectChange = (e) => {
@@ -755,16 +760,29 @@ const FieldOrders = () => {
 
               {/* TALUK Filter */}
               <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1.5">
+                <label className="block text-xs font-bold text-slate-800 uppercase mb-1.5 tracking-wide">
                   TALUK Filter
                 </label>
-                <input
-                  type="text"
+                <select
                   value={talukFilter}
                   onChange={(e) => setTalukFilter(e.target.value)}
-                  placeholder="Select TALUK"
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-800 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
+                  style={{
+                    backgroundColor: '#fef9a7',
+                    borderColor: '#60a5fa',
+                    color: '#0f172a'
+                  }}
+                  className="w-full px-3.5 py-2.5 bg-[#fef9a7] border-[1.5px] border-[#60a5fa] rounded-xl text-slate-900 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 cursor-pointer shadow-sm transition-all"
+                >
+                  <option value="" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Select TALUK
+                  </option>
+                  <option value="Aminjikarai" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Aminjikarai
+                  </option>
+                  <option value="Ambattur" style={{ backgroundColor: '#fef9a7', color: '#0f172a' }}>
+                    Ambattur
+                  </option>
+                </select>
               </div>
 
               {/* Shop* Dropdown */}
@@ -851,7 +869,7 @@ const FieldOrders = () => {
                       className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-800 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                     >
                       <option value="">Select Product</option>
-                      {products.map((p) => (
+                      {sortProducts(products).map((p) => (
                         <option key={p._id} value={p._id}>
                           {p.name} - ₹{p.dealerPrice || p.sellingPrice || p.mrp} (GST {p.gstRate || 0}%)
                         </option>

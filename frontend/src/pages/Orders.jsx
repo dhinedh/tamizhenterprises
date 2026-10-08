@@ -8,6 +8,7 @@ import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import StoreTransferModal from '../components/stock/StoreTransferModal';
 import InvoiceSuccessModal from '../components/stock/InvoiceSuccessModal';
+import { sortProducts } from '../utils/productSorter';
 
 const Orders = () => {
   const { user, isOwner, isSalesman, isStore } = useAuth();
@@ -104,7 +105,7 @@ const Orders = () => {
     try {
       const res = await api.get('/products');
       if (res.data.success) {
-        setProducts(res.data.data);
+        setProducts(sortProducts(res.data.data || []));
       }
     } catch (err) {
       console.error(err);
@@ -478,7 +479,7 @@ const Orders = () => {
                     >
                       <option value="">Select Product</option>
                       <optgroup label="femi9.in (Hygiene & Care)">
-                        {products
+                        {sortProducts(products)
                           .filter(p => p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI'))
                           .map((p) => (
                             <option key={p._id} value={p._id}>
@@ -487,7 +488,7 @@ const Orders = () => {
                           ))}
                       </optgroup>
                       <optgroup label="mansarafoods.com (Spices & Foods)">
-                        {products
+                        {sortProducts(products)
                           .filter(p => !(p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI')))
                           .map((p) => (
                             <option key={p._id} value={p._id}>

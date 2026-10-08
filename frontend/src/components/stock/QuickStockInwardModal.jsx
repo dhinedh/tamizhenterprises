@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowDownToLine, PackagePlus, CheckCircle2, IndianRupee, AlertCircle } from 'lucide-react';
 import Modal from '../common/Modal';
 import api from '../../api/client';
+import { sortProducts } from '../../utils/productSorter';
 
 const QuickStockInwardModal = ({
   isOpen,
@@ -39,21 +40,23 @@ const QuickStockInwardModal = ({
       list.unshift(activeProduct);
     }
 
-    if (!activeMfg || list.length === 0) return list;
+    if (!activeMfg || list.length === 0) return sortProducts(list);
 
     const mfgId = String(activeMfg._id || activeMfg);
     const hasMfgField = list.some(p => p.manufacturerId);
 
     if (!hasMfgField) {
       // Products don't have manufacturerId field, assume already scoped to this brand
-      return list;
+      return sortProducts(list);
     }
 
-    return list.filter(p => {
-      const pMfgId = String(p.manufacturerId?._id || p.manufacturerId || '');
-      return pMfgId === mfgId;
-    });
-  }, [productList, activeMfg, activeProduct]);
+    return sortProducts(
+      list.filter(p => {
+        const pMfgId = String(p.manufacturerId?._id || p.manufacturerId || '');
+        return pMfgId === mfgId;
+      })
+    );
+  }, [productList, activeProduct, activeMfg]);
 
   useEffect(() => {
     if (!isOpen) {

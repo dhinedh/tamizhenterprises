@@ -700,19 +700,26 @@ const Dashboard = () => {
       {/* Welcome & Multi-Brand Hub Hero Banner */}
       <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white p-6 md:p-8 rounded-3xl shadow-xl border border-slate-800 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-500/20 text-teal-300 border border-teal-400/30 tracking-wider uppercase">
-                Tamizh Enterprises Distribution ERP
-              </span>
-              <span className="text-xs text-slate-400">Madurai Central Warehouse Hub</span>
+          <div className="flex items-start sm:items-center gap-4 max-w-2xl">
+            <img
+              src="/logo.jpg"
+              alt="Tamizh Enterprises"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover shadow-xl border-2 border-teal-400/40 ring-4 ring-teal-500/20 shrink-0 bg-white"
+            />
+            <div>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="px-3 py-0.5 rounded-full text-[11px] font-bold bg-teal-500/20 text-teal-300 border border-teal-400/30 tracking-wider uppercase">
+                  Tamizh Enterprises Distribution ERP
+                </span>
+                <span className="text-xs text-slate-400">Madurai Central Warehouse Hub</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
+                Select Manufacturer / Brand
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">
+                Tamizh Enterprises purchases and stocks goods from multiple principal manufacturers. Select or register a manufacturer below to open their dedicated workspace with live inventory, SKUs, and purchase history.
+              </p>
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Select Manufacturer / Brand
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-              Tamizh Enterprises purchases and stocks goods from multiple principal manufacturers. Select or register a manufacturer below to open their dedicated workspace with live inventory, SKUs, and purchase history.
-            </p>
           </div>
 
           <div className="flex items-center gap-3">
