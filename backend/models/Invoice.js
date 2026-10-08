@@ -23,7 +23,7 @@ const invoiceItemSchema = new mongoose.Schema({
 });
 
 const invoiceSchema = new mongoose.Schema({
-  invoiceNumber: { type: String, required: true, unique: true, uppercase: true },
+  invoiceNumber: { type: String, required: true, uppercase: true, trim: true },
   orderId: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Order', 

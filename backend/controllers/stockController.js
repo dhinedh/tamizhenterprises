@@ -521,9 +521,15 @@ const transferStockToStore = async (req, res) => {
       }
     }
 
-    // Generate Invoice Number
-    const invCount = await Invoice.countDocuments();
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invCount + 1).padStart(5, '0')}`;
+    // Generate or use provided Invoice Number (separate sequence for Shop vs Customer, pure numeric e.g. '001')
+    let invoiceNumber = (req.body.customInvoiceNumber || req.body.invoiceNumber || '').trim().toUpperCase();
+    if (!invoiceNumber) {
+      const isCust = Boolean(customer);
+      const count = await Invoice.countDocuments(
+        isCust ? { customerId: { $ne: null } } : { storeId: { $ne: null }, customerId: null }
+      );
+      invoiceNumber = String(count + 1).padStart(3, '0');
+    }
     const entityState = (billingEntity.state || 'Tamil Nadu').toLowerCase();
     const isInterstate = entityState !== 'tamil nadu' && entityState !== 'tamilnadu';
 

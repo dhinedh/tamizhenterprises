@@ -93,9 +93,11 @@ const generateInvoiceFromOrder = async (req, res) => {
       }
     }
 
-    const store = order.storeId;
-    const count = await Invoice.countDocuments();
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+    const isCustomer = Boolean(order.customerId);
+    const count = await Invoice.countDocuments(
+      isCustomer ? { customerId: { $ne: null } } : { storeId: { $ne: null }, customerId: null }
+    );
+    const invoiceNumber = String(count + 1).padStart(3, '0');
 
     let taxableSubtotal = 0;
     let totalDiscount = 0;
@@ -293,16 +295,18 @@ const updateInvoice = async (req, res) => {
       paidAmount
     } = req.body;
 
-    // If invoiceNumber changed, verify uniqueness
+    // If invoiceNumber changed, verify uniqueness within the same category (Shop vs Customer)
     if (invoiceNumber && invoiceNumber.trim().toUpperCase() !== invoice.invoiceNumber) {
-      const existing = await Invoice.findOne({ 
-        invoiceNumber: invoiceNumber.trim().toUpperCase(), 
-        _id: { $ne: invoice._id } 
-      });
+      const isCust = Boolean(customerId !== undefined ? customerId : invoice.customerId);
+      const query = isCust
+        ? { customerId: { $ne: null }, invoiceNumber: invoiceNumber.trim().toUpperCase(), _id: { $ne: invoice._id } }
+        : { storeId: { $ne: null }, customerId: null, invoiceNumber: invoiceNumber.trim().toUpperCase(), _id: { $ne: invoice._id } };
+
+      const existing = await Invoice.findOne(query);
       if (existing) {
         return res.status(400).json({ 
           success: false, 
-          message: `Bill / Invoice Number "${invoiceNumber.trim().toUpperCase()}" already exists` 
+          message: `Bill / Invoice Number "${invoiceNumber.trim().toUpperCase()}" already exists for ${isCust ? 'customers' : 'retail shops'}` 
         });
       }
       invoice.invoiceNumber = invoiceNumber.trim().toUpperCase();
