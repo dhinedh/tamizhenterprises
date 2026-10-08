@@ -146,6 +146,12 @@ const Invoices = () => {
   const [removeInvoiceTarget, setRemoveInvoiceTarget] = useState(null);
   const [successToast, setSuccessToast] = useState('');
 
+  // ================= Edit Invoice State =================
+  const [editInvoiceForm, setEditInvoiceForm] = useState(null);
+  const [isSavingEditInvoice, setIsSavingEditInvoice] = useState(false);
+  const [editInvoiceError, setEditInvoiceError] = useState('');
+  const [addEditProductId, setAddEditProductId] = useState('');
+
   // ================= Add Invoice Form State =================
   const [invoiceNumberInput, setInvoiceNumberInput] = useState('905');
   const [billingType, setBillingType] = useState(isCustomerType ? 'customer' : 'store'); // 'customer' | 'store'
@@ -447,6 +453,168 @@ const Invoices = () => {
       alert('Failed to download PDF invoice.');
     } finally {
       setPrintingId(null);
+    }
+  };
+
+  // Open Invoice Edit Modal & Populate Form
+  const handleOpenEditInvoice = (inv) => {
+    setSelectedInvoice(inv);
+    setEditInvoiceError('');
+    let dStr = '';
+    if (inv.invoiceDate) {
+      const d = new Date(inv.invoiceDate);
+      if (!isNaN(d.getTime())) {
+        dStr = d.toISOString().split('T')[0];
+      }
+    }
+    setEditInvoiceForm({
+      invoiceNumber: inv.invoiceNumber || '',
+      invoiceDate: dStr || new Date().toISOString().split('T')[0],
+      storeId: inv.storeId?._id || inv.storeId || '',
+      customerId: inv.customerId?._id || inv.customerId || '',
+      saleType: inv.saleType || 'Credit',
+      status: inv.status || 'Unpaid',
+      deliveryChallanNo: inv.deliveryChallanNo || '',
+      notes: inv.notes || '',
+      items: (inv.items || []).map((it) => ({
+        productId: it.productId?._id || it.productId || '',
+        name: it.name || it.productId?.name || '',
+        hsnCode: it.hsnCode || '3004',
+        quantity: Number(it.quantity) || 1,
+        freeQuantity: Number(it.freeQuantity) || 0,
+        unitPrice: Number(it.unitPrice) || 0,
+        discountPercent: Number(it.discountPercent) || 0,
+        discountAmount: Number(it.discountAmount) || 0,
+        taxableValue: Number(it.taxableValue) || 0,
+        gstRate: it.gstRate !== undefined ? Number(it.gstRate) : 5,
+        taxAmount: Number(it.taxAmount) || 0,
+        total: Number(it.total) || 0
+      }))
+    });
+  };
+
+  // Edit item fields inside invoice edit modal
+  const handleEditItemChange = (idx, field, value) => {
+    setEditInvoiceForm((prev) => {
+      const items = [...prev.items];
+      const cur = { ...items[idx] };
+      if (field === 'quantity') cur.quantity = Number(value) || 0;
+      if (field === 'unitPrice') cur.unitPrice = Number(value) || 0;
+      if (field === 'hsnCode') cur.hsnCode = value;
+      if (field === 'gstRate') cur.gstRate = Number(value) || 0;
+      if (field === 'discountPercent') cur.discountPercent = Number(value) || 0;
+
+      const q = cur.quantity;
+      const p = cur.unitPrice;
+      const discPct = cur.discountPercent;
+      const gst = cur.gstRate;
+      const gross = q * p;
+      const discAmt = (gross * discPct) / 100;
+      const taxable = Math.max(0, gross - discAmt);
+      const tax = (taxable * gst) / 100;
+      const total = taxable + tax;
+
+      cur.discountAmount = Math.round(discAmt * 100) / 100;
+      cur.taxableValue = Math.round(taxable * 100) / 100;
+      cur.taxAmount = Math.round(tax * 100) / 100;
+      cur.total = Math.round(total * 100) / 100;
+
+      items[idx] = cur;
+      return { ...prev, items };
+    });
+  };
+
+  const handleRemoveEditItem = (idx) => {
+    setEditInvoiceForm((prev) => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleAddProductToEditInvoice = () => {
+    if (!addEditProductId) return;
+    const prod = products.find((p) => p._id === addEditProductId);
+    if (!prod) return;
+
+    const rate = Number(prod.dealerPrice || prod.sellingPrice || prod.mrp || 0);
+    const gst = Number(prod.gstRate !== undefined ? prod.gstRate : 5);
+    const taxable = rate;
+    const tax = (taxable * gst) / 100;
+    const total = taxable + tax;
+
+    const newItem = {
+      productId: prod._id,
+      name: prod.name,
+      hsnCode: prod.hsnCode || '3004',
+      quantity: 1,
+      freeQuantity: 0,
+      unitPrice: rate,
+      discountPercent: 0,
+      discountAmount: 0,
+      taxableValue: Math.round(taxable * 100) / 100,
+      gstRate: gst,
+      taxAmount: Math.round(tax * 100) / 100,
+      total: Math.round(total * 100) / 100
+    };
+
+    setEditInvoiceForm((prev) => ({
+      ...prev,
+      items: [...prev.items, newItem]
+    }));
+    setAddEditProductId('');
+  };
+
+  // Recalculate totals in real-time as user edits items
+  const editCalculatedTotals = useMemo(() => {
+    if (!editInvoiceForm?.items) return { taxable: 0, tax: 0, cgst: 0, sgst: 0, grand: 0 };
+    let taxable = 0;
+    let tax = 0;
+    let grand = 0;
+    for (const it of editInvoiceForm.items) {
+      taxable += Number(it.taxableValue || 0);
+      tax += Number(it.taxAmount || 0);
+      grand += Number(it.total || 0);
+    }
+    return {
+      taxable: Math.round(taxable * 100) / 100,
+      tax: Math.round(tax * 100) / 100,
+      cgst: Math.round((tax / 2) * 100) / 100,
+      sgst: Math.round((tax / 2) * 100) / 100,
+      grand: Math.round(grand * 100) / 100
+    };
+  }, [editInvoiceForm?.items]);
+
+  // Save edited invoice to backend
+  const handleSaveInvoiceEdit = async () => {
+    if (!selectedInvoice || !editInvoiceForm) return;
+    if (!editInvoiceForm.invoiceNumber.trim()) {
+      setEditInvoiceError('Bill / Invoice Number is required');
+      return;
+    }
+    if (!editInvoiceForm.items || editInvoiceForm.items.length === 0) {
+      setEditInvoiceError('Please include at least one item in the invoice');
+      return;
+    }
+
+    try {
+      setIsSavingEditInvoice(true);
+      setEditInvoiceError('');
+      const res = await api.put(`/invoices/${selectedInvoice._id}`, editInvoiceForm);
+      if (res.data.success) {
+        showToast('Bill / Invoice updated successfully!');
+        setInvoices((prev) =>
+          prev.map((inv) => (inv._id === selectedInvoice._id ? res.data.data : inv))
+        );
+        setSelectedInvoice(res.data.data);
+        handleOpenEditInvoice(res.data.data);
+      } else {
+        setEditInvoiceError(res.data.message || 'Failed to update invoice');
+      }
+    } catch (err) {
+      console.error('Update invoice error:', err);
+      setEditInvoiceError(err.response?.data?.message || 'Error occurred while saving invoice');
+    } finally {
+      setIsSavingEditInvoice(false);
     }
   };
 
@@ -1591,8 +1759,8 @@ const Invoices = () => {
                           <td className="py-4 px-3 align-top whitespace-nowrap">
                             <button
                               type="button"
-                              onClick={() => setSelectedInvoice(inv)}
-                              title={`Click to view invoice ${inv.invoiceNumber}`}
+                              onClick={() => handleOpenEditInvoice(inv)}
+                              title={`Click to edit / view invoice ${inv.invoiceNumber}`}
                               className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-medium"
                             >
                               {formattedNum}
@@ -1691,8 +1859,8 @@ const Invoices = () => {
                           <td className="py-4 px-3 align-top text-center">
                             <button
                               type="button"
-                              onClick={() => setSelectedInvoice(inv)}
-                              title="Edit / View Details"
+                              onClick={() => handleOpenEditInvoice(inv)}
+                              title="Edit Bill / Invoice Details"
                               className="p-1 hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center justify-center"
                             >
                               <GreenNotepadIcon />
@@ -2063,132 +2231,370 @@ const Invoices = () => {
         </Modal>
       )}
 
-      {/* ================= MODAL: INVOICE DETAIL & PRINT PREVIEW ================= */}
-      {selectedInvoice && (
+      {/* ================= MODAL: INVOICE DETAIL & EDIT ================= */}
+      {selectedInvoice && editInvoiceForm && (
         <Modal
           isOpen={!!selectedInvoice}
-          onClose={() => setSelectedInvoice(null)}
-          title={`Bill of Supply: ${selectedInvoice.invoiceNumber}`}
-          maxWidth="max-w-3xl"
+          onClose={() => {
+            setSelectedInvoice(null);
+            setEditInvoiceForm(null);
+          }}
+          title={`Bill of Supply: ${editInvoiceForm.invoiceNumber || selectedInvoice.invoiceNumber}`}
+          maxWidth="max-w-4xl"
         >
           <div className="space-y-4 text-xs bg-white p-2">
+            {editInvoiceError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{editInvoiceError}</span>
+              </div>
+            )}
+
             {/* Header / Bill Details */}
-            <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-slate-200 pb-4">
               <div>
                 <div className="text-base font-bold text-teal-800">TAMIZH ENTERPRISES</div>
                 <div className="text-[11px] text-slate-500">124, Goods Shed Road, Madurai - 625001</div>
                 <div className="text-[11px] text-slate-600 font-mono">GSTIN: 33AABCT9988C1Z4</div>
               </div>
-              <div className="text-right">
-                <div className="font-bold text-slate-900 text-sm">BILL OF SUPPLY</div>
-                <div className="font-mono text-xs font-semibold">{selectedInvoice.invoiceNumber}</div>
-                <div className="text-slate-500">
-                  Date: {formatInvoiceDate(selectedInvoice.invoiceDate)}
+              <div className="w-full sm:w-auto text-left sm:text-right bg-yellow-50/70 p-3 rounded-xl border border-yellow-200/80">
+                <div className="font-bold text-slate-900 text-xs uppercase mb-1">
+                  BILL OF SUPPLY / INVOICE NO
+                </div>
+                <div className="flex items-center sm:justify-end gap-2">
+                  <span className="text-[11px] font-semibold text-slate-500">Bill #:</span>
+                  <input
+                    type="text"
+                    value={editInvoiceForm.invoiceNumber}
+                    onChange={(e) =>
+                      setEditInvoiceForm((prev) => ({
+                        ...prev,
+                        invoiceNumber: e.target.value.toUpperCase()
+                      }))
+                    }
+                    className="w-44 px-2.5 py-1 text-sm font-mono font-bold text-slate-900 bg-white border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="e.g. INV-2026-00002"
+                  />
+                </div>
+                <div className="flex items-center sm:justify-end gap-2 mt-2">
+                  <span className="text-[11px] font-semibold text-slate-500">Date:</span>
+                  <input
+                    type="date"
+                    value={editInvoiceForm.invoiceDate}
+                    onChange={(e) =>
+                      setEditInvoiceForm((prev) => ({ ...prev, invoiceDate: e.target.value }))
+                    }
+                    className="w-44 px-2 py-1 text-xs font-semibold text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+            {/* Party & Terms Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              {/* Billed To / Party */}
               <div>
-                <span className="font-bold text-slate-800 block mb-1">
+                <label className="font-bold text-slate-800 block mb-1">
                   {selectedInvoice.customerId ? 'Customer / Billed To:' : 'Shop / Billed To:'}
+                </label>
+                {selectedInvoice.customerId ? (
+                  <select
+                    value={editInvoiceForm.customerId || ''}
+                    onChange={(e) =>
+                      setEditInvoiceForm((prev) => ({ ...prev, customerId: e.target.value }))
+                    }
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Select Customer</option>
+                    {customers.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.name} {c.phone ? `(${c.phone})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={editInvoiceForm.storeId || ''}
+                    onChange={(e) =>
+                      setEditInvoiceForm((prev) => ({ ...prev, storeId: e.target.value }))
+                    }
+                    className="w-full px-2.5 py-1.5 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">Select Retail Shop</option>
+                    {stores.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.name} {s.city ? `- ${s.city}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <div className="text-slate-500 mt-2 space-y-0.5 text-[11px]">
+                  <div>
+                    <span className="font-medium text-slate-600">Location:</span>{' '}
+                    {selectedInvoice.customerId?.address ||
+                      selectedInvoice.storeId?.address ||
+                      selectedInvoice.storeId?.city ||
+                      'Tamil Nadu'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-slate-600">Phone:</span>{' '}
+                    {selectedInvoice.customerId?.phone || selectedInvoice.storeId?.phone || '-'}
+                  </div>
+                  <div className="font-mono">
+                    <span className="font-medium text-slate-600">GSTIN:</span>{' '}
+                    {selectedInvoice.customerId?.gstNumber ||
+                      selectedInvoice.storeId?.gstNumber ||
+                      'URP'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment & Dispatch */}
+              <div className="space-y-2">
+                <span className="font-bold text-slate-800 block">Payment & Dispatch:</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                      Sale Terms:
+                    </label>
+                    <select
+                      value={editInvoiceForm.saleType}
+                      onChange={(e) =>
+                        setEditInvoiceForm((prev) => ({ ...prev, saleType: e.target.value }))
+                      }
+                      className="w-full px-2 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                      <option value="Credit">Credit</option>
+                      <option value="Cash">Cash</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                      Status:
+                    </label>
+                    <select
+                      value={editInvoiceForm.status}
+                      onChange={(e) =>
+                        setEditInvoiceForm((prev) => ({ ...prev, status: e.target.value }))
+                      }
+                      className="w-full px-2 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                      <option value="Unpaid">Unpaid</option>
+                      <option value="Partially Paid">Partially Paid</option>
+                      <option value="Paid">Paid</option>
+                      <option value="Cancelled">Cancelled (Void)</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-0.5">
+                    Delivery Challan:
+                  </label>
+                  <input
+                    type="text"
+                    value={editInvoiceForm.deliveryChallanNo}
+                    onChange={(e) =>
+                      setEditInvoiceForm((prev) => ({
+                        ...prev,
+                        deliveryChallanNo: e.target.value
+                      }))
+                    }
+                    className="w-full px-2 py-1 text-xs font-mono font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="e.g. DC-INV-2026-00002"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Line Items Table with Inline Editing */}
+            <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="bg-slate-100 px-3 py-2 border-b border-slate-200 flex justify-between items-center">
+                <span className="font-bold text-slate-700 text-xs uppercase tracking-wide">
+                  Line Items ({editInvoiceForm.items.length})
                 </span>
-                <div className="font-semibold text-slate-900">
-                  {selectedInvoice.customerId?.name || selectedInvoice.storeId?.name || 'N/A'}
-                </div>
-                <div className="text-slate-500">
-                  {selectedInvoice.customerId?.address || selectedInvoice.storeId?.address || selectedInvoice.storeId?.city || 'Tamil Nadu'}
-                </div>
-                <div className="text-slate-500">
-                  Phone: {selectedInvoice.customerId?.phone || selectedInvoice.storeId?.phone || '-'}
-                </div>
-                <div className="text-slate-500 font-mono">
-                  GSTIN: {selectedInvoice.customerId?.gstNumber || selectedInvoice.storeId?.gstNumber || 'URP'}
-                </div>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  Editable QTY, Rate, HSN & GST %
+                </span>
               </div>
-              <div className="text-right">
-                <span className="font-bold text-slate-800 block mb-1">Payment & Dispatch:</span>
-                <div>
-                  Sale Terms: <span className="font-semibold">{selectedInvoice.saleType || 'Credit'}</span>
-                </div>
-                <div>
-                  Status: <span className="font-semibold">{selectedInvoice.status}</span>
-                </div>
-                <div>
-                  Challan: <span className="font-mono">{selectedInvoice.deliveryChallanNo || '-'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Line Items with GST Breakdown */}
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-slate-100 text-slate-600 font-semibold uppercase text-[10px]">
-                  <tr>
-                    <th className="p-2">Item Description</th>
-                    <th className="p-2">HSN</th>
-                    <th className="p-2 text-right">Qty</th>
-                    <th className="p-2 text-right">Rate (₹)</th>
-                    <th className="p-2 text-right">Taxable (₹)</th>
-                    <th className="p-2 text-center">GST</th>
-                    <th className="p-2 text-right">Tax (₹)</th>
-                    <th className="p-2 text-right">Total (₹)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {selectedInvoice.items?.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="p-2 font-medium">{item.name}</td>
-                      <td className="p-2 font-mono text-[10px]">{item.hsnCode}</td>
-                      <td className="p-2 text-right font-bold">
-                        {item.quantity} {item.freeQuantity ? `(+${item.freeQuantity})` : ''}
-                      </td>
-                      <td className="p-2 text-right font-mono">₹{item.unitPrice}</td>
-                      <td className="p-2 text-right font-mono">₹{Number(item.taxableValue).toFixed(2)}</td>
-                      <td className="p-2 text-center">{item.gstRate}%</td>
-                      <td className="p-2 text-right font-mono">₹{Number(item.taxAmount || 0).toFixed(2)}</td>
-                      <td className="p-2 text-right font-bold text-slate-900">
-                        ₹{Number(item.total).toFixed(2)}
-                      </td>
+              <div className="overflow-x-auto max-h-72">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="p-2.5">Item Description</th>
+                      <th className="p-2.5 w-24">HSN</th>
+                      <th className="p-2.5 w-20 text-right">Qty</th>
+                      <th className="p-2.5 w-24 text-right">Rate (₹)</th>
+                      <th className="p-2.5 text-right">Taxable (₹)</th>
+                      <th className="p-2.5 w-16 text-center">GST</th>
+                      <th className="p-2.5 text-right">Tax (₹)</th>
+                      <th className="p-2.5 text-right">Total (₹)</th>
+                      <th className="p-2.5 w-10 text-center"></th>
                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-slate-700">
+                    {editInvoiceForm.items.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-2.5 font-semibold text-slate-800">
+                          {item.name}
+                        </td>
+                        <td className="p-2.5">
+                          <input
+                            type="text"
+                            value={item.hsnCode}
+                            onChange={(e) => handleEditItemChange(idx, 'hsnCode', e.target.value)}
+                            className="w-20 px-1.5 py-0.5 text-xs font-mono border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right">
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) => handleEditItemChange(idx, 'quantity', e.target.value)}
+                            className="w-16 px-1.5 py-0.5 text-right font-bold text-xs bg-yellow-50 border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={item.unitPrice}
+                            onChange={(e) => handleEditItemChange(idx, 'unitPrice', e.target.value)}
+                            className="w-20 px-1.5 py-0.5 text-right font-mono font-bold text-xs bg-yellow-50 border border-blue-400 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-medium">
+                          ₹{Number(item.taxableValue).toFixed(2)}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <select
+                            value={item.gstRate}
+                            onChange={(e) => handleEditItemChange(idx, 'gstRate', e.target.value)}
+                            className="px-1 py-0.5 text-xs font-semibold border border-slate-300 rounded bg-white"
+                          >
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18">18%</option>
+                          </select>
+                        </td>
+                        <td className="p-2.5 text-right font-mono text-slate-600">
+                          ₹{Number(item.taxAmount || 0).toFixed(2)}
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-slate-900 font-mono">
+                          ₹{Number(item.total).toFixed(2)}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveEditItem(idx)}
+                            title="Remove product"
+                            className="text-slate-400 hover:text-red-600 p-1 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Add More Products to this invoice */}
+              <div className="bg-slate-50 p-2.5 border-t border-slate-200 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-700">Add Product:</span>
+                <select
+                  value={addEditProductId}
+                  onChange={(e) => setAddEditProductId(e.target.value)}
+                  className="flex-1 min-w-[200px] px-2.5 py-1 text-xs font-semibold bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                >
+                  <option value="">-- Choose Product to Add --</option>
+                  {products.map((p) => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} (₹{p.dealerPrice || p.sellingPrice || p.mrp})
+                    </option>
                   ))}
-                </tbody>
-              </table>
+                </select>
+                <button
+                  type="button"
+                  disabled={!addEditProductId}
+                  onClick={handleAddProductToEditInvoice}
+                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add
+                </button>
+              </div>
             </div>
 
-            {/* Totals */}
-            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+            {/* Totals Summary */}
+            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div className="text-slate-500 text-[11px]">
-                CGST: ₹{Number(selectedInvoice.cgstTotal || 0).toFixed(2)} &bull; SGST: ₹
-                {Number(selectedInvoice.sgstTotal || 0).toFixed(2)}
+                CGST: ₹{editCalculatedTotals.cgst.toFixed(2)} &bull; SGST: ₹
+                {editCalculatedTotals.sgst.toFixed(2)}
               </div>
               <div className="text-right space-y-0.5">
-                <div>
+                <div className="text-xs">
                   Taxable Value:{' '}
-                  <span className="font-bold">
-                    ₹{Number(selectedInvoice.taxableSubtotal).toFixed(2)}
+                  <span className="font-bold text-slate-800">
+                    ₹{editCalculatedTotals.taxable.toFixed(2)}
                   </span>
                 </div>
-                <div>
+                <div className="text-xs">
                   GST Tax:{' '}
-                  <span className="font-bold">₹{Number(selectedInvoice.taxTotal).toFixed(2)}</span>
+                  <span className="font-bold text-slate-800">
+                    ₹{editCalculatedTotals.tax.toFixed(2)}
+                  </span>
                 </div>
                 <div className="text-base font-extrabold text-blue-700">
-                  Grand Total: ₹{formatAmount(selectedInvoice.grandTotal)}
+                  Grand Total: ₹{formatAmount(editCalculatedTotals.grand)}
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            {/* Footer Action Buttons */}
+            <div className="flex flex-wrap justify-between items-center gap-2 pt-2 border-t border-slate-200">
               <button
                 type="button"
-                onClick={() =>
-                  handleDownloadPDF(selectedInvoice._id, selectedInvoice.invoiceNumber)
-                }
-                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold flex items-center gap-1.5 shadow-xs"
+                onClick={() => {
+                  setSelectedInvoice(null);
+                  setEditInvoiceForm(null);
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl font-bold text-xs transition-colors cursor-pointer"
               >
-                <Download className="w-4 h-4" /> Download Official PDF
+                Close
               </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDownloadPDF(selectedInvoice._id, editInvoiceForm.invoiceNumber)
+                  }
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handlePrintInvoice(selectedInvoice._id, editInvoiceForm.invoiceNumber)
+                  }
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <PrinterIcon /> Print
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingEditInvoice}
+                  onClick={handleSaveInvoiceEdit}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {isSavingEditInvoice ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </div>
         </Modal>
