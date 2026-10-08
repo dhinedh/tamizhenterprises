@@ -146,17 +146,6 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   // Determine Invoice Title: "Bill of Supply" as requested
   const titleText = 'Bill of Supply';
 
-  // Embed automatic print action so PDF viewers prompt to print immediately upon opening
-  try {
-    const printActionRef = doc.ref({
-      S: 'JavaScript',
-      JS: new String('this.print();')
-    });
-    doc._root.data.OpenAction = printActionRef;
-  } catch (e) {
-    console.warn('PDF auto-print action setup failed:', e);
-  }
-
   // --- PAGE 1 START ---
   const p1Top = 17.4;
 
