@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle2, FileText, Download, Printer, Share2, ArrowRight, Truck, Store } from 'lucide-react';
 import Modal from '../common/Modal';
+import api from '../../api/client';
 
 const InvoiceSuccessModal = ({
   isOpen,
@@ -8,6 +9,7 @@ const InvoiceSuccessModal = ({
   invoiceData,
   onViewAllInvoices
 }) => {
+  const [downloading, setDownloading] = useState(false);
   if (!invoiceData) return null;
 
   const { invoice, order, invoiceNumber, grandTotal } = invoiceData;
@@ -16,9 +18,28 @@ const InvoiceSuccessModal = ({
   const invNumber = invoice?.invoiceNumber || invoiceNumber;
   const total = invoice?.grandTotal || grandTotal || 0;
 
-  const handleDownloadPDF = () => {
-    if (invId) {
-      window.open(`/api/invoices/${invId}/pdf`, '_blank');
+  const handleDownloadPDF = async () => {
+    if (!invId) return;
+    try {
+      setDownloading(true);
+      const res = await api.get(`/invoices/${invId}/pdf`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Tax-Invoice-${invNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      console.error('Download error:', err);
+      const token = localStorage.getItem('tamil_erp_token');
+      if (token) {
+        window.open(`/api/invoices/${invId}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+      }
+    } finally {
+      setDownloading(false);
     }
   };
 

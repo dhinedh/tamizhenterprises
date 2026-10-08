@@ -155,13 +155,13 @@ const Sidebar = ({ isOpen, onClose }) => {
     }
     if (
       location.pathname.startsWith('/customers') ||
-      location.pathname.startsWith('/invoices')
+      (location.pathname.startsWith('/invoices') && location.search.includes('type=customer'))
     ) {
       setExpandedGroups((prev) => ({ ...prev, customer: true }));
     }
     if (
       location.pathname.startsWith('/stores') ||
-      location.pathname.startsWith('/invoices') ||
+      (location.pathname.startsWith('/invoices') && !location.search.includes('type=customer')) ||
       location.pathname.startsWith('/reports')
     ) {
       setExpandedGroups((prev) => ({ ...prev, shop: true }));
@@ -236,11 +236,17 @@ const Sidebar = ({ isOpen, onClose }) => {
     if (path === '/stock-transfers' || path === '/store-transfers') {
       return location.pathname.startsWith('/stock-transfers') || location.pathname.startsWith('/store-transfers');
     }
-    if (path === '/invoices?action=new') {
-      return location.pathname === '/invoices' && location.search.includes('action=new');
+    if (path === '/invoices?type=customer&action=new') {
+      return location.pathname === '/invoices' && location.search.includes('type=customer') && location.search.includes('action=new');
     }
-    if (path === '/invoices') {
-      return location.pathname === '/invoices' && !location.search.includes('action=new');
+    if (path === '/invoices?type=customer') {
+      return location.pathname === '/invoices' && location.search.includes('type=customer') && !location.search.includes('action=new');
+    }
+    if (path === '/invoices?type=shop&action=new') {
+      return location.pathname === '/invoices' && !location.search.includes('type=customer') && location.search.includes('action=new');
+    }
+    if (path === '/invoices?type=shop') {
+      return location.pathname === '/invoices' && !location.search.includes('type=customer') && !location.search.includes('action=new');
     }
     if (path === '/demo-damage?action=new') {
       return location.pathname === '/demo-damage' && location.search.includes('action=new');
@@ -290,8 +296,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     children: [
       { name: 'Add New Customer', path: '/customers?action=new' },
       { name: 'Manage Customer', path: '/customers' },
-      { name: 'Add Invoice', path: '/invoices?action=new' },
-      { name: 'Manage Invoice', path: '/invoices' }
+      { name: 'Add Invoice', path: '/invoices?type=customer&action=new' },
+      { name: 'Manage Invoice', path: '/invoices?type=customer' }
     ]
   };
 
@@ -306,8 +312,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     children: [
       { name: 'Add Shop', path: '/stores?action=new' },
       { name: 'Manage Shop', path: '/stores' },
-      { name: 'Add Invoice', path: '/invoices?action=new' },
-      { name: 'Manage Invoice', path: '/invoices' },
+      { name: 'Add Invoice', path: '/invoices?type=shop&action=new' },
+      { name: 'Manage Invoice', path: '/invoices?type=shop' },
       { name: 'Shop Report', path: '/reports' }
     ]
   };

@@ -12,12 +12,17 @@ const { generateInvoicePDF } = require('../utils/pdfGenerator');
 // @route   GET /api/invoices
 const getInvoices = async (req, res) => {
   try {
-    const { status, storeId, customerId, search, startDate, endDate } = req.query;
+    const { status, storeId, customerId, type, search, startDate, endDate } = req.query;
     const filter = {};
 
     if (status) filter.status = status;
     if (storeId) filter.storeId = storeId;
     if (customerId) filter.customerId = customerId;
+    if (type === 'customer') {
+      filter.customerId = { $ne: null };
+    } else if (type === 'shop' || type === 'store') {
+      filter.storeId = { $ne: null };
+    }
 
     if (req.user && req.user.role === 'Store' && req.user.storeId) {
       filter.storeId = req.user.storeId;

@@ -113,7 +113,11 @@ const Invoices = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Mode: if query string has ?action=new, show Add Invoice (Invoice - Shop) form
+  const searchParams = new URLSearchParams(location.search);
+  const typeParam = searchParams.get('type') || 'shop'; // 'customer' | 'shop'
+  const isCustomerType = typeParam === 'customer';
+
+  // Mode: if query string has ?action=new, show Add Invoice form
   const isCreateMode = location.search.includes('action=new');
 
   const [invoices, setInvoices] = useState([]);
@@ -121,6 +125,7 @@ const Invoices = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [printingId, setPrintingId] = useState(null);
 
   // Pagination & Sorting state for Manage Invoice table
   const [currentPage, setCurrentPage] = useState(1);
@@ -142,13 +147,17 @@ const Invoices = () => {
 
   // ================= Add Invoice Form State =================
   const [invoiceNumberInput, setInvoiceNumberInput] = useState('905');
-  const [billingType, setBillingType] = useState('customer'); // 'customer' | 'store'
+  const [billingType, setBillingType] = useState(isCustomerType ? 'customer' : 'store'); // 'customer' | 'store'
   const [customers, setCustomers] = useState([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [invoicePaymentType, setInvoicePaymentType] = useState('Credit');
   const [invoiceNotes, setInvoiceNotes] = useState('');
   const [submittingInvoice, setSubmittingInvoice] = useState(false);
+
+  useEffect(() => {
+    setBillingType(isCustomerType ? 'customer' : 'store');
+  }, [isCustomerType]);
 
   // Added Products List for the new invoice
   const [addedItems, setAddedItems] = useState([]);
@@ -194,7 +203,7 @@ const Invoices = () => {
     try {
       setLoading(true);
       const [invRes, custRes, storesRes, prodsRes] = await Promise.all([
-        api.get('/invoices'),
+        api.get('/invoices', { params: { fresh: 'true' } }),
         api.get('/customers'),
         api.get('/stores'),
         api.get('/products')
@@ -224,7 +233,7 @@ const Invoices = () => {
 
   const fetchInvoices = async () => {
     try {
-      const res = await api.get('/invoices');
+      const res = await api.get('/invoices', { params: { fresh: 'true' } });
       if (res.data.success) {
         setInvoices(res.data.data || []);
       }
@@ -343,26 +352,121 @@ const Invoices = () => {
     });
   };
 
-  // Download / Print PDF
-  const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
+  // Print / View PDF Invoice
+  const handlePrintInvoice = async (invoiceId, invoiceNumber) => {
+    let printWindow = null;
     try {
+      printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Tax Invoice #${formatInvoiceNumber(invoiceNumber)}</title>
+              <style>
+                body {
+                  margin: 0;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  height: 100vh;
+                  font-family: system-ui, -apple-system, sans-serif;
+                  background-color: #f8fafc;
+                  color: #334155;
+                }
+                .box {
+                  text-align: center;
+                  padding: 28px 36px;
+                  background: white;
+                  border-radius: 16px;
+                  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+                  border: 1px solid #e2e8f0;
+                  max-width: 320px;
+                }
+                .spinner {
+                  width: 36px;
+                  height: 36px;
+                  border: 3px solid #e2e8f0;
+                  border-top: 3px solid #2563eb;
+                  border-radius: 50%;
+                  animation: spin 0.8s linear infinite;
+                  margin: 0 auto 16px;
+                }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a; }
+                p { margin: 0; font-size: 13px; color: #64748b; }
+              </style>
+            </head>
+            <body>
+              <div class="box">
+                <div class="spinner"></div>
+                <h3>Preparing Tax Invoice...</h3>
+                <p>Generating printable PDF, please wait.</p>
+              </div>
+            </body>
+          </html>
+        `);
+      }
+    } catch (e) {
+      console.warn('Popup pre-open failed:', e);
+    }
+
+    try {
+      setPrintingId(invoiceId);
       const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const win = window.open(url, '_blank');
-      if (!win) {
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `Tax-Invoice-${invoiceNumber || invoiceId}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      if (printWindow && !printWindow.closed) {
+        printWindow.location.href = blobUrl;
+      } else {
+        const win = window.open(blobUrl, '_blank');
+        if (!win) {
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.setAttribute('download', `Tax-Invoice-${formatInvoiceNumber(invoiceNumber)}.pdf`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          showToast('Invoice PDF downloaded (Pop-up was blocked).');
+        }
       }
     } catch (err) {
-      console.error('PDF download error:', err);
+      console.error('Failed to print invoice:', err);
+      if (printWindow && !printWindow.closed) {
+        printWindow.close();
+      }
       const token = localStorage.getItem('tamil_erp_token');
-      const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
-      window.open(`/api/invoices/${invoiceId}/pdf${tokenQuery}`, '_blank');
+      if (token) {
+        window.open(`/api/invoices/${invoiceId}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+      } else {
+        alert('Failed to load invoice PDF for printing. Please try again.');
+      }
+    } finally {
+      setPrintingId(null);
+    }
+  };
+
+  // Download PDF
+  const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
+    try {
+      setPrintingId(invoiceId);
+      const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `Tax-Invoice-${formatInvoiceNumber(invoiceNumber)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+      showToast('Invoice PDF downloaded successfully!');
+    } catch (err) {
+      console.error('Failed to download invoice:', err);
+      alert('Failed to download PDF invoice.');
+    } finally {
+      setPrintingId(null);
     }
   };
 
@@ -376,9 +480,24 @@ const Invoices = () => {
     }
   };
 
-  // Filtered and Sorted Invoices
+  // Filtered and Sorted Invoices (Strictly Filtered by Customer vs Shop)
   const filteredInvoices = useMemo(() => {
-    let result = [...invoices];
+    let result = invoices.filter((inv) => {
+      const hasCustomer = Boolean(
+        inv.customerId && (typeof inv.customerId === 'object' ? (inv.customerId._id || inv.customerId.name) : true)
+      );
+      const hasStore = Boolean(
+        inv.storeId && (typeof inv.storeId === 'object' ? (inv.storeId._id || inv.storeId.name) : true)
+      );
+
+      if (isCustomerType) {
+        // Customer Invoices: MUST have customer attached
+        return hasCustomer;
+      } else {
+        // Shop Invoices: MUST have retail store and NEVER be a customer invoice
+        return hasStore && !hasCustomer;
+      }
+    });
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -438,7 +557,7 @@ const Invoices = () => {
     });
 
     return result;
-  }, [invoices, search, sortField, sortOrder]);
+  }, [invoices, isCustomerType, search, sortField, sortOrder]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredInvoices.length / pageSize) || 1;
@@ -771,7 +890,7 @@ const Invoices = () => {
         setSelectedCustomerId('');
         setSelectedStoreId('');
         await fetchInvoices();
-        navigate('/invoices');
+        navigate(isCustomerType ? '/invoices?type=customer' : '/invoices?type=shop');
       }
     } catch (err) {
       console.error('Failed to create invoice:', err);
@@ -883,8 +1002,8 @@ const Invoices = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/invoices')}
-                  title="View All Invoices"
+                  onClick={() => navigate(isCustomerType ? '/invoices?type=customer' : '/invoices?type=shop')}
+                  title="View Invoices List"
                   className="w-10 h-10 rounded-xl bg-[#2563eb] hover:bg-blue-700 text-white flex items-center justify-center shadow-xs transition-colors cursor-pointer"
                 >
                   <List className="w-5 h-5 stroke-[2.5]" />
@@ -1259,7 +1378,7 @@ const Invoices = () => {
                 <div className="flex justify-end gap-3 pt-3">
                   <button
                     type="button"
-                    onClick={() => navigate('/invoices')}
+                    onClick={() => navigate(isCustomerType ? '/invoices?type=customer' : '/invoices?type=shop')}
                     className="px-5 py-2.5 border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
                   >
                     Cancel
@@ -1280,16 +1399,44 @@ const Invoices = () => {
       ) : (
         /* ================= MANAGE INVOICE (MANAGE INVOICE - SHOP) UI ================= */
         <div className="space-y-5">
-          {/* Top Header Row with Title and + Action Icon matching screenshot */}
-          <div className="flex items-center justify-between gap-4 pt-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1e293b] tracking-tight">
-              Manage Invoice - Shop
-            </h1>
+          {/* Top Header Row with Title, Quick Switcher, and + Action Icon */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1e293b] tracking-tight">
+                {isCustomerType ? 'Manage Invoice - Customer' : 'Manage Invoice - Shop'}
+              </h1>
+
+              {/* Quick Switcher Pills */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => navigate('/invoices?type=shop')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    !isCustomerType
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Shop Invoices
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/invoices?type=customer')}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    isCustomerType
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Customer Invoices
+                </button>
+              </div>
+            </div>
 
             <button
               type="button"
-              onClick={() => navigate('/invoices?action=new')}
-              title="Create / Add New Invoice"
+              onClick={() => navigate(isCustomerType ? '/invoices?type=customer&action=new' : '/invoices?type=shop&action=new')}
+              title={`Create / Add New ${isCustomerType ? 'Customer' : 'Shop'} Invoice`}
               className="p-1 text-blue-500 hover:text-blue-600 hover:bg-blue-50/60 rounded-xl transition-all cursor-pointer"
             >
               <Plus className="w-8 h-8 stroke-[2.5]" />
@@ -1362,7 +1509,7 @@ const Invoices = () => {
                       className="py-3 px-3 cursor-pointer hover:text-slate-800 whitespace-nowrap"
                     >
                       <div className="flex items-center gap-1">
-                        <span>Customer / Shop</span>
+                        <span>{isCustomerType ? 'Customer Name' : 'Shop / Retailer'}</span>
                         <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
                       </div>
                     </th>
@@ -1472,24 +1619,36 @@ const Invoices = () => {
 
                           {/* 3. Customer / Shop Name */}
                           <td className="py-4 px-3 align-top">
-                            <div className="font-medium text-slate-800 leading-snug">
-                              {inv.customerId?.name || inv.storeId?.name || 'Customer / Shop'}
-                            </div>
-                            <div className="text-xs text-slate-500 font-normal mt-0.5">
-                              M: {inv.customerId?.phone || inv.storeId?.phone || 'N/A'}
-                            </div>
-                            {inv.customerId ? (
-                              <span className="mt-1 inline-block px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded">
-                                Customer
-                              </span>
+                            {isCustomerType ? (
+                              <>
+                                <div className="font-medium text-slate-800 leading-snug">
+                                  {inv.customerId?.name || 'Customer'}
+                                </div>
+                                <div className="text-xs text-slate-500 font-normal mt-0.5">
+                                  M: {inv.customerId?.phone || 'N/A'}
+                                </div>
+                                <span className="mt-1 inline-block px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded">
+                                  Customer
+                                </span>
+                              </>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenShopUpdate(inv.storeId)}
-                                className="mt-1 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 border border-blue-500 rounded-md hover:bg-blue-50 transition-colors cursor-pointer inline-block"
-                              >
-                                Update
-                              </button>
+                              <>
+                                <div className="font-medium text-slate-800 leading-snug">
+                                  {inv.storeId?.name || 'Retail Shop'}
+                                </div>
+                                <div className="text-xs text-slate-500 font-normal mt-0.5">
+                                  M: {inv.storeId?.phone || 'N/A'}
+                                </div>
+                                {inv.storeId && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenShopUpdate(inv.storeId)}
+                                    className="mt-1 px-2.5 py-0.5 text-[11px] font-semibold text-blue-600 border border-blue-500 rounded-md hover:bg-blue-50 transition-colors cursor-pointer inline-block"
+                                  >
+                                    Update
+                                  </button>
+                                )}
+                              </>
                             )}
                           </td>
 
@@ -1520,11 +1679,16 @@ const Invoices = () => {
                           <td className="py-4 px-3 align-top text-center">
                             <button
                               type="button"
-                              onClick={() => handleDownloadPDF(inv._id, inv.invoiceNumber)}
-                              title="Print / Download PDF Invoice"
-                              className="p-1 hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center justify-center"
+                              disabled={printingId === inv._id}
+                              onClick={() => handlePrintInvoice(inv._id, inv.invoiceNumber)}
+                              title="Print / View Tax Invoice"
+                              className="p-1 hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center justify-center disabled:opacity-50"
                             >
-                              <PrinterIcon />
+                              {printingId === inv._id ? (
+                                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <PrinterIcon />
+                              )}
                             </button>
                           </td>
 
