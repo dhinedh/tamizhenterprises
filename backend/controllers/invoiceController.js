@@ -270,10 +270,139 @@ const voidInvoice = async (req, res) => {
   }
 };
 
+// @desc    Update invoice (bill no, date, customer/store, payment terms, status, items, totals)
+// @route   PUT /api/invoices/:id
+const updateInvoice = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    const {
+      invoiceNumber,
+      invoiceDate,
+      dueDate,
+      status,
+      saleType,
+      deliveryChallanNo,
+      notes,
+      items,
+      customerId,
+      storeId,
+      paidAmount
+    } = req.body;
+
+    // If invoiceNumber changed, verify uniqueness
+    if (invoiceNumber && invoiceNumber.trim().toUpperCase() !== invoice.invoiceNumber) {
+      const existing = await Invoice.findOne({ 
+        invoiceNumber: invoiceNumber.trim().toUpperCase(), 
+        _id: { $ne: invoice._id } 
+      });
+      if (existing) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Bill / Invoice Number "${invoiceNumber.trim().toUpperCase()}" already exists` 
+        });
+      }
+      invoice.invoiceNumber = invoiceNumber.trim().toUpperCase();
+    }
+
+    if (invoiceDate) invoice.invoiceDate = new Date(invoiceDate);
+    if (dueDate) invoice.dueDate = new Date(dueDate);
+    if (status) invoice.status = status;
+    if (saleType) invoice.saleType = saleType;
+    if (deliveryChallanNo !== undefined) invoice.deliveryChallanNo = deliveryChallanNo;
+    if (notes !== undefined) invoice.notes = notes;
+    if (customerId !== undefined) invoice.customerId = customerId || null;
+    if (storeId !== undefined) invoice.storeId = storeId || null;
+
+    // If items are provided, recompute line items and financials
+    if (Array.isArray(items) && items.length > 0) {
+      let taxableSubtotal = 0;
+      let totalDiscount = 0;
+      let cgstTotal = 0;
+      let sgstTotal = 0;
+      let taxTotal = 0;
+      let grandTotal = 0;
+
+      const updatedItems = items.map((item) => {
+        const qty = Number(item.quantity) || 0;
+        const rate = Number(item.unitPrice) || 0;
+        const discPercent = Number(item.discountPercent) || 0;
+        const gross = qty * rate;
+        const discAmt = Number(item.discountAmount) || (gross * discPercent / 100);
+        const taxable = Math.max(0, gross - discAmt);
+        const gst = Number(item.gstRate !== undefined ? item.gstRate : 5);
+        const tax = (taxable * gst) / 100;
+        const lineTotal = taxable + tax;
+
+        taxableSubtotal += taxable;
+        totalDiscount += discAmt;
+        cgstTotal += tax / 2;
+        sgstTotal += tax / 2;
+        taxTotal += tax;
+        grandTotal += lineTotal;
+
+        return {
+          productId: item.productId?._id || item.productId,
+          name: item.name,
+          hsnCode: item.hsnCode || '3004',
+          quantity: qty,
+          freeQuantity: Number(item.freeQuantity) || 0,
+          unitPrice: rate,
+          discountPercent: discPercent,
+          discountAmount: Math.round(discAmt * 100) / 100,
+          taxableValue: Math.round(taxable * 100) / 100,
+          gstRate: gst,
+          cgstAmount: Math.round((tax / 2) * 100) / 100,
+          sgstAmount: Math.round((tax / 2) * 100) / 100,
+          igstAmount: 0,
+          taxAmount: Math.round(tax * 100) / 100,
+          total: Math.round(lineTotal * 100) / 100
+        };
+      });
+
+      invoice.items = updatedItems;
+      invoice.taxableSubtotal = Math.round(taxableSubtotal * 100) / 100;
+      invoice.totalDiscount = Math.round(totalDiscount * 100) / 100;
+      invoice.cgstTotal = Math.round(cgstTotal * 100) / 100;
+      invoice.sgstTotal = Math.round(sgstTotal * 100) / 100;
+      invoice.taxTotal = Math.round(taxTotal * 100) / 100;
+      invoice.grandTotal = Math.round(grandTotal * 100) / 100;
+      
+      const paid = paidAmount !== undefined ? Number(paidAmount) : (invoice.paidAmount || 0);
+      invoice.paidAmount = paid;
+      invoice.balanceAmount = Math.max(0, invoice.grandTotal - paid);
+      if (invoice.balanceAmount === 0 && invoice.grandTotal > 0) {
+        invoice.status = 'Paid';
+      }
+    }
+
+    await invoice.save();
+
+    const populatedInvoice = await Invoice.findById(invoice._id)
+      .populate('items.productId')
+      .populate('storeId')
+      .populate('customerId')
+      .populate('salesmanId');
+
+    res.json({
+      success: true,
+      message: 'Invoice updated successfully',
+      data: populatedInvoice
+    });
+  } catch (error) {
+    console.error('Update invoice error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getInvoices,
   getInvoiceById,
   generateInvoiceFromOrder,
   downloadInvoicePDF,
+  updateInvoice,
   voidInvoice
 };

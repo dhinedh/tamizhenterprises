@@ -143,9 +143,19 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     doc.lineWidth(0.75).strokeColor('#000000').moveTo(x1, y1).lineTo(x2, y2).stroke();
   };
 
-  // Determine Invoice Title: "Bill of Supply" if GST is 0% or composition, else "Tax Invoice"
-  const isTaxInvoice = Number(invoice.taxTotal || 0) > 0;
-  const titleText = isTaxInvoice ? 'Tax Invoice' : 'Bill of Supply';
+  // Determine Invoice Title: "Bill of Supply" as requested
+  const titleText = 'Bill of Supply';
+
+  // Embed automatic print action so PDF viewers prompt to print immediately upon opening
+  try {
+    const printActionRef = doc.ref({
+      S: 'JavaScript',
+      JS: new String('this.print();')
+    });
+    doc._root.data.OpenAction = printActionRef;
+  } catch (e) {
+    console.warn('PDF auto-print action setup failed:', e);
+  }
 
   // --- PAGE 1 START ---
   const p1Top = 17.4;

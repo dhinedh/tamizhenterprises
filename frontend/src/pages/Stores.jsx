@@ -255,7 +255,7 @@ const Stores = () => {
       const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Tax-Invoice-${invoiceNumber}.pdf`);
+      link.setAttribute('download', `Bill-of-Supply-${invoiceNumber}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();

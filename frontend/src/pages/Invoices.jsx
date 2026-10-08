@@ -353,93 +353,72 @@ const Invoices = () => {
     });
   };
 
-  // Print / View PDF Invoice
+  // Print / Directly send PDF Invoice to print dialog
   const handlePrintInvoice = async (invoiceId, invoiceNumber) => {
-    let printWindow = null;
-    try {
-      printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <title>Tax Invoice #${formatInvoiceNumber(invoiceNumber)}</title>
-              <style>
-                body {
-                  margin: 0;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  height: 100vh;
-                  font-family: system-ui, -apple-system, sans-serif;
-                  background-color: #f8fafc;
-                  color: #334155;
-                }
-                .box {
-                  text-align: center;
-                  padding: 28px 36px;
-                  background: white;
-                  border-radius: 16px;
-                  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
-                  border: 1px solid #e2e8f0;
-                  max-width: 320px;
-                }
-                .spinner {
-                  width: 36px;
-                  height: 36px;
-                  border: 3px solid #e2e8f0;
-                  border-top: 3px solid #2563eb;
-                  border-radius: 50%;
-                  animation: spin 0.8s linear infinite;
-                  margin: 0 auto 16px;
-                }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                h3 { margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a; }
-                p { margin: 0; font-size: 13px; color: #64748b; }
-              </style>
-            </head>
-            <body>
-              <div class="box">
-                <div class="spinner"></div>
-                <h3>Preparing Tax Invoice...</h3>
-                <p>Generating printable PDF, please wait.</p>
-              </div>
-            </body>
-          </html>
-        `);
-      }
-    } catch (e) {
-      console.warn('Popup pre-open failed:', e);
-    }
-
     try {
       setPrintingId(invoiceId);
       const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
 
-      if (printWindow && !printWindow.closed) {
-        printWindow.location.href = blobUrl;
-      } else {
-        const win = window.open(blobUrl, '_blank');
-        if (!win) {
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.setAttribute('download', `Tax-Invoice-${formatInvoiceNumber(invoiceNumber)}.pdf`);
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          showToast('Invoice PDF downloaded (Pop-up was blocked).');
-        }
+      // Create or recycle invisible iframe for direct printing
+      let printFrame = document.getElementById('direct-print-iframe');
+      if (printFrame) {
+        printFrame.remove();
       }
+      printFrame = document.createElement('iframe');
+      printFrame.id = 'direct-print-iframe';
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = '0';
+      printFrame.src = blobUrl;
+      document.body.appendChild(printFrame);
+
+      // Trigger print directly once loaded
+      let printed = false;
+      const triggerPrint = () => {
+        if (printed) return;
+        printed = true;
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (e) {
+          console.warn('Iframe print call error, opening window fallback:', e);
+          const win = window.open(blobUrl, '_blank');
+          if (win) {
+            win.onload = () => {
+              win.focus();
+              win.print();
+            };
+          }
+        }
+      };
+
+      printFrame.onload = () => {
+        setTimeout(triggerPrint, 300);
+      };
+
+      // Fallback timer in case onload doesn't fire for PDF object
+      setTimeout(triggerPrint, 1000);
+
+      // Clean up blob URL after print
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 60000);
     } catch (err) {
       console.error('Failed to print invoice:', err);
-      if (printWindow && !printWindow.closed) {
-        printWindow.close();
-      }
       const token = localStorage.getItem('tamil_erp_token');
       if (token) {
-        window.open(`/api/invoices/${invoiceId}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+        const win = window.open(`/api/invoices/${invoiceId}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+        if (win) {
+          win.onload = () => {
+            win.focus();
+            win.print();
+          };
+        }
       } else {
         alert('Failed to load invoice PDF for printing. Please try again.');
       }
@@ -457,7 +436,7 @@ const Invoices = () => {
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `Tax-Invoice-${formatInvoiceNumber(invoiceNumber)}.pdf`);
+      link.setAttribute('download', `Bill-of-Supply-${formatInvoiceNumber(invoiceNumber)}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1684,7 +1663,7 @@ const Invoices = () => {
                               type="button"
                               disabled={printingId === inv._id}
                               onClick={() => handlePrintInvoice(inv._id, inv.invoiceNumber)}
-                              title="Print / View Tax Invoice"
+                              title="Print Bill of Supply"
                               className="p-1 hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center justify-center disabled:opacity-50"
                             >
                               {printingId === inv._id ? (
@@ -2089,7 +2068,7 @@ const Invoices = () => {
         <Modal
           isOpen={!!selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
-          title={`Tax Invoice: ${selectedInvoice.invoiceNumber}`}
+          title={`Bill of Supply: ${selectedInvoice.invoiceNumber}`}
           maxWidth="max-w-3xl"
         >
           <div className="space-y-4 text-xs bg-white p-2">
@@ -2101,7 +2080,7 @@ const Invoices = () => {
                 <div className="text-[11px] text-slate-600 font-mono">GSTIN: 33AABCT9988C1Z4</div>
               </div>
               <div className="text-right">
-                <div className="font-bold text-slate-900 text-sm">TAX INVOICE</div>
+                <div className="font-bold text-slate-900 text-sm">BILL OF SUPPLY</div>
                 <div className="font-mono text-xs font-semibold">{selectedInvoice.invoiceNumber}</div>
                 <div className="text-slate-500">
                   Date: {formatInvoiceDate(selectedInvoice.invoiceDate)}
