@@ -343,9 +343,27 @@ const Invoices = () => {
     });
   };
 
-  // Download PDF
-  const handleDownloadPDF = (invoiceId, invoiceNumber) => {
-    window.open(`/api/invoices/${invoiceId}/pdf`, '_blank');
+  // Download / Print PDF
+  const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
+    try {
+      const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const win = window.open(url, '_blank');
+      if (!win) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `Tax-Invoice-${invoiceNumber || invoiceId}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
+    } catch (err) {
+      console.error('PDF download error:', err);
+      const token = localStorage.getItem('tamil_erp_token');
+      const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : '';
+      window.open(`/api/invoices/${invoiceId}/pdf${tokenQuery}`, '_blank');
+    }
   };
 
   // Sorting Handler for Table

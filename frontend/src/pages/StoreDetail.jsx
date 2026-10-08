@@ -30,7 +30,9 @@ import {
   ShieldCheck,
   Percent,
   TrendingUp,
-  Receipt
+  Receipt,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import api from '../api/client';
 import Card from '../components/common/Card';
@@ -126,6 +128,25 @@ const StoreDetail = () => {
       alert(err.response?.data?.message || 'Error updating store');
     } finally {
       setEditSubmitting(false);
+    }
+  };
+
+  const handleDeleteStore = async () => {
+    if (!window.confirm(`Are you sure you want to delete store "${store.name}" (${store.code})?\n\nThis will permanently remove the shop.`)) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/stores/${id}`);
+      if (res.data.success) {
+        try {
+          sessionStorage.removeItem('tamil_erp_stores');
+        } catch (e) {}
+        navigate('/stores');
+      } else {
+        alert(res.data.message || 'Failed to delete store');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error deleting store');
     }
   };
 
@@ -271,14 +292,18 @@ const StoreDetail = () => {
           >
             <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer & Bill Stock
           </button>
-          {isOwner && (
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors border border-slate-200"
-            >
-              Edit Shop
-            </button>
-          )}
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors border border-slate-200 flex items-center gap-1.5 cursor-pointer"
+          >
+            <Pencil className="w-3.5 h-3.5 text-blue-600" /> Edit Shop
+          </button>
+          <button
+            onClick={handleDeleteStore}
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold rounded-xl transition-colors border border-rose-200 flex items-center gap-1.5 cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" /> Delete Shop
+          </button>
         </div>
       </div>
 

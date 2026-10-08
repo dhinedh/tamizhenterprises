@@ -240,9 +240,12 @@ const downloadInvoicePDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=Invoice-${invoice.invoiceNumber}.pdf`);
 
-    generateInvoicePDF(invoice, store || customer, res, owner);
+    generateInvoicePDF(invoice, store || customer || {}, res, owner);
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Invoice PDF generation error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: error.message });
+    }
   }
 };
 

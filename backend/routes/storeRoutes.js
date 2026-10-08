@@ -20,6 +20,6 @@ router.route('/bulk')
 router.route('/:id')
   .get(protect, getStoreById)
   .put(protect, authorize('Owner', 'Salesman'), updateStore)
-  .delete(protect, authorize('Owner'), deleteStore);
+  .delete(protect, authorize('Owner', 'Salesman'), deleteStore);
 
 module.exports = router;

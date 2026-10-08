@@ -29,7 +29,9 @@ import {
   ExternalLink,
   ChevronRight,
   DollarSign,
-  Upload
+  Upload,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import api from '../api/client';
 import Card from '../components/common/Card';
@@ -39,6 +41,27 @@ import { TableSkeleton } from '../components/common/Skeleton';
 import { useAuth } from '../context/AuthContext';
 import { useManufacturer } from '../context/ManufacturerContext';
 import AddShopView from '../components/stores/AddShopView';
+
+const CATEGORIES = [
+  'MEDICALS',
+  'SUPER MARKETS',
+  'PROVISION STORES',
+  'GENERAL MERCHANTS',
+  'DEPARTMENTAL STORES',
+  'CLINICS',
+  'FANCY STORES',
+  'OTHERS'
+];
+
+const STORE_TYPES = [
+  'Supermarket',
+  'Pharmacy/FMCG',
+  'Kirana Store',
+  'Departmental Store',
+  'Provision Store',
+  'General Merchant',
+  'Retailer'
+];
 
 const Stores = () => {
   const navigate = useNavigate();
@@ -75,6 +98,30 @@ const Stores = () => {
 
   // Toast State
   const [successToast, setSuccessToast] = useState('');
+
+  // Edit Store State
+  const [editingStore, setEditingStore] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    ownerName: '',
+    category: 'SUPER MARKETS',
+    storeType: 'Supermarket',
+    phone: '',
+    landline: '',
+    email: '',
+    state: 'Tamilnadu',
+    district: 'CHENNAI',
+    city: 'Chennai',
+    area: '',
+    address: '',
+    pincode: '',
+    gstNumber: '',
+    creditLimit: 50000,
+    creditPeriodDays: 15,
+    salesmanId: ''
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
     fetchInitialData();
@@ -124,6 +171,79 @@ const Stores = () => {
   // Open Store 360° Profile & Full History on dedicated page
   const openStoreDetail = (storeId) => {
     navigate(`/stores/${storeId}`);
+  };
+
+  // Edit Store Handlers
+  const handleOpenEdit = (store) => {
+    setEditingStore(store);
+    setEditError('');
+    setEditFormData({
+      name: store.name || '',
+      ownerName: store.ownerName || '',
+      category: store.category || 'SUPER MARKETS',
+      storeType: store.storeType || 'Supermarket',
+      phone: store.phone || '',
+      landline: store.landline || '',
+      email: store.email || '',
+      state: store.state || 'Tamilnadu',
+      district: store.district || store.city || 'CHENNAI',
+      city: store.city || 'Chennai',
+      area: store.area || '',
+      address: store.address || '',
+      pincode: store.pincode || '',
+      gstNumber: store.gstNumber || '',
+      creditLimit: store.creditLimit !== undefined ? store.creditLimit : 50000,
+      creditPeriodDays: store.creditPeriodDays !== undefined ? store.creditPeriodDays : 15,
+      salesmanId: store.salesmanId?._id || store.salesmanId || ''
+    });
+  };
+
+  const handleUpdateStore = async (e) => {
+    e.preventDefault();
+    if (!editingStore) return;
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      const res = await api.put(`/stores/${editingStore._id}`, editFormData);
+      if (res.data.success) {
+        setSuccessToast(`Shop "${editFormData.name}" updated successfully!`);
+        setTimeout(() => setSuccessToast(''), 3500);
+        setEditingStore(null);
+        try {
+          sessionStorage.removeItem('tamil_erp_stores');
+        } catch (e) {}
+        fetchStores();
+      } else {
+        setEditError(res.data.message || 'Failed to update store');
+      }
+    } catch (err) {
+      console.error('Update store error:', err);
+      setEditError(err.response?.data?.message || 'Error occurred while updating store');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleDeleteStore = async (store) => {
+    const confirmMsg = `Are you sure you want to delete store "${store.name}" (${store.code})?\n\nThis will permanently remove the shop.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const res = await api.delete(`/stores/${store._id}`);
+      if (res.data.success) {
+        setSuccessToast(`Shop "${store.name}" deleted successfully!`);
+        setTimeout(() => setSuccessToast(''), 3500);
+        try {
+          sessionStorage.removeItem('tamil_erp_stores');
+        } catch (e) {}
+        fetchStores();
+      } else {
+        alert(res.data.message || 'Failed to delete store');
+      }
+    } catch (err) {
+      console.error('Delete store error:', err);
+      alert(err.response?.data?.message || 'Error occurred while deleting store');
+    }
   };
 
   // Actions for Store 360
@@ -457,7 +577,7 @@ const Stores = () => {
                   <th className="py-3 px-3">Owner & Contact</th>
                   <th className="py-3 px-3 text-right">Credit Terms</th>
                   <th className="py-3 px-3 text-right">Outstanding Due</th>
-                  <th className="py-3 px-3 text-right">Complete Tracking</th>
+                  <th className="py-3 px-3 text-right">Complete Tracking & Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -552,19 +672,39 @@ const Stores = () => {
                         <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                             <button
+                              type="button"
                               onClick={() => openStoreDetail(store._id)}
-                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-600 hover:text-white text-teal-800 font-semibold rounded-lg text-xs flex items-center gap-1 transition-colors border border-teal-200"
+                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-600 hover:text-white text-teal-800 font-semibold rounded-lg text-xs flex items-center gap-1 transition-colors border border-teal-200 cursor-pointer"
                               title="View Full 360° Tracking & History"
                             >
                               <Eye className="w-3.5 h-3.5" />
                               360° History
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleShareWhatsAppStatement(store)}
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200"
+                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200 cursor-pointer"
                               title="WhatsApp Statement / Reminder"
                             >
                               <Share2 className="w-3.5 h-3.5" />
+                            </button>
+                            {/* Edit Shop Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(store)}
+                              className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-200 cursor-pointer"
+                              title="Edit Shop Details"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            {/* Delete Shop Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteStore(store)}
+                              className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200 cursor-pointer"
+                              title="Delete Shop"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </td>
@@ -583,6 +723,276 @@ const Stores = () => {
           </div>
         )}
       </Card>
+
+      {/* ================= EDIT SHOP MODAL ================= */}
+      {editingStore && (
+        <Modal
+          isOpen={!!editingStore}
+          onClose={() => {
+            setEditingStore(null);
+            setEditError('');
+          }}
+          title={`Edit Shop: ${editingStore.name} (${editingStore.code})`}
+          maxWidth="max-w-2xl"
+        >
+          <form onSubmit={handleUpdateStore} className="space-y-4 text-xs">
+            {editError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            {/* Row 1: Shop Name & Proprietor */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Shop Trade Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="e.g. Fresh2Day Sampoorna Vinayaga"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Proprietor / Owner Name
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.ownerName}
+                  onChange={(e) => setEditFormData({ ...editFormData, ownerName: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="Owner / Contact Person"
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Phone, Landline, Email */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Mobile Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="10-digit mobile"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Landline / Alt Phone
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.landline}
+                  onChange={(e) => setEditFormData({ ...editFormData, landline: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="Optional landline"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Email ID
+                </label>
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="shop@email.com"
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Category, Store Type, Assigned Salesman */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Category
+                </label>
+                <select
+                  value={editFormData.category}
+                  onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                >
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Store Type
+                </label>
+                <select
+                  value={editFormData.storeType}
+                  onChange={(e) => setEditFormData({ ...editFormData, storeType: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                >
+                  {STORE_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Assigned Salesman
+                </label>
+                <select
+                  value={editFormData.salesmanId}
+                  onChange={(e) => setEditFormData({ ...editFormData, salesmanId: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                >
+                  <option value="">-- No Salesman Assigned --</option>
+                  {salesmen.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name} ({s.code || s.phone})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 4: Address & Area */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.address}
+                  onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="Door No, Street Name"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Area / Locality
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.area}
+                  onChange={(e) => setEditFormData({ ...editFormData, area: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="e.g. Annanagar, Kilpauk"
+                />
+              </div>
+            </div>
+
+            {/* Row 5: City, Pincode, GSTIN */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  City / District
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.city}
+                  onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value, district: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="e.g. Chennai"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Pincode
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.pincode}
+                  onChange={(e) => setEditFormData({ ...editFormData, pincode: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-mono focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="6-digit pincode"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  GST Number (GSTIN)
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.gstNumber}
+                  onChange={(e) => setEditFormData({ ...editFormData, gstNumber: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-mono uppercase focus:ring-1 focus:ring-teal-500 focus:outline-none"
+                  placeholder="Leave empty if Unregistered"
+                />
+              </div>
+            </div>
+
+            {/* Row 6: Credit Limit & Credit Period */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Credit Limit (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={editFormData.creditLimit}
+                  onChange={(e) => setEditFormData({ ...editFormData, creditLimit: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-bold focus:ring-1 focus:ring-teal-500 focus:outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Credit Period (Days)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editFormData.creditPeriodDays}
+                  onChange={(e) => setEditFormData({ ...editFormData, creditPeriodDays: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:ring-1 focus:ring-teal-500 focus:outline-none bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end items-center gap-2.5 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingStore(null);
+                  setEditError('');
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 font-semibold cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={editSubmitting}
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold disabled:opacity-50 flex items-center gap-2 cursor-pointer shadow-sm transition-colors"
+              >
+                {editSubmitting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

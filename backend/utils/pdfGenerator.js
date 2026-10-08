@@ -51,6 +51,13 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     autoFirstPage: true
   });
 
+  doc.on('error', (err) => {
+    console.error('PDF generation error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'PDF Generation failed', error: err.message });
+    }
+  });
+
   doc.pipe(res);
 
   // Register fonts if available
@@ -319,7 +326,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     });
 
     // Description
-    doc.font(fontBold).fontSize(8.2).text(item.name, cols[1] + 4, yText, {
+    doc.font(fontBold).fontSize(8.2).text(item.name || item.productId?.name || 'Product', cols[1] + 4, yText, {
       width: cols[2] - cols[1] - 8,
       align: 'left'
     });
