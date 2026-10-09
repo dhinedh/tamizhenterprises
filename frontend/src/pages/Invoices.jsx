@@ -16,7 +16,10 @@ import {
   RotateCcw,
   Trash2,
   List,
-  ShoppingCart
+  ShoppingCart,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 import api from '../api/client';
 import Modal from '../components/common/Modal';
@@ -110,6 +113,17 @@ const GreenNotepadIcon = () => (
   </svg>
 );
 
+// 3. Vibrant WhatsApp Share Icon
+const WhatsAppShareIcon = () => (
+  <svg
+    className="w-6 h-6 text-emerald-600 hover:text-emerald-700 transition-transform hover:scale-110 inline-block drop-shadow-2xs"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path d="M12.031 2C6.496 2 2 6.494 2 12.029c0 1.767.464 3.488 1.344 5.01L2 22l5.127-1.319a9.99 9.99 0 0 0 4.904 1.348h.005c5.533 0 10.029-4.494 10.029-10.029A10.022 10.022 0 0 0 12.031 2zm0 18.358h-.004a8.31 8.31 0 0 1-4.237-1.164l-.304-.18-3.148.81.84-3.037-.197-.318a8.32 8.32 0 0 1-1.282-4.44c0-4.6 3.743-8.343 8.332-8.343a8.29 8.29 0 0 1 5.894 2.443 8.29 8.29 0 0 1 2.438 5.898c0 4.602-3.742 8.331-8.339 8.331zm4.567-6.242c-.25-.125-1.48-.73-1.709-.813-.229-.083-.396-.125-.562.125-.167.25-.646.813-.792.979-.146.167-.292.188-.542.063-.25-.125-1.056-.389-2.011-1.24-.743-.663-1.245-1.482-1.391-1.732-.146-.25-.015-.385.11-.51.112-.112.25-.292.375-.438.125-.146.167-.25.25-.417.083-.167.042-.313-.021-.438-.063-.125-.562-1.354-.771-1.854-.204-.488-.41-.422-.562-.43-.146-.008-.313-.01-.479-.01-.167 0-.438.063-.667.313-.229.25-.875.854-.875 2.083s.896 2.417 1.021 2.583c.125.167 1.762 2.692 4.271 3.774.597.258 1.063.412 1.426.527.6.19 1.146.163 1.577.099.48-.072 1.48-.604 1.688-1.188.208-.583.208-1.083.146-1.188-.063-.104-.229-.167-.479-.292z" />
+  </svg>
+);
+
 const Invoices = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -145,6 +159,12 @@ const Invoices = () => {
   const [returnInvoiceTarget, setReturnInvoiceTarget] = useState(null);
   const [removeInvoiceTarget, setRemoveInvoiceTarget] = useState(null);
   const [successToast, setSuccessToast] = useState('');
+
+  // ================= Share Invoice State =================
+  const [shareInvoiceTarget, setShareInvoiceTarget] = useState(null);
+  const [sharePhone, setSharePhone] = useState('');
+  const [shareRecipientName, setShareRecipientName] = useState('');
+  const [copiedShareText, setCopiedShareText] = useState(false);
 
   // ================= Edit Invoice State =================
   const [editInvoiceForm, setEditInvoiceForm] = useState(null);
@@ -453,6 +473,112 @@ const Invoices = () => {
       alert('Failed to download PDF invoice.');
     } finally {
       setPrintingId(null);
+    }
+  };
+
+  // ================= Share Invoice Handlers =================
+  const handleOpenShareModal = (inv) => {
+    const defaultRecipient =
+      inv.customerId?.name ||
+      inv.storeId?.name ||
+      (isCustomerType ? 'Customer' : 'Retail Shop');
+    const defaultPhone = inv.customerId?.phone || inv.storeId?.phone || '';
+    setShareInvoiceTarget(inv);
+    setShareRecipientName(defaultRecipient);
+    setSharePhone(defaultPhone);
+    setCopiedShareText(false);
+  };
+
+  const getShareInvoiceMessage = (inv, recipientName = '') => {
+    if (!inv) return '';
+    const partyName =
+      recipientName ||
+      inv.customerId?.name ||
+      inv.storeId?.name ||
+      (isCustomerType ? 'Customer' : 'Retail Shop');
+    const invNum = inv.invoiceNumber;
+    const invDate = formatInvoiceDate(inv.invoiceDate);
+    const total = formatAmount(inv.grandTotal);
+    const isPaid = inv.status === 'Paid' || inv.balanceAmount <= 0;
+    const statusText = isPaid ? 'PAID ✅' : `DUE: ₹${formatAmount(inv.balanceAmount)} ⚠️`;
+    const challan = inv.deliveryChallanNo || '';
+    const saleType = inv.saleType || 'Credit';
+
+    let itemLines = '';
+    if (inv.items && inv.items.length > 0) {
+      itemLines = inv.items
+        .map(
+          (i) =>
+            `• ${i.name} - ${i.quantity} units @ ₹${i.unitPrice} (₹${formatAmount(i.total)})`
+        )
+        .join('\n');
+    }
+
+    return (
+      `வணக்கம் / Hello ${partyName},\n\n` +
+      `🏢 *TAMIZH ENTERPRISES - GST TAX INVOICE*\n` +
+      `Goods dispatched & billed under Tamil Nadu Distribution Network.\n\n` +
+      `📋 *Invoice Details:*\n` +
+      `• Invoice No: *${invNum}*\n` +
+      `• Invoice Date: *${invDate}*\n` +
+      `• Bill Amount: *₹ ${total}*\n` +
+      `• Payment Status: *${statusText}*\n` +
+      `• Terms: *${saleType}*\n` +
+      (challan ? `• Delivery Challan: *${challan}*\n` : '') +
+      `\n` +
+      (itemLines ? `📦 *Dispatched Items:*\n${itemLines}\n\n` : '') +
+      `🏦 *Payment Options (UPI & Bank):*\n` +
+      `• UPI ID: tamizhenterprises@hdfcbank\n` +
+      `• Bank: HDFC Bank, Madurai Main Branch\n` +
+      `• A/C: 50200012345678 | IFSC: HDFC0000123\n\n` +
+      `Thank you for your business!\n` +
+      `Tamizh Enterprises Distribution Central Depot\n` +
+      `Helpline: +91 94432 10987`
+    );
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!shareInvoiceTarget) return;
+    const text = getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName);
+    const cleanPhone = sharePhone ? sharePhone.replace(/[^0-9]/g, '') : '';
+    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const url = formattedPhone
+      ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(text)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyShareText = async () => {
+    if (!shareInvoiceTarget) return;
+    const text = getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedShareText(true);
+      showToast('Invoice summary copied to clipboard!');
+      setTimeout(() => setCopiedShareText(false), 2500);
+    } catch (e) {
+      console.error('Failed to copy to clipboard', e);
+    }
+  };
+
+  const handleSystemShare = async () => {
+    if (!shareInvoiceTarget) return;
+    const text = getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName);
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Tax Invoice #${shareInvoiceTarget.invoiceNumber} - Tamizh Enterprises`,
+          text: text,
+          url: window.location.href
+        });
+        showToast('Invoice shared successfully!');
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      handleCopyShareText();
     }
   };
 
@@ -1687,6 +1813,12 @@ const Invoices = () => {
                         <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
                       </div>
                     </th>
+                    <th className="py-3 px-3 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>Share</span>
+                        <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
+                      </div>
+                    </th>
                     <th
                       onClick={() => handleSort('status')}
                       className="py-3 px-3 cursor-pointer hover:text-slate-800 whitespace-nowrap text-center"
@@ -1737,7 +1869,7 @@ const Invoices = () => {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan="13" className="py-12 text-center text-slate-400 font-medium">
+                      <td colSpan="14" className="py-12 text-center text-slate-400 font-medium">
                         Loading invoices...
                       </td>
                     </tr>
@@ -1842,7 +1974,19 @@ const Invoices = () => {
                             </button>
                           </td>
 
-                          {/* 7. Status */}
+                          {/* 7. Share */}
+                          <td className="py-4 px-3 align-top text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenShareModal(inv)}
+                              title="Share Invoice (WhatsApp, Copy & Details)"
+                              className="p-1 hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center justify-center"
+                            >
+                              <WhatsAppShareIcon />
+                            </button>
+                          </td>
+
+                          {/* 8. Status */}
                           <td className="py-4 px-3 align-top text-center whitespace-nowrap">
                             <span
                               className={`inline-block px-2.5 py-0.5 text-[11px] font-semibold rounded-md border ${
@@ -1925,7 +2069,7 @@ const Invoices = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="13" className="py-12 text-center text-slate-400">
+                      <td colSpan="14" className="py-12 text-center text-slate-400">
                         No matching invoices found.
                       </td>
                     </tr>
@@ -1982,6 +2126,164 @@ const Invoices = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ================= MODAL: SHARE INVOICE (WHATSAPP & SUMMARY) ================= */}
+      {shareInvoiceTarget && (
+        <Modal
+          isOpen={!!shareInvoiceTarget}
+          onClose={() => setShareInvoiceTarget(null)}
+          title={`Share Tax Invoice #${formatInvoiceNumber(shareInvoiceTarget.invoiceNumber)}`}
+          maxWidth="max-w-lg"
+        >
+          <div className="space-y-4 text-xs sm:text-sm">
+            {/* Top Summary Card */}
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50/50 p-3.5 rounded-xl border border-emerald-200/80 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide">
+                  Bill of Supply
+                </span>
+                <div className="font-extrabold text-base text-slate-900 font-mono">
+                  {shareInvoiceTarget.invoiceNumber}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  {formatInvoiceDate(shareInvoiceTarget.invoiceDate)}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide">
+                  Invoice Amount
+                </span>
+                <div className="font-extrabold text-lg text-emerald-700 font-mono">
+                  ₹{formatAmount(shareInvoiceTarget.grandTotal)}
+                </div>
+                <span
+                  className={`inline-block mt-0.5 px-2 py-0.5 text-[10px] font-bold rounded-md border ${
+                    shareInvoiceTarget.status === 'Paid' || shareInvoiceTarget.balanceAmount <= 0
+                      ? 'border-emerald-500 text-emerald-700 bg-emerald-100/60'
+                      : 'border-red-400 text-red-600 bg-red-50'
+                  }`}
+                >
+                  {shareInvoiceTarget.status === 'Paid' || shareInvoiceTarget.balanceAmount <= 0
+                    ? 'Paid'
+                    : 'Not Paid'}
+                </span>
+              </div>
+            </div>
+
+            {/* Recipient & Phone Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1 text-xs">
+                  Recipient Name:
+                </label>
+                <input
+                  type="text"
+                  value={shareRecipientName}
+                  onChange={(e) => setShareRecipientName(e.target.value)}
+                  placeholder="Customer / Shop name"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-700 font-bold mb-1 text-xs">
+                  WhatsApp Mobile No:
+                </label>
+                <div className="relative">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+                  <input
+                    type="tel"
+                    value={sharePhone}
+                    onChange={(e) => setSharePhone(e.target.value)}
+                    placeholder="10-digit mobile number"
+                    className="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Message Preview Box */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                  <WhatsAppShareIcon /> WhatsApp Message Preview
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyShareText}
+                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 hover:underline cursor-pointer"
+                >
+                  {copiedShareText ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" /> Copy Message Text
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="bg-[#e7f7ed] border border-emerald-200/90 rounded-xl p-3 text-slate-800 font-mono text-[11px] leading-relaxed max-h-44 overflow-y-auto whitespace-pre-wrap select-all">
+                {getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName)}
+              </div>
+            </div>
+
+            {/* Modal Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-3 border-t border-slate-200">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDownloadPDF(shareInvoiceTarget._id, shareInvoiceTarget.invoiceNumber)
+                  }
+                  className="px-3 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  title="Download PDF"
+                >
+                  <Download className="w-3.5 h-3.5" /> PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handlePrintInvoice(shareInvoiceTarget._id, shareInvoiceTarget.invoiceNumber)
+                  }
+                  className="px-3 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  title="Direct Print"
+                >
+                  <PrinterIcon /> Print
+                </button>
+                {typeof navigator !== 'undefined' && navigator.share && (
+                  <button
+                    type="button"
+                    onClick={handleSystemShare}
+                    className="px-3 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    title="Device System Share"
+                  >
+                    <Share2 className="w-3.5 h-3.5" /> Share App
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShareInvoiceTarget(null)}
+                  className="px-3.5 py-2 border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold text-xs transition-colors cursor-pointer flex-1 sm:flex-initial"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendWhatsApp}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex-1 sm:flex-initial"
+                >
+                  <WhatsAppShareIcon /> Send on WhatsApp
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* ================= MODAL: QUICK SHOP CONTACT UPDATE ================= */}
@@ -2584,6 +2886,13 @@ const Invoices = () => {
                   className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <PrinterIcon /> Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenShareModal(selectedInvoice)}
+                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5" /> Share
                 </button>
                 <button
                   type="button"

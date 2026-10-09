@@ -146,19 +146,27 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   // Determine Invoice Title: "Bill of Supply" as requested
   const titleText = 'Bill of Supply';
 
-  // --- PAGE 1 START ---
-  const p1Top = 17.4;
+  // --- SINGLE SHEET PAGE SETUP (A4: 595.28 x 841.89 pt) ---
+  const p1Top = 16.0;
+  const titleH = 22.0;
+  const titleBottom = p1Top + titleH; // 38.0
 
-  // 1. Top Title Bar (Y: 17.4 -> 46.7)
+  // 1. Top Title Bar (Y: 16.0 -> 38.0)
   strokeBorder(leftX, p1Top, rightX, p1Top);
-  strokeBorder(leftX, 46.7, rightX, 46.7);
-  doc.font(fontBold).fontSize(12.8).fillColor('#000000');
-  doc.text(titleText, leftX, 28.2, { width: totalW, align: 'center' });
+  strokeBorder(leftX, titleBottom, rightX, titleBottom);
+  doc.font(fontBold).fontSize(11.5).fillColor('#000000');
+  doc.text(titleText, leftX, p1Top + 5.5, { width: totalW, align: 'center' });
 
-  // 2. Vertical border between Left (Seller/Buyer) and Right (Invoice Info)
-  strokeBorder(midX, 46.7, midX, 413.2);
+  // 2. Top Info Box (Y: 38.0 -> 180.0, Height = 142.0 pt)
+  const infoTop = titleBottom; // 38.0
+  const infoBottom = 180.0;
+  const sellerBuyerDividerY = 106.0;
 
-  // 3. Top-Left Seller Section (Y: 46.7 -> 177.1)
+  // Vertical border between Left (Seller & Buyer) and Right (Invoice Info)
+  strokeBorder(midX, infoTop, midX, infoBottom);
+  strokeBorder(leftX, infoBottom, rightX, infoBottom);
+
+  // Logo & Seller details
   let logoImg = null;
   if (owner?.logo && typeof owner.logo === 'string' && owner.logo.includes('base64,')) {
     try {
@@ -174,84 +182,70 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
 
   if (logoImg) {
     try {
-      doc.image(logoImg, 22.8, 51.5, { fit: [105.8, 106.4], align: 'center', valign: 'center' });
+      doc.image(logoImg, 21.0, infoTop + 3.0, { fit: [74.0, 60.0], align: 'center', valign: 'center' });
     } catch (e) {
-      doc.rect(22.8, 51.5, 105.8, 106.4).strokeColor('#cccccc').stroke();
+      doc.rect(21.0, infoTop + 3.0, 74.0, 60.0).strokeColor('#cccccc').stroke();
     }
   }
 
   // Seller Text
-  const sellerTextX = 137.8;
-  const sellerTextW = midX - sellerTextX - 2;
+  const sellerTextX = 99.0;
+  const sellerTextW = midX - sellerTextX - 4.0;
 
-  doc.font(fontBold).fontSize(12.8).fillColor('#000000');
-  doc.text(seller.companyName, sellerTextX, 51.9, { width: sellerTextW });
+  doc.font(fontBold).fontSize(10.5).fillColor('#000000');
+  doc.text(seller.companyName, sellerTextX, infoTop + 3.0, { width: sellerTextW });
 
-  doc.font(fontRegular).fontSize(9.0);
-  doc.text(seller.addressLine1, sellerTextX, 70.1, { width: sellerTextW });
-  doc.text(seller.addressLine2, sellerTextX, 85.5, { width: sellerTextW });
-  doc.text(`${seller.city}, ${seller.state} - ${seller.pincode}`, sellerTextX, 100.9, { width: sellerTextW });
+  doc.font(fontRegular).fontSize(7.5);
+  doc.text(seller.addressLine1, sellerTextX, infoTop + 15.5, { width: sellerTextW });
+  doc.text(
+    `${seller.addressLine2 ? seller.addressLine2 + ', ' : ''}${seller.city}, ${seller.state} - ${seller.pincode}`,
+    sellerTextX,
+    infoTop + 25.5,
+    { width: sellerTextW }
+  );
 
-  // GSTIN
-  doc.font(fontBold).text('GSTIN/UIN : ', sellerTextX, 116.2, { continued: true });
+  doc.font(fontBold).text('GSTIN/UIN : ', sellerTextX, infoTop + 36.5, { continued: true });
   doc.font(fontRegular).text(seller.gstin);
 
-  // Contact
-  doc.font(fontBold).text('Contact : ', sellerTextX, 131.6, { continued: true });
-  doc.font(fontRegular).text(seller.contact);
+  doc.font(fontBold).text('Contact : ', sellerTextX, infoTop + 47.0, { continued: true });
+  doc.font(fontRegular).text(`${seller.contact}`);
 
-  // Email
-  doc.font(fontBold).text('Email : ', sellerTextX, 147.0);
-  doc.font(fontRegular).fontSize(8.0).text(seller.email, sellerTextX, 162.3, { width: sellerTextW });
+  doc.font(fontBold).text('Email : ', sellerTextX, infoTop + 57.5, { continued: true });
+  doc.font(fontRegular).text(seller.email);
 
-  strokeBorder(leftX, 177.1, midX, 177.1);
+  // Horizontal divider between Seller and Buyer
+  strokeBorder(leftX, sellerBuyerDividerY, midX, sellerBuyerDividerY);
 
-  // 4. Middle-Left Consignee (Ship to) (Y: 177.1 -> 295.2)
-  const custX = 17.8;
-  const custW = midX - custX - 4;
+  // Buyer (Bill to) & Consignee (Ship to)
+  const custX = 21.0;
+  const custW = midX - custX - 4.0;
 
-  doc.font(fontRegular).fontSize(9.0).fillColor('#000000');
-  doc.text('Consignee (Ship to):', custX, 188.2);
+  doc.font(fontRegular).fontSize(7.5).fillColor('#000000');
+  doc.text('Buyer (Bill to) & Consignee (Ship to):', custX, sellerBuyerDividerY + 3.0);
 
-  doc.font(fontBold).fontSize(9.0);
-  doc.text(partyName, custX, 203.5, { width: custW });
+  doc.font(fontBold).fontSize(8.5);
+  doc.text(partyName, custX, sellerBuyerDividerY + 13.5, { width: custW });
 
-  doc.font(fontRegular).fontSize(8.5);
-  doc.text(partyAddress || '-', custX, 234.3, { width: custW });
+  doc.font(fontRegular).fontSize(7.5);
+  doc.text(partyAddress || '-', custX, sellerBuyerDividerY + 25.0, { width: custW, height: 17, ellipsis: true });
 
-  doc.font(fontRegular).fontSize(9.0);
-  doc.text(`GSTIN: ${partyGstin}`, custX, 249.6);
-  doc.text(`Mobile: ${partyPhone || '-'}`, custX, 265.0);
-  doc.text(`State : , District: ${partyDistrict}`, custX, 280.4);
+  doc.font(fontBold).text('GSTIN : ', custX, sellerBuyerDividerY + 44.5, { continued: true });
+  doc.font(fontRegular).text(partyGstin, { continued: true });
+  doc.font(fontBold).text('   Mobile : ', { continued: true });
+  doc.font(fontRegular).text(partyPhone || '-');
 
-  strokeBorder(leftX, 295.2, midX, 295.2);
+  doc.text(`State : ${party?.state || 'Tamil Nadu'}, District: ${partyDistrict}`, custX, sellerBuyerDividerY + 56.5);
 
-  // 5. Bottom-Left Buyer (Bill to) (Y: 295.2 -> 413.2)
-  doc.font(fontRegular).fontSize(9.0);
-  doc.text('Buyer (Bill to):', custX, 306.2);
-
-  doc.font(fontBold).fontSize(9.0);
-  doc.text(partyName, custX, 321.6, { width: custW });
-
-  doc.font(fontRegular).fontSize(8.5);
-  doc.text(partyAddress || '-', custX, 352.3, { width: custW });
-
-  doc.font(fontRegular).fontSize(9.0);
-  doc.text(`GSTIN: ${partyGstin}`, custX, 367.7);
-  doc.text(`Mobile: ${partyPhone || '-'}`, custX, 383.1);
-  doc.text(`State : , District: ${partyDistrict}`, custX, 398.4);
-
-  // 6. Right Side Grid (X: 308.1 -> 579.4, Y: 46.7 -> 413.2)
-  const rightGridLines = [84.1, 107.4, 130.6, 153.9, 177.1, 200.4, 413.2];
+  // Right Side Grid (X: 308.1 -> 579.4, Y: infoTop -> infoBottom)
+  const rightGridLines = [60.0, 78.0, 96.0, 114.0, 132.0, 150.0, infoBottom];
   rightGridLines.forEach((y) => strokeBorder(midX, y, rightX, y));
 
-  // Vertical divider between right sub-columns (Y: 46.7 to 200.4)
-  strokeBorder(rightSubColX, 46.7, rightSubColX, 200.4);
+  // Vertical divider between right sub-columns (Y: infoTop to 150.0)
+  strokeBorder(rightSubColX, infoTop, rightSubColX, 150.0);
 
-  const colR1_X = midX + 6;
-  const colR2_X = rightSubColX + 6;
+  const colR1_X = midX + 5.0;
+  const colR2_X = rightSubColX + 5.0;
 
-  // Format invoice number to clean standard
   let displayInvNo = String(invoice.invoiceNumber || '16');
   if (displayInvNo.includes('-')) {
     const parts = displayInvNo.split('-');
@@ -259,91 +253,142 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     if (/^\d+$/.test(lastPart)) displayInvNo = lastPart;
   }
 
-  // Row 1 (Y: 46.7 -> 84.1)
-  doc.font(fontRegular).fontSize(8.2).text('Invoice #', colR1_X, 58.0);
-  doc.font(fontBold).fontSize(9.0).text(displayInvNo, colR1_X, 70.1);
+  // Row 1 (infoTop -> 60.0)
+  doc.font(fontRegular).fontSize(7.0).text('Invoice #', colR1_X, infoTop + 3.0);
+  doc.font(fontBold).fontSize(8.5).text(displayInvNo, colR1_X, infoTop + 12.0);
 
-  doc.font(fontRegular).fontSize(8.2).text('Invoice Date:', colR2_X, 58.0);
-  doc.font(fontBold).fontSize(9.0).text(formatDate(invoice.invoiceDate), colR2_X, 70.1);
+  doc.font(fontRegular).fontSize(7.0).text('Invoice Date:', colR2_X, infoTop + 3.0);
+  doc.font(fontBold).fontSize(8.5).text(formatDate(invoice.invoiceDate), colR2_X, infoTop + 12.0);
 
-  // Row 2 (Y: 84.1 -> 107.4)
-  doc.font(fontRegular).fontSize(8.2).text('Delivery Note', colR1_X, 90.9);
-  doc.font(fontRegular).fontSize(8.2).text('Mode/Terms of Payment', colR2_X, 90.9);
+  // Row 2 (60.0 -> 78.0)
+  doc.font(fontRegular).fontSize(7.0).text('Delivery Note', colR1_X, 62.0);
+  if (invoice.deliveryChallanNo) doc.font(fontBold).fontSize(7.5).text(invoice.deliveryChallanNo, colR1_X, 70.0);
 
-  // Row 3 (Y: 107.4 -> 130.6)
-  doc.font(fontRegular).fontSize(8.2).text('Reference No. & Date', colR1_X, 116.2);
-  doc.font(fontRegular).fontSize(8.2).text('Other References', colR2_X, 116.2);
+  doc.font(fontRegular).fontSize(7.0).text('Mode/Terms of Payment', colR2_X, 62.0);
+  doc.font(fontBold).fontSize(7.5).text(invoice.saleType || 'Credit', colR2_X, 70.0);
 
-  // Row 4 (Y: 130.6 -> 153.9)
-  doc.font(fontRegular).fontSize(8.2).text("Buyer's Order No.", colR1_X, 137.4);
-  doc.font(fontRegular).fontSize(8.2).text('Dated', colR2_X, 137.4);
+  // Row 3 (78.0 -> 96.0)
+  doc.font(fontRegular).fontSize(7.0).text('Reference No. & Date', colR1_X, 81.0);
+  doc.font(fontRegular).fontSize(7.0).text('Other References', colR2_X, 81.0);
 
-  // Row 5 (Y: 153.9 -> 177.1)
-  doc.font(fontRegular).fontSize(8.2).text('Dispatch Doc No.', colR1_X, 162.3);
-  doc.font(fontRegular).fontSize(8.2).text('Delivery Note Date', colR2_X, 162.3);
+  // Row 4 (96.0 -> 114.0)
+  doc.font(fontRegular).fontSize(7.0).text("Buyer's Order No.", colR1_X, 99.0);
+  doc.font(fontRegular).fontSize(7.0).text('Dated', colR2_X, 99.0);
 
-  // Row 6 (Y: 177.1 -> 200.4)
-  doc.font(fontRegular).fontSize(8.2).text('Dispatched through', colR1_X, 183.9);
-  doc.font(fontRegular).fontSize(8.2).text('Destination', colR2_X, 183.9);
+  // Row 5 (114.0 -> 132.0)
+  doc.font(fontRegular).fontSize(7.0).text('Dispatch Doc No.', colR1_X, 117.0);
+  doc.font(fontRegular).fontSize(7.0).text('Delivery Note Date', colR2_X, 117.0);
 
-  // Row 7 (Y: 200.4 -> 413.2) - Terms of Delivery
-  doc.font(fontRegular).fontSize(8.2).text('Terms of Delivery', colR1_X, 211.7);
+  // Row 6 (132.0 -> 150.0)
+  doc.font(fontRegular).fontSize(7.0).text('Dispatched through', colR1_X, 135.0);
+  doc.font(fontRegular).fontSize(7.0).text('Destination', colR2_X, 135.0);
+  doc.font(fontBold).fontSize(7.5).text(partyDistrict, colR2_X, 142.0);
 
-  // 7. Products Table Header (Y: 413.2 -> 459.5)
-  const thTop = 413.2;
-  const thBottom = 459.5;
+  // Row 7 (150.0 -> infoBottom)
+  doc.font(fontRegular).fontSize(7.0).text('Terms of Delivery', colR1_X, 153.0);
+
+  // 3. Products Table Header (Y: infoBottom -> thBottom = infoBottom + 22.0)
+  const thTop = infoBottom; // 180.0
+  const thBottom = thTop + 22.0; // 202.0
   strokeBorder(leftX, thTop, rightX, thTop);
   strokeBorder(leftX, thBottom, rightX, thBottom);
-
   cols.forEach((cx) => strokeBorder(cx, thTop, cx, thBottom));
 
-  doc.font(fontRegular).fontSize(8.2).fillColor('#000000');
-  doc.text('Sl\nNo.', cols[0], 421.3, { width: cols[1] - cols[0], align: 'center' });
-  doc.text('Description of Goods', cols[1] + 4, 421.3, { width: cols[2] - cols[1] - 8, align: 'left' });
-  doc.text('HSN/SAC', cols[2], 421.3, { width: cols[3] - cols[2], align: 'center' });
-  doc.text('Quantity', cols[3], 421.3, { width: cols[4] - cols[3], align: 'center' });
-  doc.text('MRP', cols[4] + 2, 421.3, { width: cols[5] - cols[4] - 4, align: 'right' });
-  doc.text('Rate\n(Excl.\nTax)', cols[5] + 2, 421.3, { width: cols[6] - cols[5] - 4, align: 'right' });
-  doc.text('Rate\n(Incl. Tax)', cols[6] + 2, 421.3, { width: cols[7] - cols[6] - 4, align: 'right' });
-  doc.text('per', cols[7], 421.3, { width: cols[8] - cols[7], align: 'center' });
-  doc.text('GST(%)', cols[8], 421.3, { width: cols[9] - cols[8], align: 'center' });
-  doc.text('Disc', cols[9] + 2, 421.3, { width: cols[10] - cols[9] - 4, align: 'right' });
-  doc.text('Amount', cols[10] + 2, 421.3, { width: cols[11] - cols[10] - 6, align: 'right' });
+  doc.font(fontRegular).fontSize(7.5).fillColor('#000000');
+  doc.text('Sl\nNo.', cols[0], thTop + 3.0, { width: cols[1] - cols[0], align: 'center' });
+  doc.text('Description of Goods', cols[1] + 3, thTop + 6.0, { width: cols[2] - cols[1] - 6, align: 'left' });
+  doc.text('HSN/SAC', cols[2], thTop + 6.0, { width: cols[3] - cols[2], align: 'center' });
+  doc.text('Quantity', cols[3], thTop + 6.0, { width: cols[4] - cols[3], align: 'center' });
+  doc.text('MRP', cols[4] + 2, thTop + 6.0, { width: cols[5] - cols[4] - 4, align: 'right' });
+  doc.text('Rate(Excl.)', cols[5] + 2, thTop + 6.0, { width: cols[6] - cols[5] - 4, align: 'right' });
+  doc.text('Rate(Incl.)', cols[6] + 2, thTop + 6.0, { width: cols[7] - cols[6] - 4, align: 'right' });
+  doc.text('per', cols[7], thTop + 6.0, { width: cols[8] - cols[7], align: 'center' });
+  doc.text('GST(%)', cols[8], thTop + 6.0, { width: cols[9] - cols[8], align: 'center' });
+  doc.text('Disc', cols[9] + 2, thTop + 6.0, { width: cols[10] - cols[9] - 4, align: 'right' });
+  doc.text('Amount', cols[10] + 2, thTop + 6.0, { width: cols[11] - cols[10] - 5, align: 'right' });
 
-  // 8. Render Items Rows
+  // 4. Calculate Bottom Section Positions (strictly anchored inside single sheet)
+  const items = invoice.items || [];
+  const bBottom = 810.0;
+  const bottomSectionHeight = 108.0;
+  const bTop = bBottom - bottomSectionHeight; // 702.0
+
+  // Aggregate items by HSN Code
+  const hsnMap = {};
+  items.forEach((it) => {
+    const code = it.hsnCode || '96190010';
+    if (!hsnMap[code]) {
+      hsnMap[code] = {
+        taxable: 0,
+        cgstRate: (it.gstRate || 0) / 2,
+        cgstAmount: 0,
+        sgstRate: (it.gstRate || 0) / 2,
+        sgstAmount: 0,
+        totalTax: 0
+      };
+    }
+    const lineTaxable = Number(it.taxableValue || (it.quantity * it.unitPrice));
+    const lineTax = Number(it.taxAmount || 0);
+    hsnMap[code].taxable += lineTaxable;
+    hsnMap[code].cgstAmount += lineTax / 2;
+    hsnMap[code].sgstAmount += lineTax / 2;
+    hsnMap[code].totalTax += lineTax;
+  });
+
+  const hsnCodes = Object.keys(hsnMap);
+  const numHsn = Math.max(1, hsnCodes.length);
+  const hsnRowH = 11.5;
+  const hsnHeaderH = 23.0; // 13.0 + 10.0
+  const hsnTotalRowH = 11.5;
+  const hsnTableHeight = hsnHeaderH + (numHsn * hsnRowH) + hsnTotalRowH;
+  const hsnTableTop = bTop - hsnTableHeight; // e.g. 702.0 - 46.0 = 656.0
+
+  const wordsRowH = 20.0;
+  const wordsRowTop = hsnTableTop - wordsRowH; // e.g. 656.0 - 20.0 = 636.0
+
+  const totalRowH = 15.0;
+  const totalRowTop = wordsRowTop - totalRowH; // e.g. 636.0 - 15.0 = 621.0
+
+  const qtyRowH = 16.0;
+  const qtyRowTop = totalRowTop - qtyRowH; // e.g. 621.0 - 16.0 = 605.0
+
+  // 5. Render Product Line Items within [thBottom -> qtyRowTop]
+  const availableTableH = qtyRowTop - thBottom;
+  const numItems = Math.max(1, items.length);
+  const itemRowH = Math.min(22.0, Math.max(13.5, availableTableH / numItems));
+
   let currentY = thBottom;
   let totalQty = 0;
-  const items = invoice.items || [];
 
   items.forEach((item, idx) => {
-    const rowH = 30.0;
-    const yText = currentY + 5.0;
-
+    const yText = currentY + 3.0;
     const qty = Number(item.quantity || 0);
     totalQty += qty;
     const unitStr = item.unit || 'Packs';
-    const mrp = Number(item.mrp || (item.productId?.mrp) || item.unitPrice || 0);
+    const mrp = Number(item.mrp || item.productId?.mrp || item.unitPrice || 0);
     const unitPrice = Number(item.unitPrice || 0);
     const gstRate = Number(item.gstRate || 0);
     const rateIncl = unitPrice * (1 + gstRate / 100);
     const discAmount = Number(item.discountAmount || 0);
     const discPct = Number(item.discountPercent || 0);
-    const lineTotal = Number(item.total || (qty * unitPrice));
+    const lineTotal = Number(item.total || qty * unitPrice);
 
     // Sl No
-    doc.font(fontRegular).fontSize(8.2).text(String(idx + 1), cols[0], yText, {
+    doc.font(fontRegular).fontSize(7.5).text(String(idx + 1), cols[0], yText, {
       width: cols[1] - cols[0],
       align: 'center'
     });
 
     // Description
-    doc.font(fontBold).fontSize(8.2).text(item.name || item.productId?.name || 'Product', cols[1] + 4, yText, {
-      width: cols[2] - cols[1] - 8,
-      align: 'left'
+    doc.font(fontBold).fontSize(7.5).text(item.name || item.productId?.name || 'Product', cols[1] + 3, yText, {
+      width: cols[2] - cols[1] - 6,
+      align: 'left',
+      height: itemRowH - 2,
+      ellipsis: true
     });
 
     // HSN/SAC
-    doc.font(fontRegular).fontSize(8.2).text(item.hsnCode || '96190010', cols[2], yText, {
+    doc.font(fontRegular).fontSize(7.5).text(item.hsnCode || '96190010', cols[2], yText, {
       width: cols[3] - cols[2],
       align: 'center'
     });
@@ -385,78 +430,69 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     });
 
     // Disc
-    doc.text(`${discAmount.toFixed(2)}\n(${discPct}%)`, cols[9] + 2, yText, {
+    doc.text(discAmount > 0 ? `${discAmount.toFixed(2)} (${discPct}%)` : `0.00 (0%)`, cols[9] + 2, yText, {
       width: cols[10] - cols[9] - 4,
       align: 'right'
     });
 
     // Amount
     doc.text(formatCurrency(lineTotal), cols[10] + 2, yText, {
-      width: cols[11] - cols[10] - 6,
+      width: cols[11] - cols[10] - 5,
       align: 'right'
     });
 
-    // Draw column vertical dividers
-    cols.forEach((cx) => strokeBorder(cx, currentY, cx, currentY + rowH));
-
-    currentY += rowH;
+    // Column dividers
+    cols.forEach((cx) => strokeBorder(cx, currentY, cx, currentY + itemRowH));
+    currentY += itemRowH;
+    strokeBorder(leftX, currentY, rightX, currentY);
   });
 
-  strokeBorder(leftX, currentY, rightX, currentY);
+  // Extend vertical column dividers through empty rows down to qtyRowTop (authentic Tally format)
+  if (currentY < qtyRowTop) {
+    cols.forEach((cx) => strokeBorder(cx, currentY, cx, qtyRowTop));
+  }
 
-  // 9. Subtotal Quantity Row (Height ~ 30 pt)
-  const qtyRowH = 30.0;
-  cols.forEach((cx) => strokeBorder(cx, currentY, cx, currentY + qtyRowH));
+  // 6. Subtotal Quantity Row (at qtyRowTop)
+  strokeBorder(leftX, qtyRowTop, rightX, qtyRowTop);
+  strokeBorder(leftX, totalRowTop, rightX, totalRowTop);
+  cols.forEach((cx) => strokeBorder(cx, qtyRowTop, cx, totalRowTop));
 
-  doc.font(fontBold).fontSize(8.2).text(String(totalQty), cols[3], currentY + 6, {
+  doc.font(fontBold).fontSize(7.5).text(`${totalQty} Packs`, cols[3], qtyRowTop + 3.5, {
     width: cols[4] - cols[3],
     align: 'center'
   });
-  doc.text('Packs', cols[3], currentY + 18, {
-    width: cols[4] - cols[3],
-    align: 'center'
-  });
 
-  doc.text(`₹ ${formatCurrency(invoice.grandTotal)}`, cols[10] + 2, currentY + 6, {
-    width: cols[11] - cols[10] - 6,
+  doc.text(`₹ ${formatCurrency(invoice.grandTotal)}`, cols[10] + 2, qtyRowTop + 3.5, {
+    width: cols[11] - cols[10] - 5,
     align: 'right'
   });
 
-  currentY += qtyRowH;
-  strokeBorder(leftX, currentY, rightX, currentY);
+  // 7. "Total" Row (at totalRowTop)
+  strokeBorder(leftX, totalRowTop, rightX, totalRowTop);
+  strokeBorder(leftX, wordsRowTop, rightX, wordsRowTop);
+  cols.forEach((cx) => strokeBorder(cx, totalRowTop, cx, wordsRowTop));
 
-  // 10. "Total" Row (Height ~ 18 pt)
-  const totalRowH = 18.0;
-  cols.forEach((cx) => strokeBorder(cx, currentY, cx, currentY + totalRowH));
-
-  doc.font(fontBoldOblique).fontSize(8.2).text('Total', cols[1], currentY + 4, {
+  doc.font(fontBoldOblique).fontSize(7.5).text('Total', cols[1], totalRowTop + 3.5, {
     width: cols[10] - cols[1] - 8,
     align: 'right'
   });
 
-  doc.font(fontBold).fontSize(8.2).text(`₹ ${formatCurrency(invoice.grandTotal)}`, cols[10] + 2, currentY + 4, {
-    width: cols[11] - cols[10] - 6,
+  doc.font(fontBold).fontSize(7.5).text(`₹ ${formatCurrency(invoice.grandTotal)}`, cols[10] + 2, totalRowTop + 3.5, {
+    width: cols[11] - cols[10] - 5,
     align: 'right'
   });
 
-  currentY += totalRowH;
-  strokeBorder(leftX, currentY, rightX, currentY);
+  // 8. Amount Chargeable (in words) & E. & O.E Row (at wordsRowTop)
+  strokeBorder(leftX, wordsRowTop, rightX, wordsRowTop);
+  strokeBorder(leftX, hsnTableTop, rightX, hsnTableTop);
 
-  // 11. Amount Chargeable (in words) & E. & O.E (Height ~ 36 pt)
-  const wordsRowH = 36.8;
-  doc.font(fontRegular).fontSize(8.2).text('Amount Chargeable (in words)', leftX + 4, currentY + 4);
-  doc.font('Times-Roman').fontSize(12.0).text('E. & O.E', rightX - 60, currentY + 4, { width: 56, align: 'right' });
+  doc.font(fontRegular).fontSize(7.0).text('Amount Chargeable (in words)', leftX + 4, wordsRowTop + 2.0);
+  doc.font('Times-Roman').fontSize(10.0).text('E. & O.E', rightX - 60, wordsRowTop + 2.0, { width: 56, align: 'right' });
 
   const amountInWords = numberToWordsINR(invoice.grandTotal, 'INR ');
-  doc.font(fontBold).fontSize(9.0).text(amountInWords, leftX + 4, currentY + 21);
+  doc.font(fontBold).fontSize(8.0).text(amountInWords, leftX + 4, wordsRowTop + 10.5);
 
-  strokeBorder(leftX, currentY, leftX, currentY + wordsRowH);
-  strokeBorder(rightX, currentY, rightX, currentY + wordsRowH);
-  currentY += wordsRowH;
-  strokeBorder(leftX, currentY, rightX, currentY);
-
-  // 12. HSN/SAC Tax Breakdown Table
-  const hsnTableTop = currentY;
+  // 9. HSN/SAC Tax Breakdown Table (at hsnTableTop -> bTop)
   const hsnMainCols = [
     17.4,  // 0: HSN/SAC left
     115.7, // 1: Taxable Value left
@@ -477,8 +513,8 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     579.4  // Right edge
   ];
 
-  const hsnH1 = 23.3;
-  const hsnH2 = 13.6;
+  const hsnH1 = 13.0;
+  const hsnH2 = 10.0;
   const subH_Top = hsnTableTop + hsnH1;
   const hsnRowsTop = subH_Top + hsnH2;
 
@@ -487,111 +523,67 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   strokeBorder(leftX, subH_Top, rightX, subH_Top);
   hsnMainCols.forEach((cx) => strokeBorder(cx, hsnTableTop, cx, subH_Top));
 
-  doc.font(fontRegular).fontSize(8.2).fillColor('#000000');
-  doc.text('HSN/SAC', hsnMainCols[0], hsnTableTop + 6, { width: hsnMainCols[1] - hsnMainCols[0], align: 'center' });
-  doc.text('Taxable\nValue', hsnMainCols[1], hsnTableTop + 2, { width: hsnMainCols[2] - hsnMainCols[1], align: 'center' });
-  doc.text('CGST', hsnMainCols[2], hsnTableTop + 6, { width: hsnMainCols[3] - hsnMainCols[2], align: 'center' });
-  doc.text('SGST', hsnMainCols[3], hsnTableTop + 6, { width: hsnMainCols[4] - hsnMainCols[3], align: 'center' });
-  doc.text('Total\nTax Amount', hsnMainCols[4], hsnTableTop + 2, { width: hsnMainCols[5] - hsnMainCols[4], align: 'center' });
+  doc.font(fontRegular).fontSize(7.0).fillColor('#000000');
+  doc.text('HSN/SAC', hsnMainCols[0], hsnTableTop + 3.0, { width: hsnMainCols[1] - hsnMainCols[0], align: 'center' });
+  doc.text('Taxable Value', hsnMainCols[1], hsnTableTop + 3.0, { width: hsnMainCols[2] - hsnMainCols[1], align: 'center' });
+  doc.text('CGST', hsnMainCols[2], hsnTableTop + 3.0, { width: hsnMainCols[3] - hsnMainCols[2], align: 'center' });
+  doc.text('SGST', hsnMainCols[3], hsnTableTop + 3.0, { width: hsnMainCols[4] - hsnMainCols[3], align: 'center' });
+  doc.text('Total Tax Amount', hsnMainCols[4], hsnTableTop + 3.0, { width: hsnMainCols[5] - hsnMainCols[4], align: 'center' });
 
   // Sub-header 2 (Bottom half: Rate and Amount)
   strokeBorder(leftX, hsnRowsTop, rightX, hsnRowsTop);
   hsnAllCols.forEach((cx) => strokeBorder(cx, subH_Top, cx, hsnRowsTop));
 
-  doc.text('Rate', hsnAllCols[2], subH_Top + 2, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center' });
-  doc.text('Amount', hsnAllCols[3], subH_Top + 2, { width: hsnAllCols[4] - hsnAllCols[3], align: 'center' });
-  doc.text('Rate', hsnAllCols[4], subH_Top + 2, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center' });
-  doc.text('Amount', hsnAllCols[5], subH_Top + 2, { width: hsnAllCols[6] - hsnAllCols[5], align: 'center' });
-
-  // Aggregate items by HSN Code
-  const hsnMap = {};
-  items.forEach((it) => {
-    const code = it.hsnCode || '96190010';
-    if (!hsnMap[code]) {
-      hsnMap[code] = {
-        taxable: 0,
-        cgstRate: (it.gstRate || 0) / 2,
-        cgstAmount: 0,
-        sgstRate: (it.gstRate || 0) / 2,
-        sgstAmount: 0,
-        totalTax: 0
-      };
-    }
-    const lineTaxable = Number(it.taxableValue || (it.quantity * it.unitPrice));
-    const lineTax = Number(it.taxAmount || 0);
-    hsnMap[code].taxable += lineTaxable;
-    hsnMap[code].cgstAmount += lineTax / 2;
-    hsnMap[code].sgstAmount += lineTax / 2;
-    hsnMap[code].totalTax += lineTax;
-  });
+  doc.text('Rate', hsnAllCols[2], subH_Top + 1.5, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center' });
+  doc.text('Amount', hsnAllCols[3], subH_Top + 1.5, { width: hsnAllCols[4] - hsnAllCols[3], align: 'center' });
+  doc.text('Rate', hsnAllCols[4], subH_Top + 1.5, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center' });
+  doc.text('Amount', hsnAllCols[5], subH_Top + 1.5, { width: hsnAllCols[6] - hsnAllCols[5], align: 'center' });
 
   let hsnRowY = hsnRowsTop;
-  const hsnRowH = 13.5;
 
-  Object.keys(hsnMap).forEach((hsn) => {
+  hsnCodes.forEach((hsn) => {
     const row = hsnMap[hsn];
     strokeBorder(leftX, hsnRowY + hsnRowH, rightX, hsnRowY + hsnRowH);
     hsnAllCols.forEach((cx) => strokeBorder(cx, hsnRowY, cx, hsnRowY + hsnRowH));
 
-    doc.font(fontRegular).fontSize(8.2);
-    doc.text(hsn, hsnAllCols[0], hsnRowY + 2, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center' });
-    doc.text(formatCurrency(row.taxable), hsnAllCols[1] + 2, hsnRowY + 2, { width: hsnAllCols[2] - hsnAllCols[1] - 4, align: 'right' });
-    doc.text(`${row.cgstRate}%`, hsnAllCols[2], hsnRowY + 2, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center' });
-    doc.text(formatCurrency(row.cgstAmount), hsnAllCols[3] + 2, hsnRowY + 2, { width: hsnAllCols[4] - hsnAllCols[3] - 4, align: 'right' });
-    doc.text(`${row.sgstRate}%`, hsnAllCols[4], hsnRowY + 2, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center' });
-    doc.text(formatCurrency(row.sgstAmount), hsnAllCols[5] + 2, hsnRowY + 2, { width: hsnAllCols[6] - hsnAllCols[5] - 4, align: 'right' });
-    doc.text(formatCurrency(row.totalTax), hsnAllCols[6] + 2, hsnRowY + 2, { width: hsnAllCols[7] - hsnAllCols[6] - 4, align: 'right' });
+    doc.font(fontRegular).fontSize(7.0);
+    doc.text(hsn, hsnAllCols[0], hsnRowY + 2.0, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center' });
+    doc.text(formatCurrency(row.taxable), hsnAllCols[1] + 2, hsnRowY + 2.0, { width: hsnAllCols[2] - hsnAllCols[1] - 4, align: 'right' });
+    doc.text(`${row.cgstRate}%`, hsnAllCols[2], hsnRowY + 2.0, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center' });
+    doc.text(formatCurrency(row.cgstAmount), hsnAllCols[3] + 2, hsnRowY + 2.0, { width: hsnAllCols[4] - hsnAllCols[3] - 4, align: 'right' });
+    doc.text(`${row.sgstRate}%`, hsnAllCols[4], hsnRowY + 2.0, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center' });
+    doc.text(formatCurrency(row.sgstAmount), hsnAllCols[5] + 2, hsnRowY + 2.0, { width: hsnAllCols[6] - hsnAllCols[5] - 4, align: 'right' });
+    doc.text(formatCurrency(row.totalTax), hsnAllCols[6] + 2, hsnRowY + 2.0, { width: hsnAllCols[7] - hsnAllCols[6] - 4, align: 'right' });
 
     hsnRowY += hsnRowH;
   });
 
   // HSN Total Row
-  strokeBorder(leftX, hsnRowY + hsnRowH, rightX, hsnRowY + hsnRowH);
-  hsnAllCols.forEach((cx) => strokeBorder(cx, hsnRowY, cx, hsnRowY + hsnRowH));
+  strokeBorder(leftX, hsnRowY + hsnTotalRowH, rightX, hsnRowY + hsnTotalRowH);
+  hsnAllCols.forEach((cx) => strokeBorder(cx, hsnRowY, cx, hsnRowY + hsnTotalRowH));
 
-  doc.font(fontBold).fontSize(8.2);
-  doc.text('Total', hsnAllCols[0], hsnRowY + 2, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center' });
-  doc.text(formatCurrency(invoice.taxableSubtotal || invoice.grandTotal), hsnAllCols[1] + 2, hsnRowY + 2, {
+  doc.font(fontBold).fontSize(7.0);
+  doc.text('Total', hsnAllCols[0], hsnRowY + 2.0, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center' });
+  doc.text(formatCurrency(invoice.taxableSubtotal || invoice.grandTotal), hsnAllCols[1] + 2, hsnRowY + 2.0, {
     width: hsnAllCols[2] - hsnAllCols[1] - 4,
     align: 'right'
   });
-  doc.text(formatCurrency(invoice.cgstTotal || 0), hsnAllCols[3] + 2, hsnRowY + 2, {
+  doc.text(formatCurrency(invoice.cgstTotal || 0), hsnAllCols[3] + 2, hsnRowY + 2.0, {
     width: hsnAllCols[4] - hsnAllCols[3] - 4,
     align: 'right'
   });
-  doc.text(formatCurrency(invoice.sgstTotal || 0), hsnAllCols[5] + 2, hsnRowY + 2, {
+  doc.text(formatCurrency(invoice.sgstTotal || 0), hsnAllCols[5] + 2, hsnRowY + 2.0, {
     width: hsnAllCols[6] - hsnAllCols[5] - 4,
     align: 'right'
   });
-  doc.text(formatCurrency(invoice.taxTotal || 0), hsnAllCols[6] + 2, hsnRowY + 2, {
+  doc.text(formatCurrency(invoice.taxTotal || 0), hsnAllCols[6] + 2, hsnRowY + 2.0, {
     width: hsnAllCols[7] - hsnAllCols[6] - 4,
     align: 'right'
   });
 
-  hsnRowY += hsnRowH;
-
-  // Outer border of Page 1
-  strokeBorder(leftX, 17.4, leftX, hsnRowY);
-  strokeBorder(rightX, 17.4, rightX, hsnRowY);
-
-  // 13. Check if Bottom Section (Declaration, Bank, Signatures) fits on Page 1 or moves to Page 2
-  const bottomSectionHeight = 152;
-  const pageLimit = 805;
-
-  let bTop = hsnRowY;
-  let isPage2 = false;
-
-  if (bTop + bottomSectionHeight > pageLimit) {
-    // Break to Page 2 (like in sample Invoice_16.pdf)
-    doc.addPage();
-    bTop = 17.4;
-    isPage2 = true;
-  }
-
-  const bBottom = bTop + bottomSectionHeight;
+  // 10. Bottom Section Box (Declaration, Bank, Signatures) strictly on single sheet
   const p2MidX = 298.4;
 
-  // Outer border of bottom section box
   strokeBorder(leftX, bTop, rightX, bTop);
   strokeBorder(leftX, bBottom, rightX, bBottom);
   strokeBorder(leftX, bTop, leftX, bBottom);
@@ -599,54 +591,57 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
 
   // Tax Amount in words
   const taxInWords = numberToWordsINR(invoice.taxTotal, 'INR ');
-  doc.font(fontRegular).fontSize(9.0).fillColor('#000000');
-  doc.text(`Tax Amount (in words): ${taxInWords}`, leftX + 4, bTop + 13.6);
+  doc.font(fontRegular).fontSize(7.5).fillColor('#000000');
+  doc.text(`Tax Amount (in words): ${taxInWords}`, leftX + 4, bTop + 4.0);
 
   // Declaration (Left side: leftX to p2MidX)
-  const declY = bTop + 42.1;
-  doc.font(fontBold).fontSize(9.0).text('Declaration:', leftX + 4, declY);
-  // Underline for Declaration matching sample
-  strokeBorder(leftX + 4, declY + 12.0, leftX + 63.3, declY + 12.0);
+  const declY = bTop + 16.5;
+  doc.font(fontBold).fontSize(7.5).text('Declaration:', leftX + 4, declY);
+  strokeBorder(leftX + 4, declY + 9.5, leftX + 54.0, declY + 9.5);
 
-  doc.font(fontRegular).fontSize(8.5).text(
+  doc.font(fontRegular).fontSize(7.0).text(
     'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
     leftX + 4,
-    declY + 14.3,
-    { width: p2MidX - leftX - 12 }
+    declY + 12.0,
+    { width: p2MidX - leftX - 12, lineGap: 1.5 }
   );
 
   // Bank Details (Right side: p2MidX to rightX)
-  const bankX = p2MidX + 8;
+  const bankX = p2MidX + 8.0;
   const b = seller.bankDetails;
-  doc.font(fontRegular).fontSize(9.0);
-  doc.text(`A/c Name     : ${b.accountName}`, bankX, bTop + 6.1);
-  doc.text(`A/c Number  : ${b.accountNumber}`, bankX, bTop + 23.4);
-  doc.text(`Bank Name   : ${b.bankName}`, bankX, bTop + 42.1);
-  doc.text(`Branch Name : ${b.branchName}`, bankX, bTop + 56.4);
-  doc.text(`IFS Code      : ${b.ifscCode}`, bankX, bTop + 75.1);
-  doc.text(`UPI Number  : ${b.upiNumber}`, bankX, bTop + 92.4);
+  doc.font(fontRegular).fontSize(7.2);
+  doc.text(`A/c Name     : ${b.accountName}`, bankX, bTop + 14.0);
+  doc.text(`A/c Number  : ${b.accountNumber}`, bankX, bTop + 24.0);
+  doc.text(`Bank Name   : ${b.bankName}`, bankX, bTop + 34.0);
+  doc.text(`Branch Name : ${b.branchName}`, bankX, bTop + 44.0);
+  doc.text(`IFS Code      : ${b.ifscCode}`, bankX, bTop + 54.0);
+  doc.text(`UPI Number  : ${b.upiNumber}`, bankX, bTop + 64.0);
 
   // Divider above signature
-  const sigLineY = bTop + 109.5;
+  const sigLineY = bTop + 74.0;
   strokeBorder(leftX, sigLineY, rightX, sigLineY);
   strokeBorder(p2MidX, sigLineY, p2MidX, bBottom);
 
   // Left Sign: Customer's Seal and Signature
-  doc.font(fontRegular).fontSize(8.2).text("Customer's Seal and Signature", leftX + 4, sigLineY + 3.4);
+  doc.font(fontRegular).fontSize(7.0).text("Customer's Seal and Signature", leftX + 4, bBottom - 10.0);
 
   // Right Sign: for Tamizh Enterprises / Authorised Signatory
-  doc.font(fontBold).fontSize(8.2).text(`for ${seller.companyName}`, p2MidX, sigLineY + 3.4, {
+  doc.font(fontBold).fontSize(7.0).text(`for ${seller.companyName}`, p2MidX, sigLineY + 3.0, {
     width: rightX - p2MidX - 6,
     align: 'right'
   });
-  doc.font(fontRegular).fontSize(8.2).text('Authorised Signatory', p2MidX, bBottom - 11.0, {
+  doc.font(fontRegular).fontSize(7.0).text('Authorised Signatory', p2MidX, bBottom - 10.0, {
     width: rightX - p2MidX - 6,
     align: 'right'
   });
 
-  // Footer text outside the border
-  doc.font(fontRegular).fontSize(9.0).fillColor('#000000');
-  doc.text('This is a Computer Generated Invoice', leftX, bBottom + 2.4, {
+  // Complete outer borders from top to bottom
+  strokeBorder(leftX, p1Top, leftX, bBottom);
+  strokeBorder(rightX, p1Top, rightX, bBottom);
+
+  // Footer text outside the border at the very bottom
+  doc.font(fontRegular).fontSize(7.5).fillColor('#000000');
+  doc.text('This is a Computer Generated Invoice', leftX, bBottom + 3.0, {
     width: totalW,
     align: 'center'
   });
