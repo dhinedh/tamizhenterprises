@@ -218,7 +218,7 @@ const createManufacturer = async (req, res) => {
           purchasePrice: Number(p.purchasePrice || 0),
           dealerPrice: Number(p.dealerPrice || p.mrp || p.purchasePrice || 0),
           sellingPrice: Number(p.sellingPrice || p.dealerPrice || p.mrp || p.purchasePrice || 0),
-          gstRate: Number(p.gstRate || 18),
+          gstRate: Number(p.gstRate !== undefined && p.gstRate !== null ? p.gstRate : (p.subCategory === 'Napkin' ? 0 : 18)),
           minStockAlert: Number(p.minStockAlert || 20)
         });
 

@@ -212,6 +212,7 @@ const Invoices = () => {
   const [itemTotal, setItemTotal] = useState('');
   const [itemDiscPercent, setItemDiscPercent] = useState('');
   const [itemDiscRs, setItemDiscRs] = useState('');
+  const [itemGstRate, setItemGstRate] = useState('');
 
   // Helper for today's formatted date: DD-MM-YYYY (e.g. 05-10-2026)
   const todayFormatted = useMemo(() => {
@@ -612,7 +613,7 @@ const Invoices = () => {
         discountPercent: Number(it.discountPercent) || 0,
         discountAmount: Number(it.discountAmount) || 0,
         taxableValue: Number(it.taxableValue) || 0,
-        gstRate: it.gstRate !== undefined ? Number(it.gstRate) : 5,
+        gstRate: it.gstRate !== undefined && it.gstRate !== null ? Number(it.gstRate) : 0,
         taxAmount: Number(it.taxAmount) || 0,
         total: Number(it.total) || 0
       }))
@@ -663,7 +664,7 @@ const Invoices = () => {
     if (!prod) return;
 
     const rate = Number(prod.dealerPrice || prod.sellingPrice || prod.mrp || 0);
-    const gst = Number(prod.gstRate !== undefined ? prod.gstRate : 5);
+    const gst = Number(prod.gstRate !== undefined && prod.gstRate !== null ? prod.gstRate : 0);
     const taxable = rate;
     const tax = (taxable * gst) / 100;
     const total = taxable + tax;
@@ -912,6 +913,7 @@ const Invoices = () => {
       setItemTotal('');
       setItemDiscPercent('');
       setItemDiscRs('');
+      setItemGstRate('');
       return;
     }
     const prod = products.find((p) => p._id === pId);
@@ -919,6 +921,8 @@ const Invoices = () => {
       const mrp = Number(prod.mrp || 0);
       const price = Number(prod.dealerPrice || prod.sellingPrice || mrp || 0);
       const defaultQty = 1;
+      const defaultGst = prod.gstRate !== undefined && prod.gstRate !== null ? Number(prod.gstRate) : 0;
+      setItemGstRate(String(defaultGst));
 
       setItemMrp(mrp ? String(mrp) : '');
       setItemQty(String(defaultQty));
@@ -1060,7 +1064,9 @@ const Invoices = () => {
     const discPercent = Number(itemDiscPercent) || 0;
     const discAmount = Number(itemDiscRs) || (q * p * discPercent) / 100;
     const taxableValue = Math.max(0, q * p - discAmount);
-    const gstRate = prod.gstRate || 18;
+    const gstRate = itemGstRate !== '' && itemGstRate !== undefined && itemGstRate !== null
+      ? Number(itemGstRate)
+      : (prod.gstRate !== undefined && prod.gstRate !== null ? Number(prod.gstRate) : 0);
     const taxAmount = (taxableValue * gstRate) / 100;
     const lineTotal = taxableValue + taxAmount;
 
@@ -1070,7 +1076,7 @@ const Invoices = () => {
         productId: prod._id,
         name: prod.name,
         sku: prod.sku,
-        hsnCode: prod.hsnCode || '3004',
+        hsnCode: prod.hsnCode || '96190010',
         quantity: q,
         unitPrice: p,
         mrp,
@@ -1093,6 +1099,7 @@ const Invoices = () => {
     setItemTotal('');
     setItemDiscPercent('');
     setItemDiscRs('');
+    setItemGstRate('');
   };
 
   const handleRemoveAddedItem = (index) => {
@@ -1146,7 +1153,7 @@ const Invoices = () => {
           unitPrice: item.unitPrice,
           discountPercent: item.discountPercent || 0,
           discountAmount: item.discountAmount || 0,
-          gstRate: item.gstRate || 18
+          gstRate: item.gstRate !== undefined && item.gstRate !== null ? Number(item.gstRate) : 0
         }))
       };
 
@@ -1459,7 +1466,7 @@ const Invoices = () => {
                 </div>
               </div>
 
-              {/* Row 2: TOTAL, DISC (%), DISC (₹), + Add Button */}
+              {/* Row 2: TOTAL, DISC (%), DISC (₹), GST (%), + Add Button */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                 <div className="md:col-span-3">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
@@ -1474,7 +1481,7 @@ const Invoices = () => {
                   />
                 </div>
 
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     Disc (%)
                   </label>
@@ -1490,7 +1497,7 @@ const Invoices = () => {
                   />
                 </div>
 
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
                     Disc (₹)
                   </label>
@@ -1503,6 +1510,23 @@ const Invoices = () => {
                     onChange={(e) => handleDiscRsChange(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    GST Rate
+                  </label>
+                  <select
+                    value={itemGstRate}
+                    onChange={(e) => setItemGstRate(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="0">0% (Exempt)</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
                 </div>
 
                 <div className="md:col-span-3">
@@ -1557,7 +1581,15 @@ const Invoices = () => {
                           <td className="py-2.5 px-3 text-right font-mono">
                             ₹{Number(item.taxableValue).toFixed(2)}
                           </td>
-                          <td className="py-2.5 px-3 text-center">{item.gstRate}%</td>
+                          <td className="py-2.5 px-3 text-center">
+                            {Number(item.gstRate) === 0 ? (
+                              <span className="inline-block px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                0%
+                              </span>
+                            ) : (
+                              `${item.gstRate}%`
+                            )}
+                          </td>
                           <td className="py-2.5 px-3 text-right font-bold text-slate-900">
                             ₹{Number(item.total).toFixed(2)}
                           </td>

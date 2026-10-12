@@ -121,7 +121,7 @@ const StoreTransfers = () => {
               unitPrice: prods[0].dealerPrice || prods[0].sellingPrice || 0,
               discountPercent: 0,
               freeQuantity: 0,
-              gstRate: prods[0].gstRate || 18
+              gstRate: prods[0].gstRate !== undefined && prods[0].gstRate !== null ? prods[0].gstRate : 0
             }
           ]);
         }
@@ -211,7 +211,7 @@ const StoreTransfers = () => {
       ...updated[index],
       productId: prodId,
       unitPrice,
-      gstRate: prod?.gstRate || 18
+      gstRate: prod?.gstRate !== undefined && prod?.gstRate !== null ? prod.gstRate : 0
     };
     setItems(updated);
   };
@@ -235,7 +235,7 @@ const StoreTransfers = () => {
         unitPrice,
         discountPercent: 0,
         freeQuantity: 0,
-        gstRate: defaultProd?.gstRate || 18
+        gstRate: defaultProd?.gstRate !== undefined && defaultProd?.gstRate !== null ? defaultProd.gstRate : 0
       }
     ]);
   };
@@ -259,7 +259,7 @@ const StoreTransfers = () => {
       const freeQty = Number(item.freeQuantity) || 0;
       const price = Number(item.unitPrice) || 0;
       const discPct = Number(item.discountPercent) || 0;
-      const gstRate = Number(item.gstRate) || 18;
+      const gstRate = item.gstRate !== undefined && item.gstRate !== null ? Number(item.gstRate) : 0;
 
       const gross = qty * price;
       const discount = (gross * discPct) / 100;
@@ -350,7 +350,7 @@ const StoreTransfers = () => {
               unitPrice: firstProd.dealerPrice || firstProd.sellingPrice || 0,
               discountPercent: 0,
               freeQuantity: 0,
-              gstRate: firstProd.gstRate || 18
+              gstRate: firstProd.gstRate !== undefined && firstProd.gstRate !== null ? firstProd.gstRate : 0
             }
           ]);
         }
@@ -751,7 +751,7 @@ const StoreTransfers = () => {
                     const itemGross = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
                     const itemDiscount = (itemGross * (Number(item.discountPercent) || 0)) / 100;
                     const itemTaxable = itemGross - itemDiscount;
-                    const itemTax = (itemTaxable * (Number(item.gstRate) || 18)) / 100;
+                    const itemTax = (itemTaxable * (item.gstRate !== undefined && item.gstRate !== null ? Number(item.gstRate) : 0)) / 100;
                     const itemTotal = itemTaxable + itemTax;
 
                     return (

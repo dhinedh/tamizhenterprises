@@ -590,7 +590,9 @@ const transferStockToStore = async (req, res) => {
       const itemGross = qty * unitPrice;
       const discount = (itemGross * discountPercent) / 100;
       const taxable = itemGross - discount;
-      const gstRate = Number(product.gstRate || 18);
+      const gstRate = item.gstRate !== undefined && item.gstRate !== null
+        ? Number(item.gstRate)
+        : (product.gstRate !== undefined && product.gstRate !== null ? Number(product.gstRate) : 0);
       const taxAmount = (taxable * gstRate) / 100;
       const itemTotal = taxable + taxAmount;
 
@@ -612,7 +614,7 @@ const transferStockToStore = async (req, res) => {
       invoiceItems.push({
         productId: item.productId,
         name: product.name,
-        hsnCode: product.hsnCode || '2106',
+        hsnCode: product.hsnCode || '96190010',
         quantity: qty,
         freeQuantity: freeQty,
         unitPrice,

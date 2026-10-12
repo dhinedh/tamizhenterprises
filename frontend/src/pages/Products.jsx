@@ -149,7 +149,7 @@ const Products = () => {
     purchasePrice: '',
     dealerPrice: '',
     sellingPrice: '',
-    gstRate: 18,
+    gstRate: 0,
     minStockAlert: 10,
     initialStock: 0,
     description: ''
@@ -247,7 +247,7 @@ const Products = () => {
       purchasePrice: '',
       dealerPrice: '',
       sellingPrice: '',
-      gstRate: 18,
+      gstRate: isLumi ? 5 : 0,
       minStockAlert: 10,
       initialStock: 0,
       description: ''
@@ -294,7 +294,7 @@ const Products = () => {
       purchasePrice: prod.purchasePrice !== undefined && prod.purchasePrice !== null ? prod.purchasePrice : '',
       dealerPrice: prod.dealerPrice !== undefined && prod.dealerPrice !== null ? prod.dealerPrice : '',
       sellingPrice: prod.sellingPrice !== undefined && prod.sellingPrice !== null ? prod.sellingPrice : '',
-      gstRate: prod.gstRate !== undefined && prod.gstRate !== null ? prod.gstRate : 18,
+      gstRate: prod.gstRate !== undefined && prod.gstRate !== null ? prod.gstRate : (sub === 'Lumi Diaper' ? 5 : 0),
       minStockAlert: prod.minStockAlert !== undefined && prod.minStockAlert !== null ? prod.minStockAlert : 10,
       initialStock: 0,
       description: prod.description || ''
@@ -352,7 +352,7 @@ const Products = () => {
         sellingPrice: sPrice,
         gstRate: formData.gstRate !== '' && formData.gstRate !== undefined && formData.gstRate !== null
           ? Number(formData.gstRate)
-          : 18,
+          : (formData.subCategory === 'Lumi Diaper' ? 5 : 0),
         minStockAlert: Number(formData.minStockAlert || 10),
         description: formData.description?.trim() || ''
       };
@@ -1131,7 +1131,8 @@ const Products = () => {
                     subCategory: 'Napkin',
                     category: 'Sanitary Hygiene',
                     hsnCode: prev.hsnCode === '96190020' ? '96190010' : (prev.hsnCode || '96190010'),
-                    brand: 'femi9'
+                    brand: 'femi9',
+                    gstRate: 0
                   }));
                 }}
                 className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
@@ -1145,7 +1146,7 @@ const Products = () => {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-900">Napkin</div>
-                  <div className="text-[10px] text-slate-500 font-normal">Femi9 Sanitary Napkin</div>
+                  <div className="text-[10px] text-slate-500 font-normal">Femi9 Sanitary Napkin (0% GST)</div>
                 </div>
               </button>
 
@@ -1157,7 +1158,8 @@ const Products = () => {
                     subCategory: 'Lumi Diaper',
                     category: 'Baby Diaper',
                     hsnCode: prev.hsnCode === '96190010' ? '96190020' : (prev.hsnCode || '96190020'),
-                    brand: 'femi9'
+                    brand: 'femi9',
+                    gstRate: prev.gstRate === 0 ? 5 : prev.gstRate
                   }));
                 }}
                 className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
@@ -1331,7 +1333,9 @@ const Products = () => {
                 className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white font-bold text-slate-800 focus:outline-teal-500"
               >
                 {GST_RATES.map((rate) => (
-                  <option key={rate} value={rate}>{rate}%</option>
+                  <option key={rate} value={rate}>
+                    {rate === 0 ? '0% (Exempt / Nil - Napkins)' : `${rate}%`}
+                  </option>
                 ))}
               </select>
             </div>

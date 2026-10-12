@@ -148,7 +148,9 @@ const generateInvoiceFromOrder = async (req, res) => {
       const itemGross = item.quantity * item.unitPrice;
       const discount = item.discountAmount || 0;
       const taxable = itemGross - discount;
-      const gstRate = item.gstRate || 18;
+      const gstRate = item.gstRate !== undefined && item.gstRate !== null
+        ? Number(item.gstRate)
+        : (product?.gstRate !== undefined && product?.gstRate !== null ? Number(product.gstRate) : 0);
       const taxAmount = (taxable * gstRate) / 100;
       const itemTotal = taxable + taxAmount;
 
@@ -337,7 +339,7 @@ const updateInvoice = async (req, res) => {
         const gross = qty * rate;
         const discAmt = Number(item.discountAmount) || (gross * discPercent / 100);
         const taxable = Math.max(0, gross - discAmt);
-        const gst = Number(item.gstRate !== undefined ? item.gstRate : 5);
+        const gst = Number(item.gstRate !== undefined && item.gstRate !== null ? item.gstRate : 0);
         const tax = (taxable * gst) / 100;
         const lineTotal = taxable + tax;
 

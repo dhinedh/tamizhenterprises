@@ -69,7 +69,8 @@ const createPurchase = async (req, res) => {
 
     const formattedItems = items.map(item => {
       const lineSubtotal = Number(item.orderedQty) * Number(item.unitPrice);
-      const lineTax = (lineSubtotal * (Number(item.gstRate || 18))) / 100;
+      const itemGst = item.gstRate !== undefined && item.gstRate !== null ? Number(item.gstRate) : 0;
+      const lineTax = (lineSubtotal * itemGst) / 100;
       const lineTotal = lineSubtotal + lineTax;
 
       subtotal += lineSubtotal;
@@ -82,7 +83,7 @@ const createPurchase = async (req, res) => {
         damagedQty: 0,
         shortageQty: 0,
         unitPrice: Number(item.unitPrice),
-        gstRate: Number(item.gstRate || 18),
+        gstRate: itemGst,
         taxAmount: lineTax,
         totalAmount: lineTotal
       };

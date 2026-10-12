@@ -133,7 +133,7 @@ const StoreTransferModal = ({
     const gross = qty * price;
     const disc = (gross * discPct) / 100;
     const taxable = gross - disc;
-    const gstRate = prod?.gstRate || 18;
+    const gstRate = prod?.gstRate !== undefined && prod?.gstRate !== null ? prod.gstRate : 0;
     const tax = (taxable * gstRate) / 100;
 
     subtotal += taxable;
@@ -324,7 +324,8 @@ const StoreTransferModal = ({
                     const availStock = prod?.stock?.currentStock ?? 0;
                     const isShortage = Number(item.quantity) > availStock;
                     const lineGross = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
-                    const lineTax = lineGross * ((prod?.gstRate || 18) / 100);
+                    const lineGst = prod?.gstRate !== undefined && prod?.gstRate !== null ? prod.gstRate : 0;
+                    const lineTax = lineGross * (lineGst / 100);
                     const lineTotal = lineGross + lineTax;
 
                     return (
