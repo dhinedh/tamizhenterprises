@@ -353,15 +353,23 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   const qtyRowTop = totalRowTop - qtyRowH; // e.g. 621.0 - 16.0 = 605.0
 
   // 5. Render Product Line Items within [thBottom -> qtyRowTop]
+  // Auto-adjust row height based on number of products so available table space is occupied completely
   const availableTableH = qtyRowTop - thBottom;
   const numItems = Math.max(1, items.length);
-  const itemRowH = Math.min(22.0, Math.max(13.5, availableTableH / numItems));
+  const minRowH = 13.5;
+  const autoRowH = (numItems * minRowH <= availableTableH) ? (availableTableH / numItems) : minRowH;
 
-  let currentY = thBottom;
   let totalQty = 0;
 
   items.forEach((item, idx) => {
-    const yText = currentY + 3.0;
+    const rowTop = (numItems * minRowH <= availableTableH)
+      ? thBottom + (idx * availableTableH) / numItems
+      : thBottom + idx * autoRowH;
+    const rowBottom = (numItems * minRowH <= availableTableH)
+      ? ((idx === numItems - 1) ? qtyRowTop : thBottom + ((idx + 1) * availableTableH) / numItems)
+      : rowTop + autoRowH;
+    const thisRowH = rowBottom - rowTop;
+
     const qty = Number(item.quantity || 0);
     totalQty += qty;
     const unitStr = item.unit || 'Packs';
@@ -373,22 +381,36 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     const discPct = Number(item.discountPercent || 0);
     const lineTotal = Number(item.total || qty * unitPrice);
 
+    // Font size & line height for clean vertical alignment
+    const fontSize = thisRowH >= 36.0 ? 8.5 : (thisRowH >= 22.0 ? 8.0 : 7.2);
+    doc.fontSize(fontSize);
+
+    const singleLineH = 9.5;
+    const yText = rowTop + Math.max(2.0, (thisRowH - singleLineH) / 2);
+
+    // Description text measurement & vertical centering (fits 1 or 2 wrapped lines comfortably)
+    const descText = item.name || item.productId?.name || 'Product';
+    const descW = cols[2] - cols[1] - 6;
+    doc.font(fontBold);
+    const descMeasuredH = doc.heightOfString(descText, { width: descW });
+    const yDesc = rowTop + Math.max(2.0, (thisRowH - Math.min(descMeasuredH, thisRowH - 4.0)) / 2);
+
     // Sl No
-    doc.font(fontRegular).fontSize(7.5).text(String(idx + 1), cols[0], yText, {
+    doc.font(fontRegular).text(String(idx + 1), cols[0], yText, {
       width: cols[1] - cols[0],
       align: 'center'
     });
 
     // Description
-    doc.font(fontBold).fontSize(7.5).text(item.name || item.productId?.name || 'Product', cols[1] + 3, yText, {
-      width: cols[2] - cols[1] - 6,
+    doc.font(fontBold).text(descText, cols[1] + 3, yDesc, {
+      width: descW,
       align: 'left',
-      height: itemRowH - 2,
+      height: thisRowH - 4.0,
       ellipsis: true
     });
 
     // HSN/SAC
-    doc.font(fontRegular).fontSize(7.5).text(item.hsnCode || '96190010', cols[2], yText, {
+    doc.font(fontRegular).text(item.hsnCode || '96190010', cols[2], yText, {
       width: cols[3] - cols[2],
       align: 'center'
     });
@@ -442,14 +464,14 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     });
 
     // Column dividers
-    cols.forEach((cx) => strokeBorder(cx, currentY, cx, currentY + itemRowH));
-    currentY += itemRowH;
-    strokeBorder(leftX, currentY, rightX, currentY);
+    cols.forEach((cx) => strokeBorder(cx, rowTop, cx, rowBottom));
+    // Horizontal row divider at bottom
+    strokeBorder(leftX, rowBottom, rightX, rowBottom);
   });
 
-  // Extend vertical column dividers through empty rows down to qtyRowTop (authentic Tally format)
-  if (currentY < qtyRowTop) {
-    cols.forEach((cx) => strokeBorder(cx, currentY, cx, qtyRowTop));
+  // If no items, draw empty column dividers through the table area
+  if (items.length === 0) {
+    cols.forEach((cx) => strokeBorder(cx, thBottom, cx, qtyRowTop));
   }
 
   // 6. Subtotal Quantity Row (at qtyRowTop)
