@@ -6,7 +6,8 @@ const {
   generateInvoiceFromOrder,
   downloadInvoicePDF,
   updateInvoice,
-  voidInvoice
+  voidInvoice,
+  deleteInvoice
 } = require('../controllers/invoiceController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -16,5 +17,6 @@ router.post('/generate-from-order/:orderId', protect, authorize('Owner'), genera
 router.get('/:id/pdf', protect, downloadInvoicePDF);
 router.put('/:id', protect, authorize('Owner', 'Salesman'), updateInvoice);
 router.put('/:id/void', protect, authorize('Owner', 'Salesman'), voidInvoice);
+router.delete('/:id', protect, authorize('Owner'), deleteInvoice);
 
 module.exports = router;

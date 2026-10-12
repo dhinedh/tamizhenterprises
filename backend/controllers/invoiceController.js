@@ -404,11 +404,57 @@ const updateInvoice = async (req, res) => {
   }
 };
 
+// @desc    Delete an invoice and restore stock
+// @route   DELETE /api/invoices/:id
+const deleteInvoice = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) {
+      return res.status(404).json({ success: false, message: 'Invoice not found' });
+    }
+
+    // 1. Restore stock for all items
+    if (Array.isArray(invoice.items)) {
+      for (const item of invoice.items) {
+        if (item.productId) {
+          const qtyToRestore = Number(item.quantity || 0) + Number(item.freeQuantity || 0);
+          if (qtyToRestore > 0) {
+            await Stock.findOneAndUpdate(
+              { productId: item.productId },
+              { $inc: { currentStock: qtyToRestore } }
+            );
+          }
+        }
+      }
+    }
+
+    // 2. Remove associated stock ledger entries
+    await StockLedger.deleteMany({
+      $or: [
+        { referenceId: invoice.invoiceNumber },
+        { billNumber: invoice.invoiceNumber }
+      ]
+    });
+
+    // 3. Delete invoice document
+    await Invoice.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: `Invoice #${invoice.invoiceNumber} deleted and stock restored successfully`
+    });
+  } catch (error) {
+    console.error('Delete invoice error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getInvoices,
   getInvoiceById,
   generateInvoiceFromOrder,
   downloadInvoicePDF,
   updateInvoice,
-  voidInvoice
+  voidInvoice,
+  deleteInvoice
 };

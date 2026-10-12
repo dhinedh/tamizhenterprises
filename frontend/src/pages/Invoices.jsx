@@ -158,6 +158,8 @@ const Invoices = () => {
   const [voiding, setVoiding] = useState(false);
   const [returnInvoiceTarget, setReturnInvoiceTarget] = useState(null);
   const [removeInvoiceTarget, setRemoveInvoiceTarget] = useState(null);
+  const [deleteInvoiceTarget, setDeleteInvoiceTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [successToast, setSuccessToast] = useState('');
 
   // ================= Share Invoice State =================
@@ -891,6 +893,24 @@ const Invoices = () => {
       alert('Failed to void invoice.');
     } finally {
       setVoiding(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteInvoiceTarget) return;
+    try {
+      setIsDeleting(true);
+      const res = await api.delete(`/invoices/${deleteInvoiceTarget._id}`);
+      if (res.data?.success) {
+        showToast(`Bill #${deleteInvoiceTarget.invoiceNumber} deleted and physical stock restored!`);
+        setInvoices((prev) => prev.filter((i) => i._id !== deleteInvoiceTarget._id));
+        setDeleteInvoiceTarget(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete invoice:', err);
+      alert(err.response?.data?.message || 'Failed to delete invoice.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -2093,8 +2113,14 @@ const Invoices = () => {
                           </td>
 
                           {/* 13. Delete */}
-                          <td className="py-4 px-3 align-top text-center text-slate-700 font-medium text-xs">
-                            ---
+                          <td className="py-4 px-3 align-top text-center whitespace-nowrap">
+                            <button
+                              type="button"
+                              onClick={() => setDeleteInvoiceTarget(inv)}
+                              className="px-2.5 py-0.5 text-xs font-semibold rounded-md border border-rose-300 text-rose-700 bg-rose-50/70 hover:bg-rose-100 hover:border-rose-400 transition-colors cursor-pointer shadow-2xs"
+                            >
+                              Delete
+                            </button>
                           </td>
                         </tr>
                       );
@@ -2559,6 +2585,49 @@ const Invoices = () => {
                 className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium rounded-lg disabled:opacity-50"
               >
                 {voiding ? 'Voiding...' : 'Confirm Void'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ================= MODAL: DELETE INVOICE ================= */}
+      {deleteInvoiceTarget && (
+        <Modal
+          isOpen={!!deleteInvoiceTarget}
+          onClose={() => setDeleteInvoiceTarget(null)}
+          title="Delete Invoice Confirmation"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 text-xs sm:text-sm">
+            <div className="p-3.5 bg-rose-50 rounded-xl border border-rose-200 text-rose-900">
+              <p className="font-bold text-sm text-rose-950 mb-1">Permanently Delete Invoice</p>
+              <p className="text-xs text-rose-800 leading-relaxed">
+                Are you sure you want to permanently delete Bill{' '}
+                <strong className="font-mono text-slate-900 font-bold">
+                  #{deleteInvoiceTarget.invoiceNumber}
+                </strong>?
+              </p>
+            </div>
+            <p className="text-slate-600 text-xs leading-relaxed">
+              This action will completely remove this bill from records and automatically restore all deducted product quantities back into physical warehouse stock.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteInvoiceTarget(null)}
+                className="px-3.5 py-1.5 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleConfirmDelete}
+                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Permanently'}
               </button>
             </div>
           </div>
