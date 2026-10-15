@@ -116,8 +116,8 @@ const Stores = () => {
     address: '',
     pincode: '',
     gstNumber: '',
-    creditLimit: 50000,
-    creditPeriodDays: 15,
+    creditLimit: 0,
+    creditPeriodDays: 0,
     salesmanId: ''
   });
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -194,8 +194,8 @@ const Stores = () => {
       address: store.address || '',
       pincode: store.pincode || '',
       gstNumber: store.gstNumber || '',
-      creditLimit: store.creditLimit !== undefined ? store.creditLimit : 50000,
-      creditPeriodDays: store.creditPeriodDays !== undefined ? store.creditPeriodDays : 15,
+      creditLimit: store.creditLimit !== undefined && store.creditLimit !== null ? Number(store.creditLimit) : 0,
+      creditPeriodDays: store.creditPeriodDays !== undefined && store.creditPeriodDays !== null ? Number(store.creditPeriodDays) : 0,
       salesmanId: store.salesmanId?._id || store.salesmanId || ''
     });
   };
@@ -206,11 +206,21 @@ const Stores = () => {
     setEditSubmitting(true);
     setEditError('');
     try {
-      const res = await api.put(`/stores/${editingStore._id}`, editFormData);
+      const payload = {
+        ...editFormData,
+        creditLimit: Math.max(0, Number(editFormData.creditLimit) || 0),
+        creditPeriodDays: Math.max(0, Number(editFormData.creditPeriodDays) || 0)
+      };
+      const res = await api.put(`/stores/${editingStore._id}`, payload);
       if (res.data.success) {
+        const updated = res.data.data;
         setSuccessToast(`Shop "${editFormData.name}" updated successfully!`);
         setTimeout(() => setSuccessToast(''), 3500);
         setEditingStore(null);
+        // Instantly update local state so table updates with 0 latency
+        setStores((prev) =>
+          prev.map((s) => (s._id === updated._id ? { ...s, ...updated } : s))
+        );
         try {
           sessionStorage.removeItem('tamil_erp_stores');
         } catch (e) {}
@@ -266,15 +276,17 @@ const Stores = () => {
 
   const handleShareWhatsAppStatement = (store) => {
     const balance = Number(store.outstandingBalance || 0);
+    const storeLimit = Number(store.creditLimit !== undefined && store.creditLimit !== null ? store.creditLimit : 0);
+    const storeDays = Number(store.creditPeriodDays !== undefined && store.creditPeriodDays !== null ? store.creditPeriodDays : 0);
     const text = encodeURIComponent(
       `வணக்கம் / Hello ${store.name || 'Store Partner'},\n\n` +
       `🏢 *TAMIZH ENTERPRISES - ACCOUNT STATEMENT*\n` +
       `Proprietor: ${store.ownerName || ''}\n` +
       `Store Code: ${store.code}\n\n` +
       `📊 *Current Credit Summary:*\n` +
-      `• Credit Limit: ₹ ${Number(store.creditLimit || 50000).toLocaleString('en-IN')}\n` +
+      `• Credit Limit: ₹ ${storeLimit.toLocaleString('en-IN')}\n` +
       `• Outstanding Balance Due: *₹ ${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}*\n` +
-      `• Payment Terms: ${store.creditPeriodDays || 21} Days Credit\n\n` +
+      `• Payment Terms: ${storeDays} Days Credit\n\n` +
       `🏦 *Payment Options (UPI & Bank):*\n` +
       `• UPI ID: tamizhenterprises@hdfcbank\n` +
       `• A/C: 50200012345678 | IFSC: HDFC0000123\n\n` +
@@ -323,7 +335,8 @@ const Stores = () => {
         (typeFilter === 'Kirana' && (s.storeType?.toLowerCase()?.includes('kirana') || s.category?.toLowerCase()?.includes('provision') || s.category?.toLowerCase()?.includes('general'))) ||
         (typeFilter === 'Departmental' && (s.storeType?.toLowerCase()?.includes('depart') || s.category?.toLowerCase()?.includes('depart')));
 
-      const matchOverLimit = !overLimitOnly || (s.outstandingBalance || 0) > (s.creditLimit || 50000);
+      const sLimit = Number(s.creditLimit !== undefined && s.creditLimit !== null ? s.creditLimit : 0);
+      const matchOverLimit = !overLimitOnly || (sLimit > 0 && (s.outstandingBalance || 0) > sLimit);
       return matchBrand && matchCity && matchArea && matchType && matchOverLimit;
     });
   }, [stores, activeManufacturer, cityFilter, areaFilter, typeFilter, overLimitOnly]);
@@ -350,7 +363,10 @@ const Stores = () => {
   const stats = useMemo(() => {
     const totalStores = stores.length;
     const totalOutstanding = stores.reduce((sum, s) => sum + (Number(s.outstandingBalance) || 0), 0);
-    const overLimitCount = stores.filter((s) => (s.outstandingBalance || 0) > (s.creditLimit || 50000)).length;
+    const overLimitCount = stores.filter((s) => {
+      const sLimit = Number(s.creditLimit !== undefined && s.creditLimit !== null ? s.creditLimit : 0);
+      return sLimit > 0 && (s.outstandingBalance || 0) > sLimit;
+    }).length;
     const totalLifetimeValue = stores.reduce((sum, s) => sum + (Number(s.totalOrderValue) || 0), 0);
 
     return {
@@ -586,9 +602,10 @@ const Stores = () => {
                 {filteredStores.length > 0 ? (
                   filteredStores.map((store) => {
                     const balance = Number(store.outstandingBalance || 0);
-                    const limit = Number(store.creditLimit || 50000);
-                    const isOver = balance > limit;
-                    const isHigh = balance > limit * 0.8;
+                    const limit = Number(store.creditLimit !== undefined && store.creditLimit !== null ? store.creditLimit : 0);
+                    const creditDays = Number(store.creditPeriodDays !== undefined && store.creditPeriodDays !== null ? store.creditPeriodDays : 0);
+                    const isOver = limit > 0 && balance > limit;
+                    const isHigh = limit > 0 && balance > limit * 0.8;
 
                     return (
                       <tr
@@ -650,7 +667,7 @@ const Stores = () => {
                             ₹ {limit.toLocaleString('en-IN')}
                           </div>
                           <div className="text-[10px] text-slate-400">
-                            {store.creditPeriodDays || 21} Days Credit
+                            {creditDays} Days Credit
                           </div>
                         </td>
 
@@ -831,6 +848,9 @@ const Stores = () => {
                       {cat}
                     </option>
                   ))}
+                  {editFormData.category && !CATEGORIES.includes(editFormData.category) && (
+                    <option value={editFormData.category}>{editFormData.category}</option>
+                  )}
                 </select>
               </div>
               <div>
@@ -847,6 +867,9 @@ const Stores = () => {
                       {t}
                     </option>
                   ))}
+                  {editFormData.storeType && !STORE_TYPES.includes(editFormData.storeType) && (
+                    <option value={editFormData.storeType}>{editFormData.storeType}</option>
+                  )}
                 </select>
               </div>
               <div>
@@ -1008,8 +1031,11 @@ const Stores = () => {
                   type="number"
                   min="0"
                   step="1000"
-                  value={editFormData.creditLimit}
-                  onChange={(e) => setEditFormData({ ...editFormData, creditLimit: Number(e.target.value) })}
+                  value={editFormData.creditLimit === 0 ? '0' : (editFormData.creditLimit ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
+                    setEditFormData({ ...editFormData, creditLimit: val });
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-bold focus:ring-1 focus:ring-teal-500 focus:outline-none bg-white"
                 />
               </div>
@@ -1020,8 +1046,11 @@ const Stores = () => {
                 <input
                   type="number"
                   min="0"
-                  value={editFormData.creditPeriodDays}
-                  onChange={(e) => setEditFormData({ ...editFormData, creditPeriodDays: Number(e.target.value) })}
+                  value={editFormData.creditPeriodDays === 0 ? '0' : (editFormData.creditPeriodDays ?? '')}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
+                    setEditFormData({ ...editFormData, creditPeriodDays: val });
+                  }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 text-xs font-semibold focus:ring-1 focus:ring-teal-500 focus:outline-none bg-white"
                 />
               </div>
