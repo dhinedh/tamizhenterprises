@@ -35,9 +35,9 @@ const storeSchema = new mongoose.Schema({
     ref: 'Salesman', 
     default: null 
   },
-  creditLimit: { type: Number, default: 50000, min: 0 },
+  creditLimit: { type: Number, default: 0, min: 0 },
   outstandingBalance: { type: Number, default: 0 }, // store owes Tamil Enterprises
-  creditPeriodDays: { type: Number, default: 15 },
+  creditPeriodDays: { type: Number, default: 0, min: 0 },
   status: { type: String, enum: ['Active', 'Suspended', 'Inactive'], default: 'Active' },
   totalOrdersCount: { type: Number, default: 0 },
   totalOrderValue: { type: Number, default: 0 },

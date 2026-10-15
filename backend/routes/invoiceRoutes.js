@@ -11,6 +11,10 @@ const {
 } = require('../controllers/invoiceController');
 const { protect, authorize } = require('../middleware/auth');
 
+// Public endpoints for WhatsApp / external PDF viewing without requiring login
+router.get('/public/:id/pdf', downloadInvoicePDF);
+router.get('/:id/public-pdf', downloadInvoicePDF);
+
 router.get('/', protect, getInvoices);
 router.get('/:id', protect, getInvoiceById);
 router.post('/generate-from-order/:orderId', protect, authorize('Owner'), generateInvoiceFromOrder);

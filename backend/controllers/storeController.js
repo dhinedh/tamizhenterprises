@@ -173,8 +173,8 @@ const createBulkStores = async (req, res) => {
           pincode: s.pincode ? s.pincode.trim() : '',
           gstNumber: s.gstNumber || s.gstin ? (s.gstNumber || s.gstin).trim().toUpperCase() : '',
           salesmanId: cleanSalesmanId,
-          creditLimit: Number(s.creditLimit) || 50000,
-          creditPeriodDays: Number(s.creditPeriodDays) || 21,
+          creditLimit: s.creditLimit !== undefined ? (Number(s.creditLimit) || 0) : 0,
+          creditPeriodDays: s.creditPeriodDays !== undefined ? (Number(s.creditPeriodDays) || 0) : 0,
           status: s.status || 'Active'
         });
 
@@ -250,7 +250,8 @@ const createStore = async (req, res) => {
       salesmanId: cleanSalesmanId,
       manufacturerId: cleanMfgId,
       manufacturerCode: manufacturerCode ? manufacturerCode.trim().toUpperCase() : '',
-      creditLimit: creditLimit || 50000
+      creditLimit: req.body.creditLimit !== undefined ? (Number(req.body.creditLimit) || 0) : 0,
+      creditPeriodDays: req.body.creditPeriodDays !== undefined ? (Number(req.body.creditPeriodDays) || 0) : 0
     });
 
     if (cleanSalesmanId) {
@@ -289,6 +290,12 @@ const updateStore = async (req, res) => {
     const updatePayload = { ...req.body };
     if (cleanSalesmanId !== undefined) {
       updatePayload.salesmanId = cleanSalesmanId;
+    }
+    if (req.body.creditLimit !== undefined) {
+      updatePayload.creditLimit = Math.max(0, Number(req.body.creditLimit) || 0);
+    }
+    if (req.body.creditPeriodDays !== undefined) {
+      updatePayload.creditPeriodDays = Math.max(0, Number(req.body.creditPeriodDays) || 0);
     }
 
     const updated = await Store.findByIdAndUpdate(req.params.id, updatePayload, {

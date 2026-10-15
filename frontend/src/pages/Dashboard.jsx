@@ -372,11 +372,6 @@ const Dashboard = () => {
                       <MapPin className="w-3.5 h-3.5 text-teal-400" /> {mfg.city}, {mfg.state || 'Tamil Nadu'}
                     </span>
                   )}
-                  {mfg.phone && (
-                    <span className="flex items-center gap-1">
-                      <Phone className="w-3.5 h-3.5 text-teal-400" /> {mfg.phone}
-                    </span>
-                  )}
                   {mfg.gstNumber && (
                     <span className="font-mono text-[11px] bg-white/10 px-2 py-0.5 rounded">
                       GSTIN: {mfg.gstNumber}

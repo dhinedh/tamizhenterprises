@@ -167,6 +167,7 @@ const Invoices = () => {
   const [sharePhone, setSharePhone] = useState('');
   const [shareRecipientName, setShareRecipientName] = useState('');
   const [copiedShareText, setCopiedShareText] = useState(false);
+  const [isSharingPDF, setIsSharingPDF] = useState(false);
 
   // ================= Edit Invoice State =================
   const [editInvoiceForm, setEditInvoiceForm] = useState(null);
@@ -492,14 +493,14 @@ const Invoices = () => {
     setCopiedShareText(false);
   };
 
-  const getShareInvoiceMessage = (inv, recipientName = '') => {
+  const getShareInvoiceMessage = (inv, recipientName = '', publicPdfUrl = '') => {
     if (!inv) return '';
     const partyName =
       recipientName ||
       inv.customerId?.name ||
       inv.storeId?.name ||
       (isCustomerType ? 'Customer' : 'Retail Shop');
-    const invNum = inv.invoiceNumber;
+    const invNum = formatInvoiceNumber(inv.invoiceNumber);
     const invDate = formatInvoiceDate(inv.invoiceDate);
     const total = formatAmount(inv.grandTotal);
     const isPaid = inv.status === 'Paid' || inv.balanceAmount <= 0;
@@ -512,43 +513,112 @@ const Invoices = () => {
       itemLines = inv.items
         .map(
           (i) =>
-            `• ${i.name} - ${i.quantity} units @ ₹${i.unitPrice} (₹${formatAmount(i.total)})`
+            `• ${i.name} - ${i.quantity} ${i.unit || 'Packs'} @ ₹${formatAmount(i.unitPrice)} (₹${formatAmount(i.total)})`
         )
         .join('\n');
     }
 
+    const apiBase = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace(/\/$/, '')
+      : window.location.origin;
+    const pdfLink = publicPdfUrl || `${apiBase}/api/invoices/public/${inv._id}/pdf`;
+
     return (
       `வணக்கம் / Hello ${partyName},\n\n` +
-      `🏢 *TAMIZH ENTERPRISES - GST TAX INVOICE*\n` +
-      `Goods dispatched & billed under Tamil Nadu Distribution Network.\n\n` +
-      `📋 *Invoice Details:*\n` +
-      `• Invoice No: *${invNum}*\n` +
-      `• Invoice Date: *${invDate}*\n` +
-      `• Bill Amount: *₹ ${total}*\n` +
+      `🏢 *TAMIZH ENTERPRISES - BILL OF SUPPLY*\n` +
+      `10-A, Hospital Road, Cholapuram, Ambattur, Chennai - 600053\n` +
+      `GSTIN: 33AGVPT5588R1ZW | Contact: 9841433607\n\n` +
+      `📋 *Bill Details:*\n` +
+      `• Bill of Supply No: *#${invNum}*\n` +
+      `• Date: *${invDate}*\n` +
+      `• Total Amount: *₹ ${total}*\n` +
       `• Payment Status: *${statusText}*\n` +
-      `• Terms: *${saleType}*\n` +
-      (challan ? `• Delivery Challan: *${challan}*\n` : '') +
+      `• Payment Terms: *${saleType}*\n` +
+      (challan ? `• Delivery Note: *${challan}*\n` : '') +
       `\n` +
-      (itemLines ? `📦 *Dispatched Items:*\n${itemLines}\n\n` : '') +
-      `🏦 *Payment Options (UPI & Bank):*\n` +
-      `• UPI ID: tamizhenterprises@hdfcbank\n` +
-      `• Bank: HDFC Bank, Madurai Main Branch\n` +
-      `• A/C: 50200012345678 | IFSC: HDFC0000123\n\n` +
+      (itemLines ? `📦 *Billed Items:*\n${itemLines}\n\n` : '') +
+      `📄 *Download Official PDF Bill:*\n${pdfLink}\n\n` +
+      `🏦 *Bank & UPI Details:*\n` +
+      `• A/c Name: TAMIZH ENTERPRISES\n` +
+      `• A/c Number: 134661900000504\n` +
+      `• Bank: Yes bank, Ambattur Branch\n` +
+      `• IFS Code: YESB0001346\n` +
+      `• UPI / GPay: 9841433607\n\n` +
       `Thank you for your business!\n` +
-      `Tamizh Enterprises Distribution Central Depot\n` +
-      `Helpline: +91 94432 10987`
+      `Tamizh Enterprises`
     );
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!shareInvoiceTarget) return;
-    const text = getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName);
-    const cleanPhone = sharePhone ? sharePhone.replace(/[^0-9]/g, '') : '';
-    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const url = formattedPhone
-      ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(text)}`
-      : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    setIsSharingPDF(true);
+    try {
+      const invNum = formatInvoiceNumber(shareInvoiceTarget.invoiceNumber);
+      const fileName = `Bill-of-Supply-${invNum}.pdf`;
+
+      // 1. Fetch PDF blob from backend
+      const res = await api.get(`/invoices/${shareInvoiceTarget._id}/pdf`, { responseType: 'blob' });
+      const pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      const apiBase = import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL.replace(/\/$/, '')
+        : window.location.origin;
+      const publicPdfUrl = `${apiBase}/api/invoices/public/${shareInvoiceTarget._id}/pdf`;
+      const text = getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName, publicPdfUrl);
+
+      // 2. Mobile or browser with Web Share API file support: Directly attach PDF into WhatsApp
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        try {
+          await navigator.share({
+            files: [pdfFile],
+            title: `Bill of Supply #${invNum} - Tamizh Enterprises`,
+            text: text
+          });
+          showToast('Invoice PDF shared successfully to WhatsApp!');
+          setShareInvoiceTarget(null);
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') {
+            return; // user dismissed the share modal
+          }
+          console.warn('Web Share file attachment fallback:', shareErr);
+        }
+      }
+
+      // 3. Fallback for Desktop browser / WhatsApp Web:
+      // Download the PDF automatically so it's instantly ready to attach or view
+      const blobUrl = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+
+      // Open WhatsApp chat directly with recipient and full invoice details including direct PDF link
+      const cleanPhone = sharePhone ? sharePhone.replace(/[^0-9]/g, '') : '';
+      const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+      const url = formattedPhone
+        ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(text)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+
+      showToast('PDF downloaded! Attach it in the opened WhatsApp chat.');
+    } catch (err) {
+      console.error('Failed to share invoice PDF:', err);
+      // Fallback simple link
+      const text = getShareInvoiceMessage(shareInvoiceTarget, shareRecipientName);
+      const cleanPhone = sharePhone ? sharePhone.replace(/[^0-9]/g, '') : '';
+      const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+      const url = formattedPhone
+        ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(text)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    } finally {
+      setIsSharingPDF(false);
+    }
   };
 
   const handleCopyShareText = async () => {
@@ -2333,10 +2403,21 @@ const Invoices = () => {
                 </button>
                 <button
                   type="button"
+                  disabled={isSharingPDF}
                   onClick={handleSendWhatsApp}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex-1 sm:flex-initial"
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-75 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex-1 sm:flex-initial"
                 >
-                  <WhatsAppShareIcon /> Send on WhatsApp
+                  {isSharingPDF ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Sharing PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <WhatsAppShareIcon />
+                      <span>Share as PDF in WhatsApp</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
