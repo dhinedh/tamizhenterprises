@@ -117,7 +117,7 @@ const Orders = () => {
     const updated = [...orderItems];
     updated[index].productId = productId;
     if (prod) {
-      updated[index].unitPrice = prod.dealerPrice || prod.sellingPrice || 0;
+      updated[index].unitPrice = prod.dealerPrice || prod.sellingPrice || prod.mrp || 0;
     }
     setOrderItems(updated);
   };
@@ -483,7 +483,7 @@ const Orders = () => {
                           .filter(p => p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI'))
                           .map((p) => (
                             <option key={p._id} value={p._id}>
-                              {p.name} (Stock: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice}
+                              {p.name} (Stock: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice || p.sellingPrice || p.mrp}
                             </option>
                           ))}
                       </optgroup>
@@ -492,7 +492,7 @@ const Orders = () => {
                           .filter(p => !(p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI')))
                           .map((p) => (
                             <option key={p._id} value={p._id}>
-                              {p.name} (Stock: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice}
+                              {p.name} (Stock: {p.stock?.availableStock ?? 0}) - Rate: ₹{p.dealerPrice || p.sellingPrice || p.mrp}
                             </option>
                           ))}
                       </optgroup>

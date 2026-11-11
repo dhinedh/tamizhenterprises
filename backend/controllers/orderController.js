@@ -158,7 +158,7 @@ const createOrder = async (req, res) => {
       if (!product) continue;
 
       const qty = Number(item.quantity);
-      let unitPrice = Number(item.unitPrice !== undefined ? item.unitPrice : (product.dealerPrice || product.sellingPrice));
+      let unitPrice = Number(item.unitPrice !== undefined ? item.unitPrice : (product.dealerPrice || product.sellingPrice || product.mrp || 0));
       const custom = product.customStorePrices?.find(csp => csp.storeId?.toString() === storeId);
       if (custom && custom.specialPrice) {
         unitPrice = custom.specialPrice;

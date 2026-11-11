@@ -571,8 +571,8 @@ const transferStockToStore = async (req, res) => {
         quantity: -qty,
         balanceBefore,
         balanceAfter: stock.currentStock,
-        unitPrice: Number(item.unitPrice || product.dealerPrice || product.sellingPrice),
-        totalAmount: qty * Number(item.unitPrice || product.dealerPrice || product.sellingPrice),
+        unitPrice: Number(item.unitPrice || product.dealerPrice || product.sellingPrice || product.mrp || 0),
+        totalAmount: qty * Number(item.unitPrice || product.dealerPrice || product.sellingPrice || product.mrp || 0),
         billNumber: invoiceNumber,
         notes: `Stock Transfer & Billed to ${billingEntity.name} (${billingEntity.city || billingEntity.address || ''}) [Challan: DC-${invoiceNumber}]`,
         performedBy: req.user ? req.user.name : 'Store Dispatch Admin',
@@ -583,7 +583,7 @@ const transferStockToStore = async (req, res) => {
       let unitPrice = Number(item.unitPrice);
       if (isNaN(unitPrice) || unitPrice <= 0) {
         const custom = store ? product.customStorePrices?.find(csp => csp.storeId?.toString() === storeId) : null;
-        unitPrice = (custom && custom.specialPrice) ? custom.specialPrice : (product.dealerPrice || product.sellingPrice || 0);
+        unitPrice = (custom && custom.specialPrice) ? custom.specialPrice : (product.dealerPrice || product.sellingPrice || product.mrp || 0);
       }
 
       const discountPercent = Number(item.discountPercent || 0);
