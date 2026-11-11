@@ -94,6 +94,7 @@ const generateInvoiceFromOrder = async (req, res) => {
     }
 
     const isCustomer = Boolean(order.customerId);
+    const store = order.storeId;
     const count = await Invoice.countDocuments(
       isCustomer ? { customerId: { $ne: null } } : { storeId: { $ne: null }, customerId: null }
     );
@@ -242,14 +243,17 @@ const downloadInvoicePDF = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
 
-    let store = invoice.storeId ? await Store.findById(invoice.storeId) : null;
-    let customer = invoice.customerId ? await Customer.findById(invoice.customerId) : null;
+    const storeId = invoice.storeId?._id || invoice.storeId;
+    const customerId = invoice.customerId?._id || invoice.customerId;
+    let store = storeId ? await Store.findById(storeId) : null;
+    let customer = customerId ? await Customer.findById(customerId) : null;
+    const party = store || customer || (typeof invoice.storeId === 'object' ? invoice.storeId : null) || (typeof invoice.customerId === 'object' ? invoice.customerId : null) || {};
     const owner = await User.findOne({ role: 'Owner' });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=Invoice-${invoice.invoiceNumber}.pdf`);
 
-    generateInvoicePDF(invoice, store || customer || {}, res, owner);
+    generateInvoicePDF(invoice, party, res, owner);
   } catch (error) {
     console.error('Invoice PDF generation error:', error);
     if (!res.headersSent) {

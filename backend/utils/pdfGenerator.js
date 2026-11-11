@@ -110,11 +110,12 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   };
 
   // Buyer / Consignee details
-  const partyName = party?.name || 'Valued Customer';
+  const partyName = party?.name || party?.storeName || party?.customerName || 'Valued Customer';
   const partyAddress = party?.address || '';
-  const partyPhone = party?.phone || '';
+  const partyPhone = party?.phone || party?.mobile || party?.contact || '';
+  const partyGst = (party?.gstNumber || party?.gstin || party?.gst || invoice?.partyGstNumber || '').toUpperCase().trim();
   const partyDistrict = (party?.city || party?.district || 'CHENNAI').toUpperCase();
-  const partyState = party?.state || '';
+  const partyState = party?.state || 'Tamilnadu';
 
   // Precise Coordinates matching the reference invoices exactly from user's file
   // Precise Coordinates matching the reference invoices exactly from user's file
@@ -163,7 +164,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   const isCompact = numItems > 4;
 
   const infoTop = titleBottom; // 39.8
-  const infoBottom = isCompact ? 200.0 : 296.3;
+  const infoBottom = isCompact ? 206.0 : 296.3;
 
   // Middle vertical border separating Left (Seller & Parties) and Right (Invoice & Shipping details)
   strokeBorder(midX, infoTop, midX, infoBottom);
@@ -171,8 +172,8 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
 
   // --- LEFT SIDE: 3 DISTINCT SECTIONS ---
   // When not compact: Seller (39.8 -> 153.0), Consignee (153.0 -> 225.0), Buyer (225.0 -> 296.3)
-  const sellerDividerY = isCompact ? 107.0 : 153.0;
-  const consigneeDividerY = isCompact ? 153.5 : 225.0;
+  const sellerDividerY = isCompact ? 106.0 : 153.0;
+  const consigneeDividerY = isCompact ? 156.0 : 225.0;
 
   strokeBorder(leftX, sellerDividerY, midX, sellerDividerY);
   strokeBorder(leftX, consigneeDividerY, midX, consigneeDividerY);
@@ -225,38 +226,40 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   doc.font(fontBold).text('Contact : ', sellerTextX, sTop + (sLineH * 5) + 2.0, { continued: true });
   doc.font(fontRegular).text(seller.contact);
 
-  doc.font(fontBold).text('Email : ', sellerTextX, sTop + (sLineH * 6) + 2.0);
-  doc.font(fontRegular).text(seller.email, sellerTextX, sTop + (sLineH * 7) + 2.0, { width: sellerTextW });
+  doc.font(fontBold).text('Email : ', sellerTextX, sTop + (sLineH * 6) + 2.0, { continued: true });
+  doc.font(fontRegular).text(seller.email);
 
   // Section B: Consignee (Ship to)
   const partyTextX = 20.0;
   const partyTextW = midX - partyTextX - 4.0;
-  const cTop = sellerDividerY + (isCompact ? 2.5 : 4.0);
-  const cLineH = isCompact ? 9.0 : 12.0;
+  const cTop = sellerDividerY + (isCompact ? 2.0 : 4.0);
+  const cLineH = isCompact ? 7.8 : 11.2;
 
-  doc.font(fontRegular).fontSize(7.0).fillColor('#333333');
+  doc.font(fontRegular).fontSize(isCompact ? 6.5 : 7.0).fillColor('#333333');
   doc.text('Consignee (Ship to):', partyTextX, cTop);
 
-  doc.font(fontBold).fontSize(8.0).fillColor('#000000');
+  doc.font(fontBold).fontSize(isCompact ? 7.5 : 8.0).fillColor('#000000');
   doc.text(partyName, partyTextX, cTop + cLineH, { width: partyTextW, ellipsis: true });
 
-  doc.font(fontRegular).fontSize(7.0);
-  doc.text(partyAddress || '-', partyTextX, cTop + (cLineH * 2), { width: partyTextW, height: 13, ellipsis: true });
-  doc.text(`Mobile: ${partyPhone || '-'}`, partyTextX, cTop + (cLineH * 3));
-  doc.text(`State : ${partyState}, District: ${partyDistrict}`, partyTextX, cTop + (cLineH * 4));
+  doc.font(fontRegular).fontSize(isCompact ? 6.5 : 7.0);
+  doc.text(partyAddress || '-', partyTextX, cTop + (cLineH * 2), { width: partyTextW, height: isCompact ? 10 : 13, ellipsis: true });
+  doc.text(`GSTIN: ${partyGst || '-'}`, partyTextX, cTop + (cLineH * 3));
+  doc.text(`Mobile: ${partyPhone || '-'}`, partyTextX, cTop + (cLineH * 4));
+  doc.text(`State : ${partyState}, District: ${partyDistrict}`, partyTextX, cTop + (cLineH * 5));
 
   // Section C: Buyer (Bill to)
-  const bPartyTop = consigneeDividerY + (isCompact ? 2.5 : 4.0);
-  doc.font(fontRegular).fontSize(7.0).fillColor('#333333');
+  const bPartyTop = consigneeDividerY + (isCompact ? 2.0 : 4.0);
+  doc.font(fontRegular).fontSize(isCompact ? 6.5 : 7.0).fillColor('#333333');
   doc.text('Buyer (Bill to):', partyTextX, bPartyTop);
 
-  doc.font(fontBold).fontSize(8.0).fillColor('#000000');
+  doc.font(fontBold).fontSize(isCompact ? 7.5 : 8.0).fillColor('#000000');
   doc.text(partyName, partyTextX, bPartyTop + cLineH, { width: partyTextW, ellipsis: true });
 
-  doc.font(fontRegular).fontSize(7.0);
-  doc.text(partyAddress || '-', partyTextX, bPartyTop + (cLineH * 2), { width: partyTextW, height: 13, ellipsis: true });
-  doc.text(`Mobile: ${partyPhone || '-'}`, partyTextX, bPartyTop + (cLineH * 3));
-  doc.text(`State : ${partyState}, District: ${partyDistrict}`, partyTextX, bPartyTop + (cLineH * 4));
+  doc.font(fontRegular).fontSize(isCompact ? 6.5 : 7.0);
+  doc.text(partyAddress || '-', partyTextX, bPartyTop + (cLineH * 2), { width: partyTextW, height: isCompact ? 10 : 13, ellipsis: true });
+  doc.text(`GSTIN: ${partyGst || '-'}`, partyTextX, bPartyTop + (cLineH * 3));
+  doc.text(`Mobile: ${partyPhone || '-'}`, partyTextX, bPartyTop + (cLineH * 4));
+  doc.text(`State : ${partyState}, District: ${partyDistrict}`, partyTextX, bPartyTop + (cLineH * 5));
 
   // --- RIGHT SIDE: 7 ROWS ---
   // In reference PDF: 75.0, 94.5, 114.0, 133.5, 153.0, 173.3

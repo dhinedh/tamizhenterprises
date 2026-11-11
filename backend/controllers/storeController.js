@@ -241,12 +241,14 @@ const createStore = async (req, res) => {
 
     const cleanSalesmanId = (salesmanId && mongoose.Types.ObjectId.isValid(salesmanId)) ? salesmanId : null;
     const cleanMfgId = (manufacturerId && mongoose.Types.ObjectId.isValid(manufacturerId)) ? manufacturerId : null;
+    const gstVal = req.body.gstNumber !== undefined ? req.body.gstNumber : (req.body.gstin !== undefined ? req.body.gstin : '');
 
     const store = await Store.create({
       ...req.body,
       city: city || district || 'Chennai',
       district: district || city || 'CHENNAI',
       code: finalCode,
+      gstNumber: gstVal ? gstVal.trim().toUpperCase() : '',
       salesmanId: cleanSalesmanId,
       manufacturerId: cleanMfgId,
       manufacturerCode: manufacturerCode ? manufacturerCode.trim().toUpperCase() : '',
@@ -288,6 +290,11 @@ const updateStore = async (req, res) => {
     }
 
     const updatePayload = { ...req.body };
+    if (req.body.gstNumber !== undefined) {
+      updatePayload.gstNumber = req.body.gstNumber ? req.body.gstNumber.trim().toUpperCase() : '';
+    } else if (req.body.gstin !== undefined) {
+      updatePayload.gstNumber = req.body.gstin ? req.body.gstin.trim().toUpperCase() : '';
+    }
     if (cleanSalesmanId !== undefined) {
       updatePayload.salesmanId = cleanSalesmanId;
     }
