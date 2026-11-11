@@ -8,6 +8,7 @@ import {
   Eye,
   X,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   Clock,
   ExternalLink,
@@ -226,6 +227,48 @@ const Invoices = () => {
     return `${day}-${month}-${year}`;
   }, []);
 
+  // Live duplicate warning for invoice creation
+  const duplicateInvoice = useMemo(() => {
+    const raw = (invoiceNumberInput || '').trim();
+    if (!raw) return null;
+    const cleanNum = raw.toUpperCase();
+    const numericVal = parseInt(cleanNum.replace(/\D/g, ''), 10);
+    const paddedNum = /^\d+$/.test(cleanNum) ? String(parseInt(cleanNum, 10)).padStart(3, '0') : cleanNum;
+
+    return invoices.find((inv) => {
+      const invNum = String(inv.invoiceNumber || '').trim().toUpperCase();
+      const invPadded = /^\d+$/.test(invNum) ? String(parseInt(invNum, 10)).padStart(3, '0') : invNum;
+      if (invNum === cleanNum || invPadded === paddedNum) return true;
+      const invNumericVal = parseInt(invNum.replace(/\D/g, ''), 10);
+      if (!isNaN(numericVal) && !isNaN(invNumericVal) && numericVal === invNumericVal) {
+        return true;
+      }
+      return false;
+    });
+  }, [invoiceNumberInput, invoices]);
+
+  // Live duplicate warning for invoice editing
+  const editDuplicateInvoice = useMemo(() => {
+    if (!editInvoiceForm?.invoiceNumber || !selectedInvoice) return null;
+    const raw = String(editInvoiceForm.invoiceNumber).trim();
+    if (!raw) return null;
+    const cleanNum = raw.toUpperCase();
+    const numericVal = parseInt(cleanNum.replace(/\D/g, ''), 10);
+    const paddedNum = /^\d+$/.test(cleanNum) ? String(parseInt(cleanNum, 10)).padStart(3, '0') : cleanNum;
+
+    return invoices.find((inv) => {
+      if (inv._id === selectedInvoice._id) return false;
+      const invNum = String(inv.invoiceNumber || '').trim().toUpperCase();
+      const invPadded = /^\d+$/.test(invNum) ? String(parseInt(invNum, 10)).padStart(3, '0') : invNum;
+      if (invNum === cleanNum || invPadded === paddedNum) return true;
+      const invNumericVal = parseInt(invNum.replace(/\D/g, ''), 10);
+      if (!isNaN(numericVal) && !isNaN(invNumericVal) && numericVal === invNumericVal) {
+        return true;
+      }
+      return false;
+    });
+  }, [editInvoiceForm?.invoiceNumber, selectedInvoice, invoices]);
+
   useEffect(() => {
     fetchInitialData();
   }, []);
@@ -243,8 +286,11 @@ const Invoices = () => {
       if (invRes.data.success) {
         setInvoices(invRes.data.data || []);
         // Next invoice number default (sequential or count + 1)
-        const count = invRes.data.data?.length || 0;
-        setInvoiceNumberInput(String(count > 0 ? count + 1 : 10));
+        const maxNum = (invRes.data.data || []).reduce((max, inv) => {
+          const n = parseInt(String(inv.invoiceNumber || '').replace(/\D/g, ''), 10);
+          return !isNaN(n) && n > max ? n : max;
+        }, 0);
+        setInvoiceNumberInput(String(maxNum + 1).padStart(3, '0'));
       }
       if (custRes.data.success) {
         setCustomers(custRes.data.data || []);
@@ -790,6 +836,10 @@ const Invoices = () => {
       setEditInvoiceError('Bill / Invoice Number is required');
       return;
     }
+    if (editDuplicateInvoice) {
+      setEditInvoiceError(`Warning: Invoice number "${editInvoiceForm.invoiceNumber.trim()}" already exists with that number! Please choose a unique number.`);
+      return;
+    }
     if (!editInvoiceForm.items || editInvoiceForm.items.length === 0) {
       setEditInvoiceError('Please include at least one item in the invoice');
       return;
@@ -1219,6 +1269,14 @@ const Invoices = () => {
   }, [addedItems]);
 
   const handleGenerateInvoice = async () => {
+    if (!invoiceNumberInput.trim()) {
+      alert('Please enter an Invoice Number.');
+      return;
+    }
+    if (duplicateInvoice) {
+      alert(`⚠️ Warning: Invoice number "${invoiceNumberInput.trim()}" already exists with that number!\n\nIt is already billed to: ${duplicateInvoice.storeId?.name || duplicateInvoice.customerId?.name || 'an existing customer/shop'}.\n\nPlease choose a different invoice number.`);
+      return;
+    }
     if (billingType === 'customer' && !selectedCustomerId) {
       alert('Please select a customer.');
       return;
@@ -1235,6 +1293,7 @@ const Invoices = () => {
     try {
       setSubmittingInvoice(true);
       const payload = {
+        customInvoiceNumber: invoiceNumberInput.trim(),
         paymentType: invoicePaymentType,
         notes: invoiceNotes,
         items: addedItems.map((item) => ({
@@ -1401,15 +1460,51 @@ const Invoices = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* 1. Invoice Number * */}
                 <div>
-                  <label className="block text-xs sm:text-sm font-bold text-slate-800 mb-1.5">
-                    Invoice Number*
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs sm:text-sm font-bold text-slate-800">
+                      Invoice Number*
+                    </label>
+                    {duplicateInvoice && (
+                      <span className="text-[11px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                        <AlertTriangle className="w-3 h-3 text-rose-600" /> Already Exists
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={invoiceNumberInput}
                     onChange={(e) => setInvoiceNumberInput(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white border-2 border-blue-500 rounded-xl font-bold text-slate-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className={`w-full px-4 py-2.5 bg-white border-2 rounded-xl font-bold text-base focus:outline-none transition-colors ${
+                      duplicateInvoice
+                        ? 'border-rose-500 text-rose-800 bg-rose-50/20 focus:ring-2 focus:ring-rose-500/20'
+                        : 'border-blue-500 text-slate-900 focus:ring-2 focus:ring-blue-500/20'
+                    }`}
                   />
+                  {duplicateInvoice && (
+                    <div className="mt-2 p-3 bg-amber-50 border-2 border-amber-400 rounded-xl flex items-start gap-2.5 text-amber-900 text-xs shadow-xs">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="leading-snug">
+                        <p className="font-bold text-amber-950 text-xs">
+                          ⚠️ Warning: Invoice number "{duplicateInvoice.invoiceNumber}" already exists with that number!
+                        </p>
+                        <p className="text-[11px] text-amber-800 mt-1">
+                          Already billed to:{' '}
+                          <span className="font-semibold text-slate-900">
+                            {duplicateInvoice.storeId?.name || duplicateInvoice.customerId?.name || 'Unknown Store/Customer'}
+                          </span>
+                          {duplicateInvoice.invoiceDate && (
+                            <span> • {formatInvoiceDate(duplicateInvoice.invoiceDate)}</span>
+                          )}
+                          {duplicateInvoice.grandTotal !== undefined && (
+                            <span className="font-semibold text-slate-900"> • ₹{formatAmount(duplicateInvoice.grandTotal)}</span>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-rose-700 font-semibold mt-1">
+                          Please enter a different invoice number to prevent duplicate billing.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Customer Name* (or Shop Name*) with + New */}
@@ -2756,10 +2851,27 @@ const Invoices = () => {
                         invoiceNumber: e.target.value.toUpperCase()
                       }))
                     }
-                    className="w-44 px-2.5 py-1 text-sm font-mono font-bold text-slate-900 bg-white border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    className={`w-44 px-2.5 py-1 text-sm font-mono font-bold rounded-lg focus:outline-none focus:ring-2 ${
+                      editDuplicateInvoice
+                        ? 'border-2 border-rose-500 text-rose-700 bg-rose-50/40 focus:ring-rose-400'
+                        : 'border border-blue-400 text-slate-900 bg-white focus:ring-blue-400'
+                    }`}
                     placeholder="e.g. INV-2026-00002"
                   />
                 </div>
+                {editDuplicateInvoice && (
+                  <div className="mt-1.5 p-2 bg-rose-50 border border-rose-300 rounded-lg text-left text-rose-900 text-xs flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <div className="leading-tight">
+                      <p className="font-bold text-rose-950">
+                        ⚠️ Warning: Invoice #{editDuplicateInvoice.invoiceNumber} already exists with that number!
+                      </p>
+                      <p className="text-[10px] text-rose-800 mt-0.5">
+                        Already billed to: {editDuplicateInvoice.storeId?.name || editDuplicateInvoice.customerId?.name || 'another customer/store'}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center sm:justify-end gap-2 mt-2">
                   <span className="text-[11px] font-semibold text-slate-500">Date:</span>
                   <input

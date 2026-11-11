@@ -523,12 +523,32 @@ const transferStockToStore = async (req, res) => {
 
     // Generate or use provided Invoice Number (separate sequence for Shop vs Customer, pure numeric e.g. '001')
     let invoiceNumber = (req.body.customInvoiceNumber || req.body.invoiceNumber || '').trim().toUpperCase();
-    if (!invoiceNumber) {
+    if (invoiceNumber) {
+      // Validate uniqueness: check if this invoice number already exists
+      const existing = await Invoice.findOne({
+        invoiceNumber: { $regex: new RegExp(`^${invoiceNumber}$`, 'i') }
+      }).populate('storeId customerId');
+
+      if (existing) {
+        const partyName = existing.storeId?.name || existing.customerId?.name || 'another customer/store';
+        return res.status(400).json({
+          success: false,
+          message: `Warning: Invoice number "${invoiceNumber}" already exists with that number! (Billed to: ${partyName}). Please enter a unique invoice number.`
+        });
+      }
+    } else {
       const isCust = Boolean(customer);
       const count = await Invoice.countDocuments(
         isCust ? { customerId: { $ne: null } } : { storeId: { $ne: null }, customerId: null }
       );
       invoiceNumber = String(count + 1).padStart(3, '0');
+      let collision = await Invoice.findOne({ invoiceNumber });
+      let counter = count + 1;
+      while (collision) {
+        counter++;
+        invoiceNumber = String(counter).padStart(3, '0');
+        collision = await Invoice.findOne({ invoiceNumber });
+      }
     }
     const entityState = (billingEntity.state || 'Tamil Nadu').toLowerCase();
     const isInterstate = entityState !== 'tamil nadu' && entityState !== 'tamilnadu';

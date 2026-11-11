@@ -308,11 +308,12 @@ const updateInvoice = async (req, res) => {
         ? { customerId: { $ne: null }, invoiceNumber: invoiceNumber.trim().toUpperCase(), _id: { $ne: invoice._id } }
         : { storeId: { $ne: null }, customerId: null, invoiceNumber: invoiceNumber.trim().toUpperCase(), _id: { $ne: invoice._id } };
 
-      const existing = await Invoice.findOne(query);
+      const existing = await Invoice.findOne(query).populate('storeId customerId');
       if (existing) {
+        const partyName = existing.storeId?.name || existing.customerId?.name || (isCust ? 'customers' : 'retail shops');
         return res.status(400).json({ 
           success: false, 
-          message: `Bill / Invoice Number "${invoiceNumber.trim().toUpperCase()}" already exists for ${isCust ? 'customers' : 'retail shops'}` 
+          message: `Warning: Invoice number "${invoiceNumber.trim().toUpperCase()}" already exists with that number! (Billed to: ${partyName}). Please enter a unique invoice number.` 
         });
       }
       invoice.invoiceNumber = invoiceNumber.trim().toUpperCase();
