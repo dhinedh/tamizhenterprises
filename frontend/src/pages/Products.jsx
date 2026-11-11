@@ -131,7 +131,15 @@ const Products = () => {
     );
   };
 
-  const isProductNapkin = (p) => !isProductLumi(p);
+  const isProductMansara = (p) => {
+    if (!p) return false;
+    const brand = (p.brand || '').toLowerCase();
+    const name = (p.name || '').toLowerCase();
+    const mfg = (p.manufacturerId?.name || p.manufacturerId?.code || '').toLowerCase();
+    return brand.includes('mansara') || name.includes('mansara') || mfg.includes('mansara');
+  };
+
+  const isProductNapkin = (p) => !isProductLumi(p) && !isProductMansara(p);
 
   // Form State for Add / Edit
   const [formData, setFormData] = useState({
@@ -887,7 +895,11 @@ const Products = () => {
                         <td className="py-3 px-3">
                           <div className="font-bold text-slate-900 flex items-center gap-1.5 flex-wrap">
                             <span>{prod.name}</span>
-                            {isProductLumi(prod) ? (
+                            {isProductMansara(prod) ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                Mansara Foods
+                              </span>
+                            ) : isProductLumi(prod) ? (
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 Lumi Diaper
                               </span>

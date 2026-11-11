@@ -18,15 +18,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Urad Health Mix',
-    sku: 'MANS-UHM-CLS-250G',
     barcode: '890800223311',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 165,
     purchasePrice: 115.00,
-    dealerPrice: 132.00,
-    sellingPrice: 140.00,
+    sellingPrice: 165.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -38,15 +36,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Urad Health Mix',
-    sku: 'MANS-UHM-SP-250G',
     barcode: '890800223312',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 165,
     purchasePrice: 115.00,
-    dealerPrice: 132.00,
-    sellingPrice: 140.00,
+    sellingPrice: 165.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -58,15 +54,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Urad Health Mix',
-    sku: 'MANS-UHM-MM-250G',
     barcode: '890800223313',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 165,
     purchasePrice: 115.00,
-    dealerPrice: 132.00,
-    sellingPrice: 140.00,
+    sellingPrice: 165.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -78,15 +72,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Urad Health Mix',
-    sku: 'MANS-UHM-DEL-250G',
     barcode: '890800223314',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 165,
     purchasePrice: 115.00,
-    dealerPrice: 132.00,
-    sellingPrice: 140.00,
+    sellingPrice: 165.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -98,15 +90,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Health Mix',
-    sku: 'MANS-HM-BRD-250G',
     barcode: '890800223315',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 165,
     purchasePrice: 115.00,
-    dealerPrice: 132.00,
-    sellingPrice: 140.00,
+    sellingPrice: 165.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -118,15 +108,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Health Mix',
-    sku: 'MANS-HM-RCM-250G',
     barcode: '890800223316',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 250,
     purchasePrice: 175.00,
-    dealerPrice: 200.00,
-    sellingPrice: 212.00,
+    sellingPrice: 250.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -138,15 +126,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Health Mix & Cereals',
     subCategory: 'Health Mix',
-    sku: 'MANS-HM-NUTRI-250G',
     barcode: '890800223317',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 200,
     purchasePrice: 140.00,
-    dealerPrice: 160.00,
-    sellingPrice: 170.00,
+    sellingPrice: 200.00,
     gstRate: 5,
     minStockAlert: 20,
     initialStock: 0,
@@ -158,15 +144,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Idly Podi',
-    sku: 'MANS-IP-MILLET-100G',
     barcode: '890800223318',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -178,15 +162,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Idly Podi',
-    sku: 'MANS-IP-TRAD-100G',
     barcode: '890800223319',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -198,15 +180,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Rice Podi Mix',
-    sku: 'MANS-RPM-PAR-100G',
     barcode: '890800223320',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -218,15 +198,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Rice Podi Mix',
-    sku: 'MANS-RPM-PIR-100G',
     barcode: '890800223321',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -238,15 +216,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Rice Podi Mix',
-    sku: 'MANS-RPM-MUR-100G',
     barcode: '890800223322',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -258,15 +234,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Rice Podi Mix',
-    sku: 'MANS-RPM-KAR-100G',
     barcode: '890800223323',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -278,15 +252,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Traditional Masala & Spices',
     subCategory: 'Rice Podi Mix',
-    sku: 'MANS-RPM-KOT-100G',
     barcode: '890800223324',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -298,15 +270,13 @@ const mansaraProductsData = [
     brand: 'mansarafoods.com',
     category: 'Personal Care',
     subCategory: 'Herbal Bathing Powder',
-    sku: 'MANS-HBP-100G',
     barcode: '890800223325',
     hsnCode: '1904',
     unit: 'Pack',
     unitQuantityPerPack: 1,
     mrp: 75,
     purchasePrice: 52.00,
-    dealerPrice: 60.00,
-    sellingPrice: 64.00,
+    sellingPrice: 75.00,
     gstRate: 5,
     minStockAlert: 25,
     initialStock: 0,
@@ -361,67 +331,70 @@ const seedMansara = async () => {
       console.log('Mansara manufacturer updated with ID:', mansara._id);
     }
 
-    // 2. Remove any old dummy Mansara products if they exist
-    const oldDummyNames = [
-      'Mansara Instant Chettinad Kulambu Masala Paste (200g)',
-      'Mansara Traditional Gunpowder / Idli Podi (250g)',
-      'Mansara Pure Wood Pressed Sesame Oil / Gingelly Oil (500ml)',
-      'Mansara Traditional Kaikara Ragi Murukku (200g)'
-    ];
-    const removedOld = await Product.deleteMany({
-      $or: [
-        { name: { $in: oldDummyNames } },
-        { sku: { $in: ['MANS-KUL-200G', 'MANS-PDR-250G', 'MANS-OIL-500ML', 'MANS-MRK-200G'] } }
-      ]
-    });
-    if (removedOld.deletedCount > 0) {
-      console.log(`Cleaned up ${removedOld.deletedCount} old dummy Mansara products.`);
-    }
-
-    // 3. Upsert all 15 real Mansara products
-    console.log(`Upserting ${mansaraProductsData.length} Mansara products...`);
-    let addedCount = 0;
+    // 2. Remove SKU and dealerPrice from all Mansara products in database
+    console.log('Updating Mansara products in database without SKU and without Dealer Price...');
     let updatedCount = 0;
 
     for (const item of mansaraProductsData) {
       let product = await Product.findOne({
-        $or: [
-          { sku: item.sku },
-          { name: item.name }
-        ]
+        name: item.name,
+        manufacturerId: mansara._id
       });
 
-      const productPayload = {
-        name: item.name,
-        brand: 'mansarafoods.com',
-        category: item.category,
-        subCategory: item.subCategory,
-        manufacturerId: mansara._id,
-        sku: item.sku,
-        barcode: item.barcode,
-        hsnCode: item.hsnCode,
-        unit: item.unit,
-        unitQuantityPerPack: item.unitQuantityPerPack,
-        mrp: item.mrp,
-        purchasePrice: item.purchasePrice,
-        dealerPrice: item.dealerPrice,
-        sellingPrice: item.sellingPrice,
-        gstRate: item.gstRate,
-        minStockAlert: item.minStockAlert,
-        description: item.description,
-        status: 'Active'
-      };
+      if (!product) {
+        product = await Product.findOne({ name: item.name });
+      }
 
       if (!product) {
-        product = await Product.create(productPayload);
-        addedCount++;
-        console.log(`+ Added: ${product.name} (SKU: ${product.sku}, MRP: ₹${product.mrp})`);
-      } else {
-        Object.assign(product, productPayload);
-        await product.save();
-        updatedCount++;
-        console.log(`✓ Updated: ${product.name} (SKU: ${product.sku}, MRP: ₹${product.mrp})`);
+        product = await Product.create({
+          name: item.name,
+          brand: 'mansarafoods.com',
+          category: item.category,
+          subCategory: item.subCategory,
+          manufacturerId: mansara._id,
+          barcode: item.barcode,
+          hsnCode: item.hsnCode,
+          unit: item.unit,
+          unitQuantityPerPack: item.unitQuantityPerPack,
+          mrp: item.mrp,
+          purchasePrice: item.purchasePrice,
+          dealerPrice: 0,
+          sellingPrice: item.sellingPrice,
+          gstRate: item.gstRate,
+          minStockAlert: item.minStockAlert,
+          description: item.description,
+          status: 'Active'
+        });
       }
+
+      // Explicitly unset sku and dealerPrice
+      await Product.collection.updateOne(
+        { _id: product._id },
+        { 
+          $unset: { sku: "", dealerPrice: "" },
+          $set: {
+            name: item.name,
+            brand: 'mansarafoods.com',
+            category: item.category,
+            subCategory: item.subCategory,
+            manufacturerId: mansara._id,
+            barcode: item.barcode,
+            hsnCode: item.hsnCode,
+            unit: item.unit,
+            unitQuantityPerPack: item.unitQuantityPerPack,
+            mrp: item.mrp,
+            purchasePrice: item.purchasePrice,
+            sellingPrice: item.sellingPrice,
+            gstRate: item.gstRate,
+            minStockAlert: item.minStockAlert,
+            description: item.description,
+            status: 'Active'
+          }
+        }
+      );
+
+      updatedCount++;
+      console.log(`✓ Updated (no SKU, no Dealer Price): ${item.name} (MRP: ₹${item.mrp})`);
 
       // Ensure Stock entry exists
       let stock = await Stock.findOne({ productId: product._id });
@@ -437,24 +410,22 @@ const seedMansara = async () => {
       }
     }
 
-    // 4. Update manufacturer metrics
+    // 3. Update manufacturer metrics
     const totalCount = await Product.countDocuments({ manufacturerId: mansara._id });
     mansara.productsCount = totalCount;
     await mansara.save();
 
-    console.log(`\n=== MANSARA PRODUCTS SYNCED SUCCESSFULLY ===`);
+    console.log(`\n=== MANSARA PRODUCTS UPDATED (SKU & DEALER PRICE REMOVED) ===`);
     console.log(`Manufacturer ID: ${mansara._id}`);
     console.log(`Total Mansara Products: ${totalCount}`);
-    console.log(`Newly Added: ${addedCount}`);
     console.log(`Updated: ${updatedCount}`);
 
     await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
-    console.error('Error seeding Mansara products:', error);
+    console.error('Error updating Mansara products:', error);
     process.exit(1);
   }
 };
 
 seedMansara();
-
