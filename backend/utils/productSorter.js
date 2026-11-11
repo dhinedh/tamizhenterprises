@@ -50,6 +50,27 @@ function getProductSortKey(prod) {
     sizeWeight = mmMatch ? parseInt(mmMatch[1], 10) : (name.includes('combo') ? 9999 : 50);
     const pcsMatch = name.match(/(\d+)\s*pcs/i) || sku.match(/-(\d+)p/i);
     count = pcsMatch ? parseInt(pcsMatch[1], 10) : 0;
+  } else if (brandWeight === 3) {
+    // Mansara: Catalog Sequence 1 to 15
+    const mansaraCatalog = [
+      'urad health mix - classic',
+      'urad health mix -salt&pepper',
+      'urad health mix -millet magic',
+      'urad health mix -delicious',
+      'health mix -black rice delight',
+      'health mix - ragi choco malt',
+      'health mix - nutrimix',
+      'idly podi - millet',
+      'idly podi - traditional',
+      'rice podi mix home style paruppu',
+      'rice podi mix pirandai power',
+      'rice podi mix murungai vital',
+      'rice podi mix karuveppillai special',
+      'rice podi mix kothamalli aroma',
+      'herbal bathing powder'
+    ];
+    const idx = mansaraCatalog.findIndex(term => name.includes(term) || sku.includes(term));
+    sizeWeight = idx !== -1 ? (idx + 1) : 50;
   }
 
   return { brandWeight, sizeWeight, count, name };

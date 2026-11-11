@@ -487,7 +487,7 @@ const Orders = () => {
                             </option>
                           ))}
                       </optgroup>
-                      <optgroup label="mansarafoods.com (Spices & Foods)">
+                      <optgroup label="mansarafoods.com (Health Mix & Podi)">
                         {sortProducts(products)
                           .filter(p => !(p.brand?.toLowerCase().includes('femi9') || p.manufacturerId?.name?.toLowerCase().includes('femi9') || p.sku?.startsWith('FEMI')))
                           .map((p) => (

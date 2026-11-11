@@ -31,10 +31,21 @@ const DEFAULT_STOCKS = [
   { _id: '24', name: 'Lumi9 Baby Diaper XL(24)', closingQty: 0, brand: 'femi9' },
   { _id: '25', name: 'Lumi9 Baby Diaper XL(54)', closingQty: 0, brand: 'femi9' },
   // mansarafoods.com Products
-  { _id: '10', name: 'Mansara Instant Chettinad Kulambu Masala Paste (200g)', closingQty: 0, brand: 'mansarafoods.com' },
-  { _id: '11', name: 'Mansara Traditional Gunpowder / Idli Podi (250g)', closingQty: 0, brand: 'mansarafoods.com' },
-  { _id: '12', name: 'Mansara Pure Wood Pressed Sesame Oil / Gingelly Oil (500ml)', closingQty: 0, brand: 'mansarafoods.com' },
-  { _id: '13', name: 'Mansara Traditional Kaikara Ragi Murukku (200g)', closingQty: 0, brand: 'mansarafoods.com' }
+  { _id: '101', name: 'URAD HEALTH MIX - CLASSIC (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-UHM-CLS-250G', mrp: 165 },
+  { _id: '102', name: 'URAD HEALTH MIX -SALT&PEPPER (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-UHM-SP-250G', mrp: 165 },
+  { _id: '103', name: 'URAD HEALTH MIX -MILLET MAGIC (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-UHM-MM-250G', mrp: 165 },
+  { _id: '104', name: 'URAD HEALTH MIX -DELICIOUS (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-UHM-DEL-250G', mrp: 165 },
+  { _id: '105', name: 'HEALTH MIX -BLACK RICE DELIGHT (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-HM-BRD-250G', mrp: 165 },
+  { _id: '106', name: 'HEALTH MIX - RAGI CHOCO MALT (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-HM-RCM-250G', mrp: 250 },
+  { _id: '107', name: 'HEALTH MIX - NUTRIMIX (250g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-HM-NUTRI-250G', mrp: 200 },
+  { _id: '108', name: 'IDLY PODI - MILLET IDLY PODI (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-IP-MILLET-100G', mrp: 75 },
+  { _id: '109', name: 'IDLY PODI - TRADITIONAL IDLY PODI (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-IP-TRAD-100G', mrp: 75 },
+  { _id: '110', name: 'RICE PODI MIX HOME STYLE PARUPPU (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-RPM-PAR-100G', mrp: 75 },
+  { _id: '111', name: 'RICE PODI MIX PIRANDAI POWER (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-RPM-PIR-100G', mrp: 75 },
+  { _id: '112', name: 'RICE PODI MIX MURUNGAI VITAL (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-RPM-MUR-100G', mrp: 75 },
+  { _id: '113', name: 'RICE PODI MIX KARUVEPPILLAI SPECIAL (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-RPM-KAR-100G', mrp: 75 },
+  { _id: '114', name: 'RICE PODI MIX KOTHAMALLI AROMA (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-RPM-KOT-100G', mrp: 75 },
+  { _id: '115', name: 'HERBAL BATHING POWDER (100g)', closingQty: 0, brand: 'mansarafoods.com', sku: 'MANS-HBP-100G', mrp: 75 }
 ];
 
 const StockManagement = () => {
