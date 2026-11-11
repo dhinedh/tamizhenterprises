@@ -264,12 +264,12 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   // --- RIGHT SIDE: 7 ROWS ---
   // In reference PDF: 75.0, 94.5, 114.0, 133.5, 153.0, 173.3
   const rightGridLines = isCompact
-    ? [57.0, 75.0, 93.0, 111.0, 129.0, 147.0]
+    ? [65.0, 88.0, 110.0, 132.0, 154.0, 176.0]
     : [75.0, 94.5, 114.0, 133.5, 153.0, 173.3];
   rightGridLines.forEach((y) => strokeBorder(midX, y, rightX, y));
 
   // Vertical divider between right sub-columns (doesn't cross Terms of Delivery!)
-  const rSubColBottom = isCompact ? 147.0 : 173.3;
+  const rSubColBottom = isCompact ? 176.0 : 173.3;
   strokeBorder(rightSubColX, infoTop, rightSubColX, rSubColBottom);
 
   const colR1_X = midX + 5.0;
@@ -318,32 +318,39 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Terms of Delivery', colR1_X, 175.5);
   } else {
     // Compact Right Side Rows
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Invoice #', colR1_X, infoTop + 2.5);
-    doc.font(fontBold).fontSize(8.5).fillColor('#000000').text(displayInvNo, colR1_X, infoTop + 10.5);
+    // Row 1 (39.8 -> 65.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Invoice #', colR1_X, infoTop + 3.0);
+    doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(displayInvNo, colR1_X, infoTop + 12.0);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Invoice Date:', colR2_X, infoTop + 2.5);
-    doc.font(fontBold).fontSize(8.5).fillColor('#000000').text(formatDate(invoice.invoiceDate), colR2_X, infoTop + 10.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Invoice Date:', colR2_X, infoTop + 3.0);
+    doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(formatDate(invoice.invoiceDate), colR2_X, infoTop + 12.0);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Delivery Note', colR1_X, 59.0);
+    // Row 2 (65.0 -> 88.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Delivery Note', colR1_X, 67.5);
     if (invoice.deliveryChallanNo) {
-      doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.deliveryChallanNo, colR1_X, 66.5);
+      doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.deliveryChallanNo, colR1_X, 76.5);
     }
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Mode/Terms of Payment', colR2_X, 59.0);
-    doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.saleType || 'Credit', colR2_X, 66.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Mode/Terms of Payment', colR2_X, 67.5);
+    doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.saleType || 'Credit', colR2_X, 76.5);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Reference No. & Date', colR1_X, 77.0);
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Other References', colR2_X, 77.0);
+    // Row 3 (88.0 -> 110.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Reference No. & Date', colR1_X, 90.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Other References', colR2_X, 90.5);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text("Buyer's Order No.", colR1_X, 95.0);
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Dated', colR2_X, 95.0);
+    // Row 4 (110.0 -> 132.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text("Buyer's Order No.", colR1_X, 112.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dated', colR2_X, 112.5);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Dispatch Doc No.', colR1_X, 113.0);
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Delivery Note Date', colR2_X, 113.0);
+    // Row 5 (132.0 -> 154.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dispatch Doc No.', colR1_X, 134.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Delivery Note Date', colR2_X, 134.5);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Dispatched through', colR1_X, 131.0);
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Destination', colR2_X, 131.0);
+    // Row 6 (154.0 -> 176.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dispatched through', colR1_X, 156.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Destination', colR2_X, 156.5);
 
-    doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Terms of Delivery', colR1_X, 149.5);
+    // Row 7 (176.0 -> 206.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Terms of Delivery', colR1_X, 178.5);
   }
 
   // 3. Products Table Header (34.5 pt height matching reference PDF)
