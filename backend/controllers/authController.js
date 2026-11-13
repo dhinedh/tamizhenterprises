@@ -54,8 +54,9 @@ const loginUser = async (req, res) => {
   try {
     const { email, phone, identifier, password } = req.body;
     const loginIdentifier = (identifier || email || phone || '').trim();
+    const cleanPassword = typeof password === 'string' ? password.trim() : password;
 
-    if (!loginIdentifier || !password) {
+    if (!loginIdentifier || !cleanPassword) {
       return res.status(400).json({ success: false, message: 'Please provide email or phone number and password' });
     }
 
@@ -74,7 +75,7 @@ const loginUser = async (req, res) => {
 
     const user = await User.findOne({ $or: userQueries }).populate('storeId').populate('salesmanId');
 
-    if (user && (await user.matchPassword(password))) {
+    if (user && (await user.matchPassword(cleanPassword))) {
       user.lastLogin = new Date();
       await user.save();
 

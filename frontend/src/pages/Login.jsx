@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, UserCheck, Store, Lock, Mail, Phone, ArrowRight } from 'lucide-react';
+import { ShieldCheck, UserCheck, Store, Lock, Mail, Phone, ArrowRight, Eye, EyeOff, Smartphone, Laptop } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('admin@tamilenterprises.com');
   const [password, setPassword] = useState('admin123');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, quickDemoLogin } = useAuth();
@@ -15,7 +16,9 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const result = await login(email, password);
+    const cleanEmail = (email || '').trim();
+    const cleanPassword = (password || '').trim();
+    const result = await login(cleanEmail, cleanPassword);
     setLoading(false);
     if (result.success) {
       navigate('/');
@@ -67,6 +70,10 @@ const Login = () => {
               <input
                 type="text"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                inputMode="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
@@ -80,14 +87,32 @@ const Login = () => {
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                className="w-full pl-9 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
+
+          {/* Multiple device login badge */}
+          <div className="flex items-center gap-1.5 text-[11px] text-teal-700 bg-teal-50/80 px-2.5 py-1.5 rounded-lg border border-teal-200/60">
+            <Smartphone className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+            <Laptop className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
+            <span>Multiple device login allowed — stays signed in on phone & PC</span>
           </div>
 
           <button

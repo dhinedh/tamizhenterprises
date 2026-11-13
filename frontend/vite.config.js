@@ -9,6 +9,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    host: true, // Listen on all network addresses (0.0.0.0) so mobile phones on the same Wi-Fi can connect
     port: 3000,
     proxy: {
       '/api': {
