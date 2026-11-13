@@ -10,6 +10,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const connectDB = require('./config/db');
+const { isDbConnected } = require('./config/db');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -32,6 +33,24 @@ const reportRoutes = require('./routes/reportRoutes');
 const compression = require('compression');
 
 const app = express();
+
+// Universal CORS & Preflight handler (guarantees CORS headers on every response, including errors and preflights)
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, token');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Enable Gzip/Brotli response compression for all API routes (drastically reduces payload transfer sizes)
 app.use(compression());
@@ -74,8 +93,21 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     app: 'Tamizh Enterprises ERP Backend',
+    dbConnected: isDbConnected(),
     timestamp: new Date().toISOString()
   });
+});
+
+// Check DB readiness for API routes (except health check)
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next();
+  if (!isDbConnected()) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database connecting or unreachable. Please verify MongoDB Atlas IP whitelist (0.0.0.0/0) is active.'
+    });
+  }
+  next();
 });
 
 // Mount Routes
