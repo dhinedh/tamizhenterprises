@@ -172,8 +172,8 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
 
   // --- LEFT SIDE: 3 DISTINCT SECTIONS ---
   // When not compact: Seller (39.8 -> 153.0), Consignee (153.0 -> 225.0), Buyer (225.0 -> 296.3)
-  const sellerDividerY = isCompact ? 106.0 : 153.0;
-  const consigneeDividerY = isCompact ? 156.0 : 225.0;
+  const sellerDividerY = isCompact ? 110.0 : 153.0;
+  const consigneeDividerY = isCompact ? 158.0 : 225.0;
 
   strokeBorder(leftX, sellerDividerY, midX, sellerDividerY);
   strokeBorder(leftX, consigneeDividerY, midX, consigneeDividerY);
@@ -204,29 +204,29 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   // Seller Text
   const sellerTextX = 94.0;
   const sellerTextW = midX - sellerTextX - 4.0;
-  const sTop = isCompact ? (infoTop + 2.5) : 48.0;
-  const sLineH = isCompact ? 8.5 : 11.0;
+  const sTop = isCompact ? (infoTop + 2.0) : 48.0;
+  const sLineH = isCompact ? 8.0 : 11.0;
 
-  doc.font(fontBold).fontSize(isCompact ? 9.5 : 10.5).fillColor('#000000');
+  doc.font(fontBold).fontSize(isCompact ? 9.0 : 10.5).fillColor('#000000');
   doc.text(seller.companyName, sellerTextX, sTop, { width: sellerTextW });
 
-  doc.font(fontRegular).fontSize(7.0).fillColor('#000000');
-  doc.text(seller.addressLine1, sellerTextX, sTop + sLineH + 2.0, { width: sellerTextW });
-  doc.text(seller.addressLine2, sellerTextX, sTop + (sLineH * 2) + 2.0, { width: sellerTextW });
+  doc.font(fontRegular).fontSize(6.8).fillColor('#000000');
+  doc.text(seller.addressLine1, sellerTextX, sTop + sLineH + 1.5, { width: sellerTextW });
+  doc.text(seller.addressLine2, sellerTextX, sTop + (sLineH * 2) + 1.5, { width: sellerTextW });
   doc.text(
     `${seller.city}, ${seller.state} - ${seller.pincode}`,
     sellerTextX,
-    sTop + (sLineH * 3) + 2.0,
+    sTop + (sLineH * 3) + 1.5,
     { width: sellerTextW }
   );
 
-  doc.font(fontBold).fontSize(7.0).text('GSTIN/UIN : ', sellerTextX, sTop + (sLineH * 4) + 2.0, { continued: true });
+  doc.font(fontBold).fontSize(6.8).text('GSTIN/UIN : ', sellerTextX, sTop + (sLineH * 4) + 1.5, { continued: true });
   doc.font(fontBold).text(seller.gstin);
 
-  doc.font(fontBold).text('Contact : ', sellerTextX, sTop + (sLineH * 5) + 2.0, { continued: true });
+  doc.font(fontBold).text('Contact : ', sellerTextX, sTop + (sLineH * 5) + 1.5, { continued: true });
   doc.font(fontRegular).text(seller.contact);
 
-  doc.font(fontBold).text('Email : ', sellerTextX, sTop + (sLineH * 6) + 2.0, { continued: true });
+  doc.font(fontBold).text('Email : ', sellerTextX, sTop + (sLineH * 6) + 1.5, { continued: true });
   doc.font(fontRegular).text(seller.email);
 
   // Section B: Consignee (Ship to)
@@ -264,12 +264,12 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   // --- RIGHT SIDE: 7 ROWS ---
   // In reference PDF: 75.0, 94.5, 114.0, 133.5, 153.0, 173.3
   const rightGridLines = isCompact
-    ? [65.0, 88.0, 110.0, 132.0, 154.0, 176.0]
+    ? [67.0, 89.0, 111.0, 133.0, 155.0, 177.0]
     : [75.0, 94.5, 114.0, 133.5, 153.0, 173.3];
   rightGridLines.forEach((y) => strokeBorder(midX, y, rightX, y));
 
   // Vertical divider between right sub-columns (doesn't cross Terms of Delivery!)
-  const rSubColBottom = isCompact ? 176.0 : 173.3;
+  const rSubColBottom = isCompact ? 177.0 : 173.3;
   strokeBorder(rightSubColX, infoTop, rightSubColX, rSubColBottom);
 
   const colR1_X = midX + 5.0;
@@ -318,39 +318,39 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     doc.font(fontRegular).fontSize(7.0).fillColor('#555555').text('Terms of Delivery', colR1_X, 175.5);
   } else {
     // Compact Right Side Rows
-    // Row 1 (39.8 -> 65.0)
+    // Row 1 (39.8 -> 67.0)
     doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Invoice #', colR1_X, infoTop + 3.0);
-    doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(displayInvNo, colR1_X, infoTop + 12.0);
+    doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(displayInvNo, colR1_X, infoTop + 13.0);
 
     doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Invoice Date:', colR2_X, infoTop + 3.0);
-    doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(formatDate(invoice.invoiceDate), colR2_X, infoTop + 12.0);
+    doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(formatDate(invoice.invoiceDate), colR2_X, infoTop + 13.0);
 
-    // Row 2 (65.0 -> 88.0)
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Delivery Note', colR1_X, 67.5);
+    // Row 2 (67.0 -> 89.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Delivery Note', colR1_X, 69.5);
     if (invoice.deliveryChallanNo) {
-      doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.deliveryChallanNo, colR1_X, 76.5);
+      doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.deliveryChallanNo, colR1_X, 78.5);
     }
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Mode/Terms of Payment', colR2_X, 67.5);
-    doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.saleType || 'Credit', colR2_X, 76.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Mode/Terms of Payment', colR2_X, 69.5);
+    doc.font(fontBold).fontSize(7.5).fillColor('#000000').text(invoice.saleType || 'Credit', colR2_X, 78.5);
 
-    // Row 3 (88.0 -> 110.0)
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Reference No. & Date', colR1_X, 90.5);
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Other References', colR2_X, 90.5);
+    // Row 3 (89.0 -> 111.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Reference No. & Date', colR1_X, 91.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Other References', colR2_X, 91.5);
 
-    // Row 4 (110.0 -> 132.0)
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text("Buyer's Order No.", colR1_X, 112.5);
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dated', colR2_X, 112.5);
+    // Row 4 (111.0 -> 133.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text("Buyer's Order No.", colR1_X, 113.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dated', colR2_X, 113.5);
 
-    // Row 5 (132.0 -> 154.0)
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dispatch Doc No.', colR1_X, 134.5);
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Delivery Note Date', colR2_X, 134.5);
+    // Row 5 (133.0 -> 155.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dispatch Doc No.', colR1_X, 135.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Delivery Note Date', colR2_X, 135.5);
 
-    // Row 6 (154.0 -> 176.0)
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dispatched through', colR1_X, 156.5);
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Destination', colR2_X, 156.5);
+    // Row 6 (155.0 -> 177.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Dispatched through', colR1_X, 157.5);
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Destination', colR2_X, 157.5);
 
-    // Row 7 (176.0 -> 206.0)
-    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Terms of Delivery', colR1_X, 178.5);
+    // Row 7 (177.0 -> 206.0)
+    doc.font(fontRegular).fontSize(6.8).fillColor('#555555').text('Terms of Delivery', colR1_X, 179.5);
   }
 
   // 3. Products Table Header (34.5 pt height matching reference PDF)

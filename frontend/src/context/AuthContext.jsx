@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const quickDemoLogin = async (roleName) => {
-    let credentials = { email: 'admin@tamilenterprises.com', password: 'admin123' };
+    let credentials = { email: '9841433607', password: 'tamizh' };
     if (roleName === 'Salesman') {
       credentials = { email: 'murugan@tamilenterprises.com', password: 'sales123' };
     } else if (roleName === 'Store') {

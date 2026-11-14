@@ -65,12 +65,18 @@ const loginUser = async (req, res) => {
       { phone: loginIdentifier }
     ];
 
-    // Normalize phone number to match various formats (+91 94432 10987, 9443210987, etc.)
+    // Normalize phone number to match various formats (+91 98414 33607, 9841433607, +919841433607, etc.)
     const digitsOnly = loginIdentifier.replace(/\D/g, '');
     if (digitsOnly.length >= 7) {
       const last10 = digitsOnly.slice(-10);
       const flexiblePattern = last10.split('').join('[\\s-]*');
-      userQueries.push({ phone: { $regex: flexiblePattern, $options: 'i' } });
+      userQueries.push(
+        { phone: digitsOnly },
+        { phone: last10 },
+        { phone: `+91 ${last10}` },
+        { phone: `+91${last10}` },
+        { phone: { $regex: flexiblePattern, $options: 'i' } }
+      );
     }
 
     const user = await User.findOne({ $or: userQueries }).populate('storeId').populate('salesmanId');
