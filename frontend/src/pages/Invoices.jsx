@@ -534,7 +534,15 @@ const Invoices = () => {
       showToast('Invoice PDF downloaded successfully!');
     } catch (err) {
       console.error('Failed to download invoice:', err);
-      alert('Failed to download PDF invoice.');
+      const token = localStorage.getItem('tamil_erp_token');
+      const scaleToUse = overrideScale || printScale || localStorage.getItem('invoice_print_vscale') || '100';
+      if (token && (err?.response?.status === 502 || err?.response?.status === 504 || !err?.response)) {
+        showToast('Server is preparing document. Opening direct download stream...');
+        const downloadUrl = `/api/invoices/${invoiceId}/pdf?scale=${scaleToUse}&token=${encodeURIComponent(token)}`;
+        window.open(downloadUrl, '_blank');
+      } else {
+        alert('Failed to download PDF invoice. Please try again.');
+      }
     } finally {
       setPrintingId(null);
     }

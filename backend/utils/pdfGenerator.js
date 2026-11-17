@@ -43,27 +43,25 @@ function formatDate(dateVal) {
   return `${day} ${month} ${year}`;
 }
 
-function generateInvoicePDF(invoice, party, res, owner = null, vScale = 1.0) {
-  let scale = Number(vScale) || 1.0;
-  if (scale > 5) scale = scale / 100;
-  // Support vertical-only scaling (100% normal, 110%, 118%, 120%, up to 135% without page overflow)
-  scale = Math.max(0.85, Math.min(1.35, scale));
+function generateInvoicePDFBuffer(invoice, party, owner = null, vScale = 1.0) {
+  return new Promise((resolve, reject) => {
+    try {
+      let scale = Number(vScale) || 1.0;
+      if (scale > 5) scale = scale / 100;
+      // Support vertical-only scaling (100% normal, 110%, 118%, 120%, up to 135% without page overflow)
+      scale = Math.max(0.85, Math.min(1.35, scale));
 
-  const doc = new PDFDocument({
-    size: 'A4',
-    margin: 0,
-    bufferPages: true,
-    autoFirstPage: true
-  });
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: 0,
+        bufferPages: true,
+        autoFirstPage: true
+      });
 
-  doc.on('error', (err) => {
-    console.error('PDF generation error:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, message: 'PDF Generation failed', error: err.message });
-    }
-  });
-
-  doc.pipe(res);
+      const chunks = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', (err) => reject(err));
 
   // Register fonts if available
   const fontsDir = path.join(__dirname, '../assets/fonts');
@@ -850,6 +848,29 @@ function generateInvoicePDF(invoice, party, res, owner = null, vScale = 1.0) {
   });
 
   doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
-module.exports = { generateInvoicePDF };
+async function generateInvoicePDF(invoice, party, res, owner = null, vScale = 1.0) {
+  try {
+    const buffer = await generateInvoicePDFBuffer(invoice, party, owner, vScale);
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename=Invoice-${invoice?.invoiceNumber || 'bill'}.pdf`);
+      res.setHeader('Content-Length', buffer.length);
+    }
+    res.end(buffer);
+  } catch (err) {
+    console.error('generateInvoicePDF error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: 'PDF Generation failed', error: err.message });
+    } else {
+      res.end();
+    }
+  }
+}
+
+module.exports = { generateInvoicePDF, generateInvoicePDFBuffer };

@@ -1,4 +1,5 @@
-  const Invoice = require('../models/Invoice');
+const mongoose = require('mongoose');
+const Invoice = require('../models/Invoice');
 const Order = require('../models/Order');
 const Store = require('../models/Store');
 const Customer = require('../models/Customer');
@@ -248,7 +249,12 @@ const generateInvoiceFromOrder = async (req, res) => {
 // @route   GET /api/invoices/:id/pdf
 const downloadInvoicePDF = async (req, res) => {
   try {
-    const invoice = await Invoice.findById(req.params.id).populate('items.productId');
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const invoice = await (isObjectId
+      ? Invoice.findById(req.params.id)
+      : Invoice.findOne({ invoiceNumber: req.params.id })
+    ).populate('items.productId');
+
     if (!invoice) {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
@@ -269,14 +275,13 @@ const downloadInvoicePDF = async (req, res) => {
     const party = store || customer || (typeof invoice.storeId === 'object' ? invoice.storeId : null) || (typeof invoice.customerId === 'object' ? invoice.customerId : null) || {};
     const owner = await User.findOne({ role: 'Owner' });
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=Invoice-${invoice.invoiceNumber}.pdf`);
-
-    generateInvoicePDF(invoice, party, res, owner, vScale);
+    await generateInvoicePDF(invoice, party, res, owner, vScale);
   } catch (error) {
     console.error('Invoice PDF generation error:', error);
     if (!res.headersSent) {
       res.status(500).json({ success: false, message: error.message });
+    } else {
+      res.end();
     }
   }
 };
