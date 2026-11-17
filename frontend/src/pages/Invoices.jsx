@@ -430,6 +430,7 @@ const Invoices = () => {
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   };
+  const formatDate = formatInvoiceDate;
 
   // Helper to format currency amount (e.g. 3,564.00)
   const formatAmount = (num) => {
@@ -2624,7 +2625,7 @@ const Invoices = () => {
                   {printModalInvoice.storeId?.name || printModalInvoice.customerId?.name || 'Customer / Retail Shop'}
                 </div>
                 <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                  Bill #{formatInvoiceNumber(printModalInvoice.invoiceNumber)} &bull; {formatDate(printModalInvoice.invoiceDate)}
+                  Bill #{formatInvoiceNumber(printModalInvoice.invoiceNumber)} &bull; {formatInvoiceDate(printModalInvoice.invoiceDate)}
                 </div>
               </div>
               <div className="text-right">
