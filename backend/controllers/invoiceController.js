@@ -1,4 +1,4 @@
-const Invoice = require('../models/Invoice');
+  const Invoice = require('../models/Invoice');
 const Order = require('../models/Order');
 const Store = require('../models/Store');
 const Customer = require('../models/Customer');
@@ -252,6 +252,15 @@ const downloadInvoicePDF = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Invoice not found' });
     }
 
+    const scaleParam = req.query.scale || req.query.vScale;
+    let vScale = 1.0;
+    if (scaleParam) {
+      const parsed = parseFloat(scaleParam);
+      if (!isNaN(parsed) && parsed > 0) {
+        vScale = parsed > 5 ? parsed / 100 : parsed;
+      }
+    }
+
     const storeId = invoice.storeId?._id || invoice.storeId;
     const customerId = invoice.customerId?._id || invoice.customerId;
     let store = storeId ? await Store.findById(storeId) : null;
@@ -262,7 +271,7 @@ const downloadInvoicePDF = async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=Invoice-${invoice.invoiceNumber}.pdf`);
 
-    generateInvoicePDF(invoice, party, res, owner);
+    generateInvoicePDF(invoice, party, res, owner, vScale);
   } catch (error) {
     console.error('Invoice PDF generation error:', error);
     if (!res.headersSent) {

@@ -143,6 +143,16 @@ const Invoices = () => {
   const [search, setSearch] = useState('');
   const [printingId, setPrintingId] = useState(null);
 
+  // ================= Print Scaling State (Vertical Height Only) =================
+  const [printScale, setPrintScale] = useState(() => localStorage.getItem('invoice_print_vscale') || '100');
+  const [printModalInvoice, setPrintModalInvoice] = useState(null);
+  const [alwaysDirectPrint, setAlwaysDirectPrint] = useState(() => localStorage.getItem('invoice_direct_print') === 'true');
+
+  const handleScaleChange = (val) => {
+    setPrintScale(val);
+    localStorage.setItem('invoice_print_vscale', val);
+  };
+
   // Pagination & Sorting state for Manage Invoice table
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -429,11 +439,12 @@ const Invoices = () => {
     });
   };
 
-  // Print / Directly send PDF Invoice to print dialog
-  const handlePrintInvoice = async (invoiceId, invoiceNumber) => {
+  // Print / Directly send PDF Invoice to print dialog with Vertical Scaling
+  const handlePrintInvoice = async (invoiceId, invoiceNumber, overrideScale = null) => {
     try {
       setPrintingId(invoiceId);
-      const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+      const scaleToUse = overrideScale || printScale || localStorage.getItem('invoice_print_vscale') || '100';
+      const res = await api.get(`/invoices/${invoiceId}/pdf?scale=${scaleToUse}`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
 
@@ -487,8 +498,9 @@ const Invoices = () => {
     } catch (err) {
       console.error('Failed to print invoice:', err);
       const token = localStorage.getItem('tamil_erp_token');
+      const scaleToUse = overrideScale || printScale || localStorage.getItem('invoice_print_vscale') || '100';
       if (token) {
-        const win = window.open(`/api/invoices/${invoiceId}/pdf?token=${encodeURIComponent(token)}`, '_blank');
+        const win = window.open(`/api/invoices/${invoiceId}/pdf?scale=${scaleToUse}&token=${encodeURIComponent(token)}`, '_blank');
         if (win) {
           win.onload = () => {
             win.focus();
@@ -503,11 +515,12 @@ const Invoices = () => {
     }
   };
 
-  // Download PDF
-  const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
+  // Download PDF with Vertical Scaling
+  const handleDownloadPDF = async (invoiceId, invoiceNumber, overrideScale = null) => {
     try {
       setPrintingId(invoiceId);
-      const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+      const scaleToUse = overrideScale || printScale || localStorage.getItem('invoice_print_vscale') || '100';
+      const res = await api.get(`/invoices/${invoiceId}/pdf?scale=${scaleToUse}`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -1987,7 +2000,7 @@ const Invoices = () => {
 
           {/* White Card Container matching screenshot */}
           <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 sm:p-7 space-y-5">
-            {/* Show Entries & Search Bar Row */}
+            {/* Show Entries, Print Height Scale & Search Bar Row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs sm:text-sm text-slate-600 font-normal">
               {/* Show [ 10 ] entries */}
               <div className="flex items-center gap-2">
@@ -2006,6 +2019,26 @@ const Invoices = () => {
                   <option value={100}>100</option>
                 </select>
                 <span>entries</span>
+              </div>
+
+              {/* Print Height Scale (Vertical Only • Fixed Width) */}
+              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/90 rounded-xl px-2.5 py-1 text-xs">
+                <span className="font-semibold text-slate-700 whitespace-nowrap">Print Height:</span>
+                <select
+                  value={printScale}
+                  onChange={(e) => handleScaleChange(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-md px-2 py-0.5 font-bold text-teal-700 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                  title="Vertical height scale (100% normal, 110%, 118%, 120% extends downward without expanding width)"
+                >
+                  <option value="100">100% (Normal)</option>
+                  <option value="105">105%</option>
+                  <option value="110">110% (+10% Height)</option>
+                  <option value="115">115%</option>
+                  <option value="118">118% (Extended Height)</option>
+                  <option value="120">120% (+20% Height)</option>
+                  <option value="125">125%</option>
+                </select>
+                <span className="text-[10px] text-slate-500 hidden md:inline">Fixed Width</span>
               </div>
 
               {/* Search: [ ] */}
@@ -2228,8 +2261,14 @@ const Invoices = () => {
                             <button
                               type="button"
                               disabled={printingId === inv._id}
-                              onClick={() => handlePrintInvoice(inv._id, inv.invoiceNumber)}
-                              title="Print Bill of Supply"
+                              onClick={() => {
+                                if (alwaysDirectPrint) {
+                                  handlePrintInvoice(inv._id, inv.invoiceNumber, printScale);
+                                } else {
+                                  setPrintModalInvoice(inv);
+                                }
+                              }}
+                              title={`Print Bill of Supply (Scale: ${printScale}%)`}
                               className="p-1 hover:opacity-80 transition-opacity cursor-pointer inline-flex items-center justify-center disabled:opacity-50"
                             >
                               {printingId === inv._id ? (
@@ -2508,7 +2547,7 @@ const Invoices = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    handleDownloadPDF(shareInvoiceTarget._id, shareInvoiceTarget.invoiceNumber)
+                    handleDownloadPDF(shareInvoiceTarget._id, shareInvoiceTarget.invoiceNumber, printScale)
                   }
                   className="px-3 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   title="Download PDF"
@@ -2518,7 +2557,7 @@ const Invoices = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    handlePrintInvoice(shareInvoiceTarget._id, shareInvoiceTarget.invoiceNumber)
+                    handlePrintInvoice(shareInvoiceTarget._id, shareInvoiceTarget.invoiceNumber, printScale)
                   }
                   className="px-3 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   title="Direct Print"
@@ -2562,6 +2601,158 @@ const Invoices = () => {
                       <span>Share as PDF in WhatsApp</span>
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* ================= MODAL: INVOICE PRINT SCALING (VERTICAL HEIGHT ONLY) ================= */}
+      {printModalInvoice && (
+        <Modal
+          isOpen={!!printModalInvoice}
+          onClose={() => setPrintModalInvoice(null)}
+          title={`Print Invoice: #${formatInvoiceNumber(printModalInvoice.invoiceNumber)}`}
+          maxWidth="max-w-lg"
+        >
+          <div className="space-y-4 p-1 text-slate-800 text-xs sm:text-sm">
+            {/* Invoice Brief Summary */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 flex items-center justify-between">
+              <div>
+                <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                  {printModalInvoice.storeId?.name || printModalInvoice.customerId?.name || 'Customer / Retail Shop'}
+                </div>
+                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  Bill #{formatInvoiceNumber(printModalInvoice.invoiceNumber)} &bull; {formatDate(printModalInvoice.invoiceDate)}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-extrabold text-teal-800 text-sm">
+                  ₹{formatAmount(printModalInvoice.grandTotal)}
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  {printModalInvoice.items?.length || 0} Products
+                </div>
+              </div>
+            </div>
+
+            {/* Vertical Scale Selection Controls */}
+            <div className="space-y-2.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                    Print Scale (Vertical Height Only)
+                  </span>
+                  <div className="text-[11px] text-slate-500">
+                    Extends bottom portion downward without expanding width
+                  </div>
+                </div>
+                <span className="text-xs font-extrabold text-teal-700 bg-teal-100/70 px-2.5 py-1 rounded-lg border border-teal-300 font-mono">
+                  {printScale}%
+                </span>
+              </div>
+
+              {/* Quick Preset Buttons */}
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 pt-1">
+                {[
+                  { label: '100%', sub: 'Normal', val: '100' },
+                  { label: '105%', sub: '+5%', val: '105' },
+                  { label: '110%', sub: '+10%', val: '110' },
+                  { label: '115%', sub: '+15%', val: '115' },
+                  { label: '118%', sub: 'Extended', val: '118' },
+                  { label: '120%', sub: '+20%', val: '120' }
+                ].map((item) => (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => handleScaleChange(item.val)}
+                    className={`py-2 px-1 text-center rounded-lg border transition-all cursor-pointer ${
+                      printScale === item.val
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm font-bold'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-teal-400 hover:bg-teal-50/50'
+                    }`}
+                  >
+                    <div className="text-xs font-bold leading-none">{item.label}</div>
+                    <div className={`text-[9px] mt-1 ${printScale === item.val ? 'text-teal-100' : 'text-slate-400'}`}>
+                      {item.sub}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Slider for smooth adjustment */}
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="range"
+                  min="90"
+                  max="130"
+                  step="1"
+                  value={printScale}
+                  onChange={(e) => handleScaleChange(e.target.value)}
+                  className="w-full accent-teal-600 cursor-pointer"
+                />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <input
+                    type="number"
+                    min="90"
+                    max="135"
+                    value={printScale}
+                    onChange={(e) => handleScaleChange(e.target.value)}
+                    className="w-16 px-2 py-1 text-xs font-bold font-mono border border-slate-300 rounded-lg text-center bg-white focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  />
+                  <span className="text-xs text-slate-500 font-bold">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Specifications Guarantee Alert */}
+            <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-emerald-950">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>Exact Requirements Guaranteed:</span>
+              </div>
+              <ul className="text-[11px] space-y-1 text-emerald-800 list-disc list-inside">
+                <li><strong>Width:</strong> Left-to-right invoice width remains strictly fixed (no horizontal stretching).</li>
+                <li><strong>Height:</strong> Bottom portion extends downward gracefully as scale increases.</li>
+                <li><strong>Alignment:</strong> Original left and right margins are completely maintained.</li>
+                <li><strong>Browser Tip:</strong> In Chrome/Edge print window, keep <strong>"Scale: Default" (100%)</strong>.</li>
+              </ul>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-200">
+              <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={alwaysDirectPrint}
+                  onChange={(e) => {
+                    setAlwaysDirectPrint(e.target.checked);
+                    localStorage.setItem('invoice_direct_print', String(e.target.checked));
+                  }}
+                  className="rounded text-teal-600 focus:ring-teal-500 w-3.5 h-3.5"
+                />
+                <span className="text-[11px] font-medium">1-Click direct print using this scale</span>
+              </label>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadPDF(printModalInvoice._id, printModalInvoice.invoiceNumber, printScale)}
+                  className="px-3.5 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download PDF
+                </button>
+                <button
+                  type="button"
+                  disabled={printingId === printModalInvoice._id}
+                  onClick={() => {
+                    handlePrintInvoice(printModalInvoice._id, printModalInvoice.invoiceNumber, printScale);
+                    setPrintModalInvoice(null);
+                  }}
+                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-teal-600/20 transition-all cursor-pointer"
+                >
+                  <PrinterIcon /> Print Now
                 </button>
               </div>
             </div>
@@ -3212,10 +3403,27 @@ const Invoices = () => {
               </button>
 
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-xl">
+                  <span className="text-[11px] font-semibold text-slate-600">Height:</span>
+                  <select
+                    value={printScale}
+                    onChange={(e) => handleScaleChange(e.target.value)}
+                    className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-xs font-bold text-teal-700 focus:outline-none"
+                    title="Vertical height scale (width stays fixed)"
+                  >
+                    <option value="100">100%</option>
+                    <option value="105">105%</option>
+                    <option value="110">110%</option>
+                    <option value="115">115%</option>
+                    <option value="118">118%</option>
+                    <option value="120">120%</option>
+                    <option value="125">125%</option>
+                  </select>
+                </div>
                 <button
                   type="button"
                   onClick={() =>
-                    handleDownloadPDF(selectedInvoice._id, editInvoiceForm.invoiceNumber)
+                    handleDownloadPDF(selectedInvoice._id, editInvoiceForm.invoiceNumber, printScale)
                   }
                   className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
@@ -3224,7 +3432,7 @@ const Invoices = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    handlePrintInvoice(selectedInvoice._id, editInvoiceForm.invoiceNumber)
+                    handlePrintInvoice(selectedInvoice._id, editInvoiceForm.invoiceNumber, printScale)
                   }
                   className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 >

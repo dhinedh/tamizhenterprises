@@ -373,7 +373,8 @@ const StoreTransfers = () => {
   // Action: Download Official PDF
   const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
     try {
-      const res = await api.get(`/invoices/${invoiceId}/pdf`, { responseType: 'blob' });
+      const scale = localStorage.getItem('invoice_print_vscale') || '100';
+      const res = await api.get(`/invoices/${invoiceId}/pdf?scale=${scale}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
@@ -382,7 +383,8 @@ const StoreTransfers = () => {
       link.click();
       link.remove();
     } catch (err) {
-      window.open(`/api/invoices/${invoiceId}/pdf`, '_blank');
+      const scale = localStorage.getItem('invoice_print_vscale') || '100';
+      window.open(`/api/invoices/${invoiceId}/pdf?scale=${scale}`, '_blank');
     }
   };
 

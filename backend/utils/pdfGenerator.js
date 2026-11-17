@@ -43,7 +43,12 @@ function formatDate(dateVal) {
   return `${day} ${month} ${year}`;
 }
 
-function generateInvoicePDF(invoice, party, res, owner = null) {
+function generateInvoicePDF(invoice, party, res, owner = null, vScale = 1.0) {
+  let scale = Number(vScale) || 1.0;
+  if (scale > 5) scale = scale / 100;
+  // Support vertical-only scaling (100% normal, 110%, 118%, 120%, up to 135% without page overflow)
+  scale = Math.max(0.85, Math.min(1.35, scale));
+
   const doc = new PDFDocument({
     size: 'A4',
     margin: 0,
@@ -424,22 +429,24 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
 
   const hsnCodes = Object.keys(hsnMap);
   const numHsn = Math.max(1, hsnCodes.length);
-  const hsnRowH = isCompact ? 13.0 : 17.0;
-  const hsnHeaderH = isCompact ? 24.0 : 30.0;
-  const hsnTotalRowH = isCompact ? 13.0 : 17.0;
+  const hsnRowH = (isCompact ? 13.0 : 17.0) * scale;
+  const hsnH1 = (isCompact ? 13.0 : 17.0) * scale;
+  const hsnH2 = (isCompact ? 11.0 : 13.0) * scale;
+  const hsnHeaderH = hsnH1 + hsnH2;
+  const hsnTotalRowH = (isCompact ? 13.0 : 17.0) * scale;
   const hsnTableHeight = hsnHeaderH + (numHsn * hsnRowH) + hsnTotalRowH;
 
-  const qtyRowH = isCompact ? 20.0 : 32.2;
-  const totalRowH = isCompact ? 16.0 : 18.0;
-  const wordsRowH = isCompact ? 22.0 : 37.5;
-  const bankAndDeclH = isCompact ? 75.0 : 111.8;
-  const sigH = isCompact ? 42.0 : 53.6;
+  const qtyRowH = (isCompact ? 20.0 : 32.2) * scale;
+  const totalRowH = (isCompact ? 16.0 : 18.0) * scale;
+  const wordsRowH = (isCompact ? 22.0 : 37.5) * scale;
+  const bankAndDeclH = (isCompact ? 75.0 : 111.8) * scale;
+  const sigH = (isCompact ? 42.0 : 53.6) * scale;
   const totalBottomH = qtyRowH + totalRowH + wordsRowH + hsnTableHeight + bankAndDeclH + sigH;
 
-  // Maximum printable bottom on standard A4 page before footer text
-  const maxBottomY = 762.4;
+  // Maximum printable bottom on standard A4 page before footer text (A4 total height = 841.89 pt)
+  const maxBottomY = 812.0;
   const maxAvailableForItems = Math.max(80.0, maxBottomY - (thBottom + totalBottomH));
-  const standardRowH = isCompact ? 22.0 : 30.8;
+  const standardRowH = (isCompact ? 22.0 : 30.8) * scale;
   const itemRowH = (items.length * standardRowH <= maxAvailableForItems)
     ? standardRowH
     : Math.max(14.0, maxAvailableForItems / items.length);
@@ -682,8 +689,6 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     578.6  // Right edge
   ];
 
-  const hsnH1 = isCompact ? 13.0 : 17.0;
-  const hsnH2 = isCompact ? 11.0 : 13.0;
   const subH_Top = hsnTableTop + hsnH1;
   const hsnRowsTop = subH_Top + hsnH2;
 
@@ -693,7 +698,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   hsnMainCols.forEach((cx) => strokeBorder(cx, hsnTableTop, cx, subH_Top));
 
   doc.font(fontRegular).fontSize(7.0).fillColor('#000000');
-  const hsnTopTextY = hsnTableTop + (isCompact ? 3.0 : 4.5);
+  const hsnTopTextY = hsnTableTop + (hsnH1 - 9.0) / 2;
   doc.text('HSN/SAC', hsnMainCols[0], hsnTopTextY, { width: hsnMainCols[1] - hsnMainCols[0], align: 'center' });
   doc.text('Taxable\nValue', hsnMainCols[1], hsnTableTop + (isCompact ? 1.5 : 2.5), { width: hsnMainCols[2] - hsnMainCols[1], align: 'center' });
   doc.text('CGST', hsnMainCols[2], hsnTopTextY, { width: hsnMainCols[3] - hsnMainCols[2], align: 'center' });
@@ -704,7 +709,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   strokeBorder(leftX, hsnRowsTop, rightX, hsnRowsTop);
   hsnAllCols.forEach((cx) => strokeBorder(cx, subH_Top, cx, hsnRowsTop));
 
-  const hsnSubTextY = subH_Top + (isCompact ? 2.0 : 2.5);
+  const hsnSubTextY = subH_Top + (hsnH2 - 9.0) / 2;
   doc.text('Rate', hsnAllCols[2], hsnSubTextY, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center' });
   doc.text('Amount', hsnAllCols[3], hsnSubTextY, { width: hsnAllCols[4] - hsnAllCols[3], align: 'center' });
   doc.text('Rate', hsnAllCols[4], hsnSubTextY, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center' });
@@ -775,7 +780,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   doc.font(fontBold).text(taxInWords);
 
   // Declaration (Left side: leftX to p2MidX)
-  const declY = bTop + (isCompact ? 16.5 : 24.0);
+  const declY = bTop + (isCompact ? 16.5 : 24.0) * scale;
   doc.font(fontBold).fontSize(7.5).text('Declaration:', leftX + 4.0, declY);
   strokeBorder(leftX + 4.0, declY + 9.5, leftX + 54.0, declY + 9.5);
 
@@ -783,15 +788,15 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
     leftX + 4.0,
     declY + 14.0,
-    { width: p2MidX - leftX - 12.0, lineGap: 2.0 }
+    { width: p2MidX - leftX - 12.0, lineGap: 2.0 * scale }
   );
 
   // Bank Details (Right side: p2MidX to rightX)
   const bankX = p2MidX + 8.0;
   const b = seller.bankDetails;
   doc.font(fontRegular).fontSize(7.2);
-  const bLineGap = isCompact ? 10.0 : 16.0;
-  const bStart = bTop + (isCompact ? 14.0 : 18.0);
+  const bLineGap = (isCompact ? 10.0 : 16.0) * scale;
+  const bStart = bTop + (isCompact ? 14.0 : 18.0) * scale;
   const bankLabels = ['A/c Name', 'A/c Number', 'Bank Name', 'Branch Name', 'IFS Code', 'UPI Number'];
   const bankValues = [
     `: ${b.accountName}`,
@@ -813,7 +818,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   strokeBorder(p2MidX, sigLineY, p2MidX, bBottom);
 
   // Left Sign: Customer's Seal and Signature
-  doc.font(fontRegular).fontSize(7.0).text("Customer's Seal and Signature", leftX + 4.0, sigLineY + (isCompact ? 4.0 : 6.0));
+  doc.font(fontRegular).fontSize(7.0).text("Customer's Seal and Signature", leftX + 4.0, sigLineY + (isCompact ? 4.0 : 6.0) * scale);
 
   // Right Sign: for Tamizh Enterprises / Authorised Signatory
   doc.font(fontRegular).fontSize(7.0);
@@ -823,11 +828,11 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   const sigTextTotalW = forPrefixW + companyNameW;
   const sigTextStartX = rightX - 6.0 - sigTextTotalW;
 
-  const sigTopY = sigLineY + (isCompact ? 4.0 : 6.0);
+  const sigTopY = sigLineY + (isCompact ? 4.0 : 6.0) * scale;
   doc.font(fontRegular).fontSize(7.0).text('for ', sigTextStartX, sigTopY, { lineBreak: false });
   doc.font(fontBold).fontSize(7.0).text(seller.companyName, sigTextStartX + forPrefixW, sigTopY, { lineBreak: false });
 
-  doc.font(fontRegular).fontSize(7.0).text('Authorised Signatory', p2MidX, bBottom - (isCompact ? 10.0 : 14.0), {
+  doc.font(fontRegular).fontSize(7.0).text('Authorised Signatory', p2MidX, bBottom - (isCompact ? 10.0 : 14.0) * scale, {
     width: rightX - p2MidX - 6.0,
     align: 'right',
     lineBreak: false
