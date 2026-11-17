@@ -164,18 +164,19 @@ const createOrder = async (req, res) => {
         unitPrice = custom.specialPrice;
       }
 
+      const finalSellingPrice = unitPrice;
       const discountPercent = Number(item.discountPercent || 0);
-      const gross = qty * unitPrice;
+      const gross = qty * finalSellingPrice;
       let discount = (gross * discountPercent) / 100;
       if (item.discountAmount) {
         discount = Number(item.discountAmount);
       }
-      const taxable = Math.max(0, gross - discount);
+      const itemTotal = Math.max(0, gross - discount);
       const gstRate = Number(product.gstRate !== undefined ? product.gstRate : 0);
-      const tax = (taxable * gstRate) / 100;
-      const total = taxable + tax;
+      const taxable = gstRate > 0 ? (itemTotal / (1 + gstRate / 100)) : itemTotal;
+      const tax = itemTotal - taxable;
 
-      subtotal += gross;
+      subtotal += taxable;
       discountTotal += discount;
       taxTotal += tax;
 
@@ -185,12 +186,12 @@ const createOrder = async (req, res) => {
         sku: product.sku,
         quantity: qty,
         freeQuantity: Number(item.freeQuantity || 0),
-        unitPrice,
+        unitPrice: finalSellingPrice,
         discountPercent,
         discountAmount: discount,
         gstRate,
         taxAmount: tax,
-        total
+        total: itemTotal
       });
     }
 

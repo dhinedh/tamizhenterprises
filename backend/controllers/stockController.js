@@ -599,22 +599,34 @@ const transferStockToStore = async (req, res) => {
         date: new Date()
       });
 
-      // Price calculation
-      let unitPrice = Number(item.unitPrice);
-      if (isNaN(unitPrice) || unitPrice <= 0) {
+      // Price calculation based on MRP, Margin & GST Inclusive Logic
+      let finalSellingPrice = Number(item.unitPrice);
+      if (isNaN(finalSellingPrice) || finalSellingPrice <= 0) {
         const custom = store ? product.customStorePrices?.find(csp => csp.storeId?.toString() === storeId) : null;
-        unitPrice = (custom && custom.specialPrice) ? custom.specialPrice : (product.dealerPrice || product.sellingPrice || product.mrp || 0);
+        finalSellingPrice = (custom && custom.specialPrice) ? custom.specialPrice : (product.dealerPrice || product.sellingPrice || product.mrp || 0);
       }
 
-      const discountPercent = Number(item.discountPercent || 0);
-      const itemGross = qty * unitPrice;
-      const discount = (itemGross * discountPercent) / 100;
-      const taxable = itemGross - discount;
+      const mrp = Number(item.mrp || product.mrp || finalSellingPrice || 0);
       const gstRate = item.gstRate !== undefined && item.gstRate !== null
         ? Number(item.gstRate)
         : (product.gstRate !== undefined && product.gstRate !== null ? Number(product.gstRate) : 0);
-      const taxAmount = (taxable * gstRate) / 100;
-      const itemTotal = taxable + taxAmount;
+
+      // Rate Include Tax: Display final selling price directly (Do not deduct GST from displayed rate)
+      const rateInclTax = finalSellingPrice;
+
+      // Rate Exclude Tax = Final Selling Price / (1 + GST Percentage / 100)
+      const rateExclTax = gstRate > 0 ? (finalSellingPrice / (1 + gstRate / 100)) : finalSellingPrice;
+
+      const discountPercent = Number(item.discountPercent || 0);
+      const itemGross = qty * finalSellingPrice;
+      const discount = item.discountAmount ? Number(item.discountAmount) : ((itemGross * discountPercent) / 100);
+
+      // Final selling price total (GST inclusive)
+      const itemTotal = Math.max(0, itemGross - discount);
+
+      // Taxable Value and GST Breakdown (Both rate modes represent same final selling price)
+      const taxable = gstRate > 0 ? (itemTotal / (1 + gstRate / 100)) : itemTotal;
+      const taxAmount = itemTotal - taxable;
 
       let cgst = 0, sgst = 0, igst = 0;
       if (isInterstate) {
@@ -637,16 +649,19 @@ const transferStockToStore = async (req, res) => {
         hsnCode: product.hsnCode || '96190010',
         quantity: qty,
         freeQuantity: freeQty,
-        unitPrice,
+        mrp,
+        unitPrice: finalSellingPrice,
+        rateInclTax,
+        rateExclTax: Math.round(rateExclTax * 100) / 100,
         discountPercent,
-        discountAmount: discount,
-        taxableValue: taxable,
+        discountAmount: Math.round(discount * 100) / 100,
+        taxableValue: Math.round(taxable * 100) / 100,
         gstRate,
-        cgstAmount: cgst,
-        sgstAmount: sgst,
-        igstAmount: igst,
-        taxAmount,
-        total: itemTotal
+        cgstAmount: Math.round(cgst * 100) / 100,
+        sgstAmount: Math.round(sgst * 100) / 100,
+        igstAmount: Math.round(igst * 100) / 100,
+        taxAmount: Math.round(taxAmount * 100) / 100,
+        total: Math.round(itemTotal * 100) / 100
       });
 
       formattedOrderItems.push({

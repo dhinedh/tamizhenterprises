@@ -263,8 +263,9 @@ const StoreTransfers = () => {
 
       const gross = qty * price;
       const discount = (gross * discPct) / 100;
-      const taxable = gross - discount;
-      const tax = (taxable * gstRate) / 100;
+      const lineTotal = Math.max(0, gross - discount);
+      const taxable = gstRate > 0 ? (lineTotal / (1 + gstRate / 100)) : lineTotal;
+      const tax = lineTotal - taxable;
 
       subtotal += taxable;
       discountTotal += discount;

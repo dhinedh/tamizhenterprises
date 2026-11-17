@@ -146,14 +146,20 @@ const generateInvoiceFromOrder = async (req, res) => {
         performedBy: req.user ? req.user.name : 'Billing System'
       });
 
-      const itemGross = item.quantity * item.unitPrice;
-      const discount = item.discountAmount || 0;
-      const taxable = itemGross - discount;
+      const finalSellingPrice = Number(item.unitPrice);
+      const mrp = Number(item.mrp || product?.mrp || finalSellingPrice || 0);
       const gstRate = item.gstRate !== undefined && item.gstRate !== null
         ? Number(item.gstRate)
         : (product?.gstRate !== undefined && product?.gstRate !== null ? Number(product.gstRate) : 0);
-      const taxAmount = (taxable * gstRate) / 100;
-      const itemTotal = taxable + taxAmount;
+
+      const rateInclTax = finalSellingPrice;
+      const rateExclTax = gstRate > 0 ? (finalSellingPrice / (1 + gstRate / 100)) : finalSellingPrice;
+
+      const itemGross = item.quantity * finalSellingPrice;
+      const discount = item.discountAmount || ((itemGross * (item.discountPercent || 0)) / 100);
+      const itemTotal = Math.max(0, itemGross - discount);
+      const taxable = gstRate > 0 ? (itemTotal / (1 + gstRate / 100)) : itemTotal;
+      const taxAmount = itemTotal - taxable;
 
       let cgst = 0, sgst = 0, igst = 0;
       if (isInterstate) {
@@ -176,16 +182,19 @@ const generateInvoiceFromOrder = async (req, res) => {
         hsnCode: product ? product.hsnCode : '2106',
         quantity: item.quantity,
         freeQuantity: item.freeQuantity || 0,
-        unitPrice: item.unitPrice,
+        mrp,
+        unitPrice: finalSellingPrice,
+        rateInclTax,
+        rateExclTax: Math.round(rateExclTax * 100) / 100,
         discountPercent: item.discountPercent || 0,
-        discountAmount: discount,
-        taxableValue: taxable,
+        discountAmount: Math.round(discount * 100) / 100,
+        taxableValue: Math.round(taxable * 100) / 100,
         gstRate,
-        cgstAmount: cgst,
-        sgstAmount: sgst,
-        igstAmount: igst,
-        taxAmount,
-        total: itemTotal
+        cgstAmount: Math.round(cgst * 100) / 100,
+        sgstAmount: Math.round(sgst * 100) / 100,
+        igstAmount: Math.round(igst * 100) / 100,
+        taxAmount: Math.round(taxAmount * 100) / 100,
+        total: Math.round(itemTotal * 100) / 100
       });
     }
 
@@ -339,14 +348,16 @@ const updateInvoice = async (req, res) => {
 
       const updatedItems = items.map((item) => {
         const qty = Number(item.quantity) || 0;
-        const rate = Number(item.unitPrice) || 0;
-        const discPercent = Number(item.discountPercent) || 0;
-        const gross = qty * rate;
-        const discAmt = Number(item.discountAmount) || (gross * discPercent / 100);
-        const taxable = Math.max(0, gross - discAmt);
+        const finalSellingPrice = Number(item.unitPrice) || 0;
+        const mrp = Number(item.mrp || item.productId?.mrp || finalSellingPrice || 0);
         const gst = Number(item.gstRate !== undefined && item.gstRate !== null ? item.gstRate : 0);
-        const tax = (taxable * gst) / 100;
-        const lineTotal = taxable + tax;
+        const discPercent = Number(item.discountPercent) || 0;
+        const gross = qty * finalSellingPrice;
+        const discAmt = Number(item.discountAmount) || (gross * discPercent / 100);
+        const lineTotal = Math.max(0, gross - discAmt);
+        const taxable = gst > 0 ? (lineTotal / (1 + gst / 100)) : lineTotal;
+        const tax = lineTotal - taxable;
+        const rateExclTax = gst > 0 ? (finalSellingPrice / (1 + gst / 100)) : finalSellingPrice;
 
         taxableSubtotal += taxable;
         totalDiscount += discAmt;
@@ -361,7 +372,10 @@ const updateInvoice = async (req, res) => {
           hsnCode: item.hsnCode || '3004',
           quantity: qty,
           freeQuantity: Number(item.freeQuantity) || 0,
-          unitPrice: rate,
+          mrp,
+          unitPrice: finalSellingPrice,
+          rateInclTax: finalSellingPrice,
+          rateExclTax: Math.round(rateExclTax * 100) / 100,
           discountPercent: discPercent,
           discountAmount: Math.round(discAmt * 100) / 100,
           taxableValue: Math.round(taxable * 100) / 100,

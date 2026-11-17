@@ -721,20 +721,35 @@ const Invoices = () => {
       status: inv.status || 'Unpaid',
       deliveryChallanNo: inv.deliveryChallanNo || '',
       notes: inv.notes || '',
-      items: (inv.items || []).map((it) => ({
-        productId: it.productId?._id || it.productId || '',
-        name: it.name || it.productId?.name || '',
-        hsnCode: it.hsnCode || '3004',
-        quantity: Number(it.quantity) || 1,
-        freeQuantity: Number(it.freeQuantity) || 0,
-        unitPrice: Number(it.unitPrice) || 0,
-        discountPercent: Number(it.discountPercent) || 0,
-        discountAmount: Number(it.discountAmount) || 0,
-        taxableValue: Number(it.taxableValue) || 0,
-        gstRate: it.gstRate !== undefined && it.gstRate !== null ? Number(it.gstRate) : 0,
-        taxAmount: Number(it.taxAmount) || 0,
-        total: Number(it.total) || 0
-      }))
+      items: (inv.items || []).map((it) => {
+        const qty = Number(it.quantity) || 1;
+        const p = Number(it.rateInclTax || it.unitPrice || 0);
+        const gst = it.gstRate !== undefined && it.gstRate !== null ? Number(it.gstRate) : 0;
+        const discAmt = Number(it.discountAmount) || 0;
+        const discPct = Number(it.discountPercent) || 0;
+        const lineTotal = it.rateInclTax ? (Number(it.total) || Math.max(0, qty * p - discAmt)) : Math.max(0, qty * p - discAmt);
+        const taxable = gst > 0 ? (lineTotal / (1 + gst / 100)) : lineTotal;
+        const tax = lineTotal - taxable;
+        const rateExcl = gst > 0 ? (p / (1 + gst / 100)) : p;
+
+        return {
+          productId: it.productId?._id || it.productId || '',
+          name: it.name || it.productId?.name || '',
+          hsnCode: it.hsnCode || '3004',
+          quantity: qty,
+          freeQuantity: Number(it.freeQuantity) || 0,
+          mrp: Number(it.mrp || 0),
+          unitPrice: p,
+          rateInclTax: p,
+          rateExclTax: Math.round(rateExcl * 100) / 100,
+          discountPercent: discPct,
+          discountAmount: Math.round(discAmt * 100) / 100,
+          taxableValue: Math.round(taxable * 100) / 100,
+          gstRate: gst,
+          taxAmount: Math.round(tax * 100) / 100,
+          total: Math.round(lineTotal * 100) / 100
+        };
+      })
     });
   };
 
@@ -750,19 +765,22 @@ const Invoices = () => {
       if (field === 'discountPercent') cur.discountPercent = Number(value) || 0;
 
       const q = cur.quantity;
-      const p = cur.unitPrice;
+      const p = cur.unitPrice; // Final selling price (Rate Incl. Tax)
       const discPct = cur.discountPercent;
       const gst = cur.gstRate;
       const gross = q * p;
       const discAmt = (gross * discPct) / 100;
-      const taxable = Math.max(0, gross - discAmt);
-      const tax = (taxable * gst) / 100;
-      const total = taxable + tax;
+      const lineTotal = Math.max(0, gross - discAmt);
+      const taxable = gst > 0 ? (lineTotal / (1 + gst / 100)) : lineTotal;
+      const tax = lineTotal - taxable;
+      const rateExclTax = gst > 0 ? (p / (1 + gst / 100)) : p;
 
+      cur.rateInclTax = p;
+      cur.rateExclTax = Math.round(rateExclTax * 100) / 100;
       cur.discountAmount = Math.round(discAmt * 100) / 100;
       cur.taxableValue = Math.round(taxable * 100) / 100;
       cur.taxAmount = Math.round(tax * 100) / 100;
-      cur.total = Math.round(total * 100) / 100;
+      cur.total = Math.round(lineTotal * 100) / 100;
 
       items[idx] = cur;
       return { ...prev, items };
@@ -782,10 +800,12 @@ const Invoices = () => {
     if (!prod) return;
 
     const rate = Number(prod.dealerPrice || prod.sellingPrice || prod.mrp || 0);
+    const mrp = Number(prod.mrp || rate || 0);
     const gst = Number(prod.gstRate !== undefined && prod.gstRate !== null ? prod.gstRate : 0);
-    const taxable = rate;
-    const tax = (taxable * gst) / 100;
-    const total = taxable + tax;
+    const lineTotal = rate;
+    const taxable = gst > 0 ? (lineTotal / (1 + gst / 100)) : lineTotal;
+    const tax = lineTotal - taxable;
+    const rateExclTax = gst > 0 ? (rate / (1 + gst / 100)) : rate;
 
     const newItem = {
       productId: prod._id,
@@ -793,13 +813,16 @@ const Invoices = () => {
       hsnCode: prod.hsnCode || '3004',
       quantity: 1,
       freeQuantity: 0,
+      mrp,
       unitPrice: rate,
+      rateInclTax: rate,
+      rateExclTax: Math.round(rateExclTax * 100) / 100,
       discountPercent: 0,
       discountAmount: 0,
       taxableValue: Math.round(taxable * 100) / 100,
       gstRate: gst,
       taxAmount: Math.round(tax * 100) / 100,
-      total: Math.round(total * 100) / 100
+      total: Math.round(lineTotal * 100) / 100
     };
 
     setEditInvoiceForm((prev) => ({
@@ -1198,17 +1221,24 @@ const Invoices = () => {
     const prod = products.find((p) => p._id === currentProductId);
     if (!prod) return;
 
-    const p = Number(itemPrice) || 0;
+    const p = Number(itemPrice) || 0; // Final Selling Price (Rate Include Tax)
     const mrp = Number(itemMrp) || 0;
     const shopPercent = Number(itemShopPercent) || 0;
     const discPercent = Number(itemDiscPercent) || 0;
     const discAmount = Number(itemDiscRs) || (q * p * discPercent) / 100;
-    const taxableValue = Math.max(0, q * p - discAmount);
     const gstRate = itemGstRate !== '' && itemGstRate !== undefined && itemGstRate !== null
       ? Number(itemGstRate)
       : (prod.gstRate !== undefined && prod.gstRate !== null ? Number(prod.gstRate) : 0);
-    const taxAmount = (taxableValue * gstRate) / 100;
-    const lineTotal = taxableValue + taxAmount;
+
+    // Rate Include Tax: Display final selling price directly
+    const rateInclTax = p;
+    // Rate Exclude Tax = Final Selling Price / (1 + GST Percentage / 100)
+    const rateExclTax = gstRate > 0 ? (p / (1 + gstRate / 100)) : p;
+
+    // Both rate modes represent the same final selling price
+    const lineTotal = Math.max(0, q * p - discAmount);
+    const taxableValue = gstRate > 0 ? (lineTotal / (1 + gstRate / 100)) : lineTotal;
+    const taxAmount = lineTotal - taxableValue;
 
     setAddedItems((prev) => [
       ...prev,
@@ -1221,12 +1251,16 @@ const Invoices = () => {
         unitPrice: p,
         mrp,
         shopPercent,
+        marginPercent: shopPercent,
+        marginAmount: mrp > 0 ? Math.round(((mrp * shopPercent) / 100) * 100) / 100 : 0,
+        rateInclTax: Math.round(rateInclTax * 100) / 100,
+        rateExclTax: Math.round(rateExclTax * 100) / 100,
         discountPercent: discPercent,
-        discountAmount: discAmount,
-        taxableValue,
+        discountAmount: Math.round(discAmount * 100) / 100,
+        taxableValue: Math.round(taxableValue * 100) / 100,
         gstRate,
-        taxAmount,
-        total: lineTotal
+        taxAmount: Math.round(taxAmount * 100) / 100,
+        total: Math.round(lineTotal * 100) / 100
       }
     ]);
 
@@ -1299,9 +1333,17 @@ const Invoices = () => {
         items: addedItems.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
+          mrp: item.mrp || 0,
+          marginPercent: item.marginPercent || item.shopPercent || 0,
+          marginAmount: item.marginAmount || 0,
+          rateInclTax: item.rateInclTax || item.unitPrice,
+          rateExclTax: item.rateExclTax || 0,
           unitPrice: item.unitPrice,
           discountPercent: item.discountPercent || 0,
           discountAmount: item.discountAmount || 0,
+          taxableValue: item.taxableValue,
+          taxAmount: item.taxAmount,
+          total: item.total,
           gstRate: item.gstRate !== undefined && item.gstRate !== null ? Number(item.gstRate) : 0
         }))
       };
@@ -1742,8 +1784,9 @@ const Invoices = () => {
                         <th className="py-2.5 px-3">Product</th>
                         <th className="py-2.5 px-3 text-right">MRP</th>
                         <th className="py-2.5 px-3 text-right">Qty</th>
-                        <th className="py-2.5 px-3 text-right">Shop %</th>
-                        <th className="py-2.5 px-3 text-right">Shop Price</th>
+                        <th className="py-2.5 px-3 text-right">Margin %</th>
+                        <th className="py-2.5 px-3 text-right">Rate (Excl. Tax)</th>
+                        <th className="py-2.5 px-3 text-right">Rate (Incl. Tax)</th>
                         <th className="py-2.5 px-3 text-right">Discount</th>
                         <th className="py-2.5 px-3 text-right">Taxable</th>
                         <th className="py-2.5 px-3 text-center">GST</th>
@@ -1752,43 +1795,49 @@ const Invoices = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {addedItems.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/60">
-                          <td className="py-2.5 px-3 font-medium">{idx + 1}</td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-900">{item.name}</td>
-                          <td className="py-2.5 px-3 text-right text-slate-500">₹{Number(item.mrp || 0).toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-right font-bold">{item.quantity}</td>
-                          <td className="py-2.5 px-3 text-right text-blue-600 font-semibold">{Number(item.shopPercent || 0).toFixed(1)}%</td>
-                          <td className="py-2.5 px-3 text-right font-bold text-emerald-700">₹{Number(item.unitPrice).toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-right text-red-600">
-                            ₹{Number(item.discountAmount || 0).toFixed(2)}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-mono">
-                            ₹{Number(item.taxableValue).toFixed(2)}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            {Number(item.gstRate) === 0 ? (
-                              <span className="inline-block px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                0%
-                              </span>
-                            ) : (
-                              `${item.gstRate}%`
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-bold text-slate-900">
-                            ₹{Number(item.total).toFixed(2)}
-                          </td>
-                          <td className="py-2.5 px-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveAddedItem(idx)}
-                              className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {addedItems.map((item, idx) => {
+                        const gst = Number(item.gstRate || 0);
+                        const rateIncl = Number(item.rateInclTax || item.unitPrice || 0);
+                        const rateExcl = Number(item.rateExclTax || (gst > 0 ? (rateIncl / (1 + gst / 100)) : rateIncl));
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/60">
+                            <td className="py-2.5 px-3 font-medium">{idx + 1}</td>
+                            <td className="py-2.5 px-3 font-semibold text-slate-900">{item.name}</td>
+                            <td className="py-2.5 px-3 text-right text-slate-500">₹{Number(item.mrp || 0).toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right font-bold">{item.quantity}</td>
+                            <td className="py-2.5 px-3 text-right text-blue-600 font-semibold">{Number(item.shopPercent || item.marginPercent || 0).toFixed(1)}%</td>
+                            <td className="py-2.5 px-3 text-right font-mono text-slate-600">₹{rateExcl.toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-emerald-700">₹{rateIncl.toFixed(2)}</td>
+                            <td className="py-2.5 px-3 text-right text-red-600">
+                              ₹{Number(item.discountAmount || 0).toFixed(2)}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono">
+                              ₹{Number(item.taxableValue).toFixed(2)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {gst === 0 ? (
+                                <span className="inline-block px-2 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  0%
+                                </span>
+                              ) : (
+                                `${gst}%`
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                              ₹{Number(item.total).toFixed(2)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAddedItem(idx)}
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

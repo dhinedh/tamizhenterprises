@@ -379,22 +379,43 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   doc.text('Amount', cols[10] + 1.0, hTextY, { width: cols[11] - cols[10] - 3.0, align: 'right' });
 
   // 4. Calculate Dynamic Layout based on Products & HSN
-  // Aggregate items by HSN Code
+  // GST Inclusive Calculation:
+  // 1. MRP is always considered GST-inclusive
+  // 2. Final Selling Price is after margin deduction
+  // 3. Rate Include Tax = Final Selling Price (displayed directly)
+  // 4. Rate Exclude Tax = Final Selling Price / (1 + GST% / 100)
+  // 5. Line Total = Qty * Final Selling Price - Discount
+  // 6. Taxable Value = Line Total / (1 + GST% / 100)
+  // 7. GST Amount = Line Total - Taxable Value
   const hsnMap = {};
+  let calculatedGrandTotal = 0;
+  let calculatedTaxableSubtotal = 0;
+  let calculatedTaxTotal = 0;
+
   items.forEach((it) => {
     const code = it.hsnCode || '96190010';
+    const gstRate = Number(it.gstRate || 0);
+    const qty = Number(it.quantity || 0);
+    const finalSellingPrice = Number(it.rateInclTax || it.finalSellingPrice || it.unitPrice || 0);
+    const discAmount = Number(it.discountAmount || 0);
+    const lineTotal = Math.max(0, qty * finalSellingPrice - discAmount);
+    const lineTaxable = gstRate > 0 ? (lineTotal / (1 + gstRate / 100)) : lineTotal;
+    const lineTax = lineTotal - lineTaxable;
+
+    calculatedGrandTotal += lineTotal;
+    calculatedTaxableSubtotal += lineTaxable;
+    calculatedTaxTotal += lineTax;
+
     if (!hsnMap[code]) {
       hsnMap[code] = {
         taxable: 0,
-        cgstRate: (it.gstRate || 0) / 2,
+        cgstRate: gstRate / 2,
         cgstAmount: 0,
-        sgstRate: (it.gstRate || 0) / 2,
+        sgstRate: gstRate / 2,
         sgstAmount: 0,
         totalTax: 0
       };
     }
-    const lineTaxable = Number(it.taxableValue || (it.quantity * it.unitPrice));
-    const lineTax = Number(it.taxAmount || 0);
     hsnMap[code].taxable += lineTaxable;
     hsnMap[code].cgstAmount += lineTax / 2;
     hsnMap[code].sgstAmount += lineTax / 2;
@@ -435,13 +456,26 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     const qty = Number(item.quantity || 0);
     totalQty += qty;
     const unitStr = item.unit || 'Packs';
-    const mrp = Number(item.mrp || item.productId?.mrp || item.unitPrice || 0);
-    const unitPrice = Number(item.unitPrice || 0);
+    const mrp = Number(item.mrp || item.productId?.mrp || 0);
     const gstRate = Number(item.gstRate || 0);
-    const rateIncl = unitPrice * (1 + gstRate / 100);
     const discAmount = Number(item.discountAmount || 0);
     const discPct = Number(item.discountPercent || 0);
-    const lineTotal = Number(item.total || qty * unitPrice);
+
+    // Final Selling Price after margin deduction (Rate Include Tax)
+    let finalSellingPrice = Number(item.rateInclTax || item.finalSellingPrice || item.unitPrice || 0);
+    if (!finalSellingPrice && mrp > 0) {
+      const marginPct = Number(item.shopPercent || item.marginPercent || 0);
+      finalSellingPrice = mrp - (mrp * marginPct / 100);
+    }
+
+    // Rate Include Tax: Display final selling price directly
+    const rateIncl = finalSellingPrice;
+
+    // Rate Exclude Tax = Final Selling Price / (1 + GST Percentage / 100)
+    const rateExcl = gstRate > 0 ? (finalSellingPrice / (1 + gstRate / 100)) : finalSellingPrice;
+
+    // Line total represents qty * finalSellingPrice - discAmount
+    const lineTotal = Math.max(0, qty * finalSellingPrice - discAmount);
 
     // Font size
     const fontSize = thisRowH >= 25.0 ? 7.2 : (thisRowH >= 20.0 ? 7.0 : 6.6);
@@ -495,7 +529,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     });
 
     // Rate (Excl. Tax)
-    doc.text(unitPrice.toFixed(2), cols[5] + 1.0, yText, {
+    doc.text(rateExcl.toFixed(2), cols[5] + 1.0, yText, {
       width: cols[6] - cols[5] - 2.0,
       align: 'right',
       lineBreak: false
@@ -587,7 +621,13 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     lineBreak: false
   });
 
-  doc.font(fontBold).fontSize(isCompact ? 7.0 : 7.2).fillColor('#000000').text(`₹ ${formatCurrency(invoice.grandTotal)}`, cols[10] + 1.0, qtyRowTop + (qtyRowH - 9.0) / 2, {
+  const finalGrandTotal = calculatedGrandTotal > 0 ? calculatedGrandTotal : Number(invoice.grandTotal || 0);
+  const finalTaxableSubtotal = calculatedTaxableSubtotal > 0 ? calculatedTaxableSubtotal : Number(invoice.taxableSubtotal || 0);
+  const finalTaxTotal = calculatedTaxTotal > 0 ? calculatedTaxTotal : Number(invoice.taxTotal || 0);
+  const finalCgstTotal = finalTaxTotal / 2;
+  const finalSgstTotal = finalTaxTotal / 2;
+
+  doc.font(fontBold).fontSize(isCompact ? 7.0 : 7.2).fillColor('#000000').text(`₹ ${formatCurrency(finalGrandTotal)}`, cols[10] + 1.0, qtyRowTop + (qtyRowH - 9.0) / 2, {
     width: cols[11] - cols[10] - 2.0,
     align: 'right',
     lineBreak: false
@@ -604,7 +644,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
     lineBreak: false
   });
 
-  doc.font(fontBold).fontSize(isCompact ? 7.0 : 7.2).fillColor('#000000').text(`₹ ${formatCurrency(invoice.grandTotal)}`, cols[10] + 1.0, totalRowTop + (totalRowH - 9.0) / 2, {
+  doc.font(fontBold).fontSize(isCompact ? 7.0 : 7.2).fillColor('#000000').text(`₹ ${formatCurrency(finalGrandTotal)}`, cols[10] + 1.0, totalRowTop + (totalRowH - 9.0) / 2, {
     width: cols[11] - cols[10] - 2.0,
     align: 'right',
     lineBreak: false
@@ -617,7 +657,7 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   doc.font(fontRegular).fontSize(7.0).fillColor('#333333').text('Amount Chargeable (in words)', leftX + 4.0, wordsRowTop + 3.0);
   doc.font(fontRegular).fontSize(8.0).fillColor('#000000').text('E. & O.E', rightX - 60.0, wordsRowTop + 3.0, { width: 56.0, align: 'right' });
 
-  const amountInWords = numberToWordsINR(invoice.grandTotal, 'INR ');
+  const amountInWords = numberToWordsINR(finalGrandTotal, 'INR ');
   const wordsY = wordsRowH >= 30.0 ? (wordsRowTop + 16.0) : (wordsRowTop + 11.5);
   doc.font(fontBold).fontSize(8.0).fillColor('#000000').text(amountInWords, leftX + 4.0, wordsY, { lineBreak: false });
 
@@ -697,22 +737,22 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   const yHsnTotalText = hsnRowY + (hsnTotalRowH - 9.0) / 2;
   doc.font(fontBold).fontSize(7.0);
   doc.text('Total', hsnAllCols[0], yHsnTotalText, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center', lineBreak: false });
-  doc.text(formatCurrency(invoice.taxableSubtotal || invoice.grandTotal), hsnAllCols[1] + 2.0, yHsnTotalText, {
+  doc.text(formatCurrency(finalTaxableSubtotal), hsnAllCols[1] + 2.0, yHsnTotalText, {
     width: hsnAllCols[2] - hsnAllCols[1] - 4.0,
     align: 'right',
     lineBreak: false
   });
-  doc.text(formatCurrency(invoice.cgstTotal || 0), hsnAllCols[3] + 2.0, yHsnTotalText, {
+  doc.text(formatCurrency(finalCgstTotal), hsnAllCols[3] + 2.0, yHsnTotalText, {
     width: hsnAllCols[4] - hsnAllCols[3] - 4.0,
     align: 'right',
     lineBreak: false
   });
-  doc.text(formatCurrency(invoice.sgstTotal || 0), hsnAllCols[5] + 2.0, yHsnTotalText, {
+  doc.text(formatCurrency(finalSgstTotal), hsnAllCols[5] + 2.0, yHsnTotalText, {
     width: hsnAllCols[6] - hsnAllCols[5] - 4.0,
     align: 'right',
     lineBreak: false
   });
-  doc.text(formatCurrency(invoice.taxTotal || 0), hsnAllCols[6] + 2.0, yHsnTotalText, {
+  doc.text(formatCurrency(finalTaxTotal), hsnAllCols[6] + 2.0, yHsnTotalText, {
     width: hsnAllCols[7] - hsnAllCols[6] - 4.0,
     align: 'right',
     lineBreak: false
@@ -727,8 +767,8 @@ function generateInvoicePDF(invoice, party, res, owner = null) {
   strokeBorder(rightX, bTop, rightX, bBottom);
 
   // Tax Amount in words (Prints "Nil" when tax is 0, matching reference images)
-  const hasTax = Number(invoice.taxTotal || 0) > 0;
-  const taxInWords = hasTax ? numberToWordsINR(invoice.taxTotal, 'INR ') : 'Nil';
+  const hasTax = finalTaxTotal > 0.01;
+  const taxInWords = hasTax ? numberToWordsINR(finalTaxTotal, 'INR ') : 'Nil';
 
   doc.font(fontRegular).fontSize(7.5).fillColor('#000000');
   doc.text('Tax Amount (in words): ', leftX + 4.0, bTop + (isCompact ? 4.0 : 6.0), { continued: true });
