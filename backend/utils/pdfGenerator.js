@@ -427,11 +427,11 @@ function generateInvoicePDFBuffer(invoice, party, owner = null, vScale = 1.0) {
 
   const hsnCodes = Object.keys(hsnMap);
   const numHsn = Math.max(1, hsnCodes.length);
-  const hsnRowH = (isCompact ? 13.0 : 17.0) * scale;
-  const hsnH1 = (isCompact ? 13.0 : 17.0) * scale;
-  const hsnH2 = (isCompact ? 11.0 : 13.0) * scale;
+  const hsnRowH = (isCompact ? 13.0 : 16.0) * scale;
+  const hsnH1 = (isCompact ? 14.5 : 17.0) * scale;
+  const hsnH2 = (isCompact ? 12.0 : 13.0) * scale;
   const hsnHeaderH = hsnH1 + hsnH2;
-  const hsnTotalRowH = (isCompact ? 13.0 : 17.0) * scale;
+  const hsnTotalRowH = (isCompact ? 13.0 : 16.0) * scale;
   const hsnTableHeight = hsnHeaderH + (numHsn * hsnRowH) + hsnTotalRowH;
 
   const qtyRowH = (isCompact ? 20.0 : 32.2) * scale;
@@ -696,22 +696,22 @@ function generateInvoicePDFBuffer(invoice, party, owner = null, vScale = 1.0) {
   hsnMainCols.forEach((cx) => strokeBorder(cx, hsnTableTop, cx, subH_Top));
 
   doc.font(fontRegular).fontSize(7.0).fillColor('#000000');
-  const hsnTopTextY = hsnTableTop + (hsnH1 - 9.0) / 2;
-  doc.text('HSN/SAC', hsnMainCols[0], hsnTopTextY, { width: hsnMainCols[1] - hsnMainCols[0], align: 'center' });
-  doc.text('Taxable\nValue', hsnMainCols[1], hsnTableTop + (isCompact ? 1.5 : 2.5), { width: hsnMainCols[2] - hsnMainCols[1], align: 'center' });
-  doc.text('CGST', hsnMainCols[2], hsnTopTextY, { width: hsnMainCols[3] - hsnMainCols[2], align: 'center' });
-  doc.text('SGST', hsnMainCols[3], hsnTopTextY, { width: hsnMainCols[4] - hsnMainCols[3], align: 'center' });
-  doc.text('Total\nTax Amount', hsnMainCols[4], hsnTableTop + (isCompact ? 1.5 : 2.5), { width: hsnMainCols[5] - hsnMainCols[4], align: 'center' });
+  const hsnTopTextY = hsnTableTop + (hsnH1 - 7.5) / 2;
+  doc.text('HSN/SAC', hsnMainCols[0], hsnTopTextY, { width: hsnMainCols[1] - hsnMainCols[0], align: 'center', lineBreak: false });
+  doc.text('Taxable Value', hsnMainCols[1], hsnTopTextY, { width: hsnMainCols[2] - hsnMainCols[1], align: 'center', lineBreak: false });
+  doc.text('CGST', hsnMainCols[2], hsnTopTextY, { width: hsnMainCols[3] - hsnMainCols[2], align: 'center', lineBreak: false });
+  doc.text('SGST', hsnMainCols[3], hsnTopTextY, { width: hsnMainCols[4] - hsnMainCols[3], align: 'center', lineBreak: false });
+  doc.text('Total Tax Amount', hsnMainCols[4], hsnTopTextY, { width: hsnMainCols[5] - hsnMainCols[4], align: 'center', lineBreak: false });
 
   // Sub-header 2 (Bottom half: Rate and Amount)
   strokeBorder(leftX, hsnRowsTop, rightX, hsnRowsTop);
   hsnAllCols.forEach((cx) => strokeBorder(cx, subH_Top, cx, hsnRowsTop));
 
-  const hsnSubTextY = subH_Top + (hsnH2 - 9.0) / 2;
-  doc.text('Rate', hsnAllCols[2], hsnSubTextY, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center' });
-  doc.text('Amount', hsnAllCols[3], hsnSubTextY, { width: hsnAllCols[4] - hsnAllCols[3], align: 'center' });
-  doc.text('Rate', hsnAllCols[4], hsnSubTextY, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center' });
-  doc.text('Amount', hsnAllCols[5], hsnSubTextY, { width: hsnAllCols[6] - hsnAllCols[5], align: 'center' });
+  const hsnSubTextY = subH_Top + (hsnH2 - 7.5) / 2;
+  doc.text('Rate', hsnAllCols[2], hsnSubTextY, { width: hsnAllCols[3] - hsnAllCols[2], align: 'center', lineBreak: false });
+  doc.text('Amount', hsnAllCols[3], hsnSubTextY, { width: hsnAllCols[4] - hsnAllCols[3], align: 'center', lineBreak: false });
+  doc.text('Rate', hsnAllCols[4], hsnSubTextY, { width: hsnAllCols[5] - hsnAllCols[4], align: 'center', lineBreak: false });
+  doc.text('Amount', hsnAllCols[5], hsnSubTextY, { width: hsnAllCols[6] - hsnAllCols[5], align: 'center', lineBreak: false });
 
   let hsnRowY = hsnRowsTop;
 
@@ -720,7 +720,7 @@ function generateInvoicePDFBuffer(invoice, party, owner = null, vScale = 1.0) {
     strokeBorder(leftX, hsnRowY + hsnRowH, rightX, hsnRowY + hsnRowH);
     hsnAllCols.forEach((cx) => strokeBorder(cx, hsnRowY, cx, hsnRowY + hsnRowH));
 
-    const yRowText = hsnRowY + (hsnRowH - 9.0) / 2;
+    const yRowText = hsnRowY + (hsnRowH - 7.5) / 2;
     doc.font(fontRegular).fontSize(7.0);
     doc.text(hsn, hsnAllCols[0], yRowText, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center', lineBreak: false });
     doc.text(formatCurrency(row.taxable), hsnAllCols[1] + 2.0, yRowText, { width: hsnAllCols[2] - hsnAllCols[1] - 4.0, align: 'right', lineBreak: false });
@@ -737,7 +737,7 @@ function generateInvoicePDFBuffer(invoice, party, owner = null, vScale = 1.0) {
   strokeBorder(leftX, hsnRowY + hsnTotalRowH, rightX, hsnRowY + hsnTotalRowH);
   hsnAllCols.forEach((cx) => strokeBorder(cx, hsnRowY, cx, hsnRowY + hsnTotalRowH));
 
-  const yHsnTotalText = hsnRowY + (hsnTotalRowH - 9.0) / 2;
+  const yHsnTotalText = hsnRowY + (hsnTotalRowH - 7.5) / 2;
   doc.font(fontBold).fontSize(7.0);
   doc.text('Total', hsnAllCols[0], yHsnTotalText, { width: hsnAllCols[1] - hsnAllCols[0], align: 'center', lineBreak: false });
   doc.text(formatCurrency(finalTaxableSubtotal), hsnAllCols[1] + 2.0, yHsnTotalText, {
