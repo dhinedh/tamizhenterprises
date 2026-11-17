@@ -6,6 +6,7 @@ const Stock = require('../models/Stock');
 const StockLedger = require('../models/StockLedger');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const Salesman = require('../models/Salesman');
 const { generateInvoicePDF } = require('../utils/pdfGenerator');
 
 // @desc    Get all invoices

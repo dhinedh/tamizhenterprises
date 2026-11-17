@@ -6,6 +6,7 @@ const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const Invoice = require('../models/Invoice');
 const Manufacturer = require('../models/Manufacturer');
+const Salesman = require('../models/Salesman');
 
 // @desc    Get all stock levels
 // @route   GET /api/stock
@@ -566,10 +567,16 @@ const transferStockToStore = async (req, res) => {
     // Deduct stock, update ledger, calculate pricing & taxes
     for (const item of items) {
       const product = await Product.findById(item.productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: `Product ${item.name || item.productId} not found` });
+      }
       const qty = Number(item.quantity);
       const freeQty = Number(item.freeQuantity || 0);
 
-      const stock = await Stock.findOne({ productId: item.productId });
+      let stock = await Stock.findOne({ productId: item.productId });
+      if (!stock) {
+        stock = await Stock.create({ productId: item.productId, currentStock: 0, reservedStock: 0 });
+      }
       const balanceBefore = stock.currentStock;
 
       // Deduct from physical stock
@@ -670,7 +677,7 @@ const transferStockToStore = async (req, res) => {
         sku: product.sku,
         quantity: qty,
         freeQuantity: freeQty,
-        unitPrice,
+        unitPrice: finalSellingPrice,
         discountPercent,
         discountAmount: discount,
         gstRate,
